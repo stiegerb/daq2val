@@ -26,22 +26,33 @@ def getConfig(string):
 				rms = None
 
 	return nstreams, nrus, nbus, rms
-def processDirs(directory):
-	for subdir in os.listdir(directory):
-		if not os.path.isdir(directory+subdir): continue
-		nstreams, nrus, nbus, rms = getConfig(subdir)
-		feedback = "Processing %-35s with %2s streams, %1d readout units, and %1d builder units." % (subdir, nstreams, nrus, nbus)
+def fillTreeForDir(treefile, subdir, files):
+	if options.verbose > 0: print "  ... processing", subdir
+	if not 'server.csv' in files: return
+
+	nstreams, nrus, nbus, rms = getConfig(subdir.split('/').pop())
+	if options.verbose > 1:
+		feedback = "    with %2s streams, %1d readout units, and %1d builder units." % (nstreams, nrus, nbus)
 		if rms is not None: feedback += " RMS is %4.2f" % rms
 		print feedback
-		treefile = directory.strip('/')+'.root'
 
-		if options.outputName != 'plot.pdf':
-			treefile = options.outputName
+	fillTree(subdir+'/server.csv', treefile, subdir, nstreams, nbus, nrus, rms, doCleaning=options.doCleaning)
+	if options.doCleaning:
+		cleanFile(subdir+'/server.csv')
 
-		fillTree(directory+subdir+'/server.csv', treefile, 'd'+subdir, nstreams, nbus, nrus, rms=rms, doCleaning=options.doCleaning)
-		if options.doCleaning:
-			cleanFilesInDir(directory+subdir)
+	return None
+def processDirs(directory):
+	if not os.path.isdir(directory):
+		print directory, "is not a directory."
+		return
 
+	treefile = directory.strip('/')+'.root'
+	if options.outputName != 'plot.pdf':
+		treefile = options.outputName
+
+	os.path.walk(directory, fillTreeForDir, treefile)
+
+	return None
 
 ##---------------------------------------------------------------------------------
 ## Cleaning of outliers in a data set
@@ -76,6 +87,10 @@ def cleanData(data, step=1, length=4, cutoff=3, quality=0.05):
 	else: return data
 def metaCleaning(data, maxlength=15, minlength=4, cutoff=3, quality=0.05):
 	from numpy import mean,std,seterr
+
+	## Skip empty data:
+	if abs(mean(data)) < 0.01 and abs(std(data)) < 0.01: return data
+
 	seterr(invalid='raise')
 	length = maxlength
 
@@ -278,44 +293,66 @@ def printTable(filename, case):
 
 	print "--------------------------------------------------------------------------------------"
 	f.Close()
-def makeMultiPlot(filename, caselist, miny=0, maxy=5500, oname='', frag=False, logx=True, logy=False):
-	from ROOT import gROOT, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend
+def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(0,0), oname='', frag=False, logx=True, logy=False, tag=''):
+	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TPaveText
 	from operator import itemgetter
 
 	gROOT.SetBatch()
+	gStyle.SetOptStat(0)
 	f = TFile(filename)
 	if not f.IsOpen(): raise RuntimeError, "Cannot open "+filename+"\n"
+
 	canv = TCanvas("Plot", "Plot", 0, 0, 1024, 768)
 	canv.cd()
 	if logx: canv.SetLogx()
 	if logy: canv.SetLogy()
 	canv.SetGridx()
 	canv.SetGridy()
+	## Cosmetics
+	canv.DrawFrame(rangex[0], rangey[0], rangex[1], rangey[1])
+	axes = TH2D('axes', 'A', 10, rangex[0], rangex[1], 10, rangey[0], rangey[1])
+	axes.GetYaxis().SetTitle("Av. Throughput per RU (MB/s)")
+	axes.GetYaxis().SetTitleOffset(1.4)
+	axes.GetXaxis().SetTitleOffset(1.2)
+	if(frag):
+		axes.SetTitle("Throughput vs. Fragment Size")
+		axes.GetXaxis().SetTitle("Fragment Size (bytes)")
+	else:
+		axes.SetTitle("Throughput vs. Superfragment Size")
+		axes.GetXaxis().SetTitle("Superfragment Size (bytes)")
+	axes.Draw()
+	if len(tag) > 0:
+		pave = TPaveText(0.12, 0.75, 0.30, 0.88, 'NDC')
+		pave.SetTextFont(42)
+		pave.SetTextSize(0.06)
+		pave.SetFillStyle(1001)
+		pave.SetFillColor(0)
+		pave.SetBorderSize(0)
+		pave.AddText(tag)
+		pave.Draw()
 
 	graphs = []
 	configs = set()
 	for case in caselist:
-		graphs.append(getGraph(f, "d"+case, miny=miny, maxy=maxy, frag=frag))
-		configs.add(getConfig(case)[:2])
+		graphs.append(getGraph(f, case, frag=frag))
+		configs.add(getConfig(case.split('/').pop())[:2])
 
 	configs = sorted(configs, key=itemgetter(0))
-	leg = TLegend(0.35, 0.13, 0.88, 0.20+len(caselist)*0.05)
-	leg.SetFillStyle(1001);
-	leg.SetFillColor(0);
-	leg.SetTextFont(42);
-	leg.SetTextSize(0.035);
-	leg.SetBorderSize(0);
+	leg = TLegend(0.38, 0.13, 0.899, 0.20+len(caselist)*0.05)
+	leg.SetFillStyle(1001)
+	leg.SetFillColor(0)
+	leg.SetTextFont(42)
+	leg.SetTextSize(0.033)
+	leg.SetBorderSize(0)
 
 	colors = [1,2,3,4]
 
 	for n,graph in enumerate(graphs):
 		graph.SetLineColor(colors[n])
 		graph.SetMarkerColor(colors[n])
-		leg.AddEntry(graph, caselist[n], 'P')
-		if n == 0: graph.Draw("APL")
-		else: graph.Draw("PL")
 
-
+		leg.AddEntry(graph, caselist[n].split('/').pop(), 'P')
+		graph.Draw("PL")
 
 	if not frag:
 		func = get100kHzRateGraph()
@@ -324,7 +361,6 @@ def makeMultiPlot(filename, caselist, miny=0, maxy=5500, oname='', frag=False, l
 
 	else:
 		for n,c in enumerate(configs):
-			# print colors[n]
 			func = get100kHzRateGraph(c[0]/c[1], frag=frag)
 			func.SetLineColor(colors[n])
 			func.SetLineWidth(1)
@@ -347,7 +383,7 @@ def get100kHzRateGraph(nStreams=4, frag=False, xmax=100000):
 	f.SetLineColor(1)
 	f.SetLineStyle(2)
 	return f
-def getGraph(file, subdir, miny=0, maxy=5500, frag=False):
+def getGraph(file, subdir, frag=False):
 	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 	from array import array
 
@@ -364,28 +400,14 @@ def getGraph(file, subdir, miny=0, maxy=5500, frag=False):
 		## Loop on the tree
 		for	jentry in xrange(entries):
 			if t.GetEntry(jentry) <= 0: continue
-			# if int(t.ThroughPut) ==0 and int(t.ThroughPutE) == 0: continue
 			if(frag): g.SetPoint(step, t.FragSize,   t.ThroughPut)
 			else:     g.SetPoint(step, t.SuFragSize, t.ThroughPut)
 			g.SetPointError(     step,           0., t.ThroughPutE)
 			step+=1
 
-		g.GetYaxis().SetTitle("Av. Throughput per RU (MB/s)")
-		g.GetYaxis().SetTitleOffset(1.4)
-		if(frag):
-			g.SetTitle("Throughput vs. Fragment Size")
-			g.GetXaxis().SetTitle("Fragment Size (bytes)")
-		else:
-			g.SetTitle("Throughput vs. Superfragment Size")
-			g.GetXaxis().SetTitle("Superfragment Size (bytes)")
-
-		color = 4
 		g.SetMarkerStyle(20)
 		g.SetLineWidth(2)
-		g.SetLineColor(color)
-		g.SetMarkerColor(color)
 
-		g.GetYaxis().SetRangeUser(miny, maxy);
 		return g
 	except AttributeError as e:
 		print "Didn't find tree", treeloc, "in file", file
@@ -393,28 +415,32 @@ def getGraph(file, subdir, miny=0, maxy=5500, frag=False):
 
 def makeStandardPlots():
 	# rootfile = 'data/data_30_07_2013.root'
-	gevbfile = 'data/eFEROLs/gevb2g/dummyFerol.root'
-	evbfile  = 'data/eFEROLs/EvB.root'
-	outputdir = 'plots/'
-	# makeMultiPlot(rootfile, ['4x1x2_evb_r720_U28', '8x1x2_evb_r720_U28', '12x1x2_evb_r720_U28', '16x1x2_evb_r720_U28'], oname=outputdir+'x1x2_plot.pdf',     frag=True)
-	# makeMultiPlot(rootfile, ['4x1x2_evb_r720_U28', '8x1x2_evb_r720_U28', '12x1x2_evb_r720_U28', '16x1x2_evb_r720_U28'], oname=outputdir+'x1x2_plot_log.pdf', frag=True, logx=True)
-	# makeMultiPlot(rootfile, ['4x1x2_evb_r720_U28', '4x1x2_evb_r720_U31'],                                               oname=outputdir+'4x1x2_plot.pdf')
-	# makeMultiPlot(rootfile, ['8x1x2_evb_r720_U28', '8x1x2_evb_r720_U31'],                                               oname=outputdir+'8x1x2_plot.pdf')
+	# gevbfile = 'data/eFEROLs/gevb2g/dummyFerol.root'
+	# evbfile  = 'data/eFEROLs/EvB.root'
 
-	makeMultiPlot(gevbfile, ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_0.5_useLogNormal_true', '8x1x2_RMS_1_useLogNormal_true', '8x1x2_RMS_2_useLogNormal_true'],     oname=outputdir+'8x1x2_lognormals_gevb2g_frag.pdf',  frag=True)
-	makeMultiPlot(gevbfile, ['16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_0.5_useLogNormal_true', '16x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_2_useLogNormal_true'], oname=outputdir+'16x1x2_lognormals_gevb2g_frag.pdf', frag=True)
-	makeMultiPlot(evbfile,  ['8x1x4_RMS_0_useLogNormal_false', '8x1x4_RMS_0.5_useLogNormal_true', '8x1x4_RMS_1_useLogNormal_true', '8x1x4_RMS_2_useLogNormal_true'],     oname=outputdir+'8x1x4_lognormals_EvB_frag.pdf',     frag=True)
-	makeMultiPlot(evbfile,  ['16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_0.5_useLogNormal_true', '16x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_2_useLogNormal_true'], oname=outputdir+'16x1x4_lognormals_EvB_frag.pdf',    frag=True)
+	rootfile  = 'data/Aug7.root'
+	outputdir = 'plots/Aug7/'
+	prefix = 'data/Aug7/eFEROLs/'
+	rangex=(250, 17000)
 
-	makeMultiPlot(gevbfile, ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_1_useLogNormal_true'], oname=outputdir+'x1x2_lognormals_gevb2g_sufrag.pdf', frag=False)
-	makeMultiPlot(evbfile,  ['8x1x4_RMS_0_useLogNormal_false', '8x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_1_useLogNormal_true'], oname=outputdir+'x1x4_lognormals_EvB_sufrag.pdf',    frag=False)
-	makeMultiPlot(gevbfile, ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_1_useLogNormal_true'], oname=outputdir+'x1x2_lognormals_gevb2g_frag.pdf',   frag=True)
-	makeMultiPlot(evbfile,  ['8x1x4_RMS_0_useLogNormal_false', '8x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_1_useLogNormal_true'], oname=outputdir+'x1x4_lognormals_EvB_frag.pdf',      frag=True)
+	list_8x1x2_lognormals_gevb2g  = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_0.5_useLogNormal_true', '8x1x2_RMS_1_useLogNormal_true', '8x1x2_RMS_2_useLogNormal_true']]
+	list_16x1x2_lognormals_gevb2g = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_0.5_useLogNormal_true', '16x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_2_useLogNormal_true']]
 
-	# makeMultiPlot(evbfile,  ['16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_0.5_useLogNormal_true', '16x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_2_useLogNormal_true'], oname=outputdir+'16x1x4_lognormals_EvB_frag.pdf',    frag=True)
+	list_8x1x4_lognormals_EvB =  [ prefix + 'EvB/' + x for x in ['8x1x4_RMS_0_useLogNormal_false',  '8x1x4_RMS_0.5_useLogNormal_true', '8x1x4_RMS_1_useLogNormal_true', '8x1x4_RMS_2_useLogNormal_true']]
+	list_16x1x4_lognormals_EvB = [ prefix + 'EvB/' + x for x in ['16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_0.5_useLogNormal_true', '16x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_2_useLogNormal_true']]
 
-def makePlotsFromPlotCard(cardfile, rootfile):
-	pass
+	# makeMultiPlot(rootfile, list_8x1x2_lognormals_gevb2g,  oname=outputdir+'8x1x2_lognormals_gevb2g_frag.pdf',  frag=True, tag='gevb2g')
+	# makeMultiPlot(rootfile, list_16x1x2_lognormals_gevb2g, oname=outputdir+'16x1x2_lognormals_gevb2g_frag.pdf', frag=True, tag='gevb2g')
+	makeMultiPlot(rootfile, list_8x1x4_lognormals_EvB,  rangex=rangex, oname=outputdir+'8x1x4_lognormals_EvB_frag.pdf',  frag=True, tag="EvB")
+	makeMultiPlot(rootfile, list_16x1x4_lognormals_EvB, rangex=rangex, oname=outputdir+'16x1x4_lognormals_EvB_frag.pdf', frag=True, tag="EvB")
+
+	# list_x1x2_lognormals_gevb2g = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_1_useLogNormal_true']]
+	# makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g, oname=outputdir+'x1x2_lognormals_gevb2g_sufrag.pdf', frag=False)
+	# makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g, oname=outputdir+'x1x2_lognormals_gevb2g_frag.pdf',   frag=True)
+
+	# list_x1x4_lognormals_EvB = [ prefix + 'EvB/' + x for x in ['8x1x4_RMS_0_useLogNormal_false', '8x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_1_useLogNormal_true']]
+	# makeMultiPlot(rootfile, list_x1x4_lognormals_EvB, oname=outputdir+'x1x4_lognormals_EvB_sufrag.pdf',    frag=False)
+	# makeMultiPlot(rootfile, list_x1x4_lognormals_EvB, oname=outputdir+'x1x4_lognormals_EvB_frag.pdf',      frag=True)
 
 
 ##---------------------------------------------------------------------------------
@@ -452,6 +478,10 @@ if __name__ == "__main__":
 	                  action="store_true", dest="doCleaning",
 	                  help="Remove outliers in the rates when filling the trees")
 
+	parser.add_option("-v", "--verbose", default="1",
+	                  action="store", type="int", dest="verbose",
+	                  help="Verbose level [default: %default (semi-quiet)]")
+
 	parser.add_option("--maxy", default="5000",
 	                  action="store", type="float", dest="maxy",
 	                  help="Y axis range, maximum")
@@ -477,12 +507,8 @@ if __name__ == "__main__":
 
 	## Argument is a directory
 	if len(args) > 0 and os.path.isdir(args[0]):
-		if options.doCleaning:
-			processDirs(args[0])
-			exit(0)
-		else:
-			processDirs(args[0])
-			exit(0)
+		processDirs(args[0])
+		exit(0)
 
 	## Argument is a root file
 	if len(args) > 1 and os.path.isfile(args[0]) and os.path.splitext(args[0])[1] == '.root':
