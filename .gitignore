@@ -1,6 +1,6 @@
 *.pyc
 *~
 *.xlsx
-sandbox/
-plots/
-daq2val_documentation.txt
+/sandbox/
+/plots/
+/daq2val_documentation.txt
