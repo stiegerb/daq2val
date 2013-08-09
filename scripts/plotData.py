@@ -424,15 +424,11 @@ def getGraph(file, subdir, frag=False):
 		raise e
 
 def makeStandardPlots():
-	# rootfile = 'data/data_30_07_2013.root'
-	# gevbfile = 'data/eFEROLs/gevb2g/dummyFerol.root'
-	# evbfile  = 'data/eFEROLs/EvB.root'
-
-	# outputdir = 'plots/test/'
 	outputdir = 'plots/Aug8/'
 	rootfile  = 'data/Aug7.root'
 	prefix = 'data/Aug7/eFEROLs/'
 
+	## Case lists:
 	list_8x1x2_lognormals_gevb2g  = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_0.5_useLogNormal_true', '8x1x2_RMS_1_useLogNormal_true', '8x1x2_RMS_2_useLogNormal_true']]
 	list_16x1x2_lognormals_gevb2g = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_0.5_useLogNormal_true', '16x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_2_useLogNormal_true']]
 	list_x1x2_lognormals_gevb2g   = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_1_useLogNormal_true']]
@@ -445,7 +441,7 @@ def makeStandardPlots():
 	list_x1x4_lognormals_EvB      = [ prefix + 'EvB/' + x for x in ['8x1x4_RMS_0_useLogNormal_false', '8x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_1_useLogNormal_true']]
 
 
-
+	## Do the plots
 	makeMultiPlot(rootfile, list_8x1x2_lognormals_gevb2g,  oname=outputdir+'8x1x2_lognormals_gevb2g_frag.pdf',  frag=True,  tag='gevb2g')
 	makeMultiPlot(rootfile, list_16x1x2_lognormals_gevb2g, oname=outputdir+'16x1x2_lognormals_gevb2g_frag.pdf', frag=True,  tag='gevb2g')
 	makeMultiPlot(rootfile, list_8x1x4_lognormals_EvB,     oname=outputdir+'8x1x4_lognormals_EvB_frag.pdf',     frag=True,  tag="EvB")
@@ -465,19 +461,18 @@ if __name__ == "__main__":
 	from optparse import OptionParser
 	usage = """
 
-	First produce rootfile with tree from csv files with:
-	 	%prog [options] path/to/directory
+	First produce the ROOT file with tree from csv files with:
+	 	%prog [options] path/to/directory/
 	where directory contains subdirectories of cases.
+	If --doCleaning is given, the data is cleaned, and a cleaned .csv file is produced.
 	Afterwards, produce plots with:
 	 	%prog [options] path/to/file.root case1 case2 case3
 	or print a table to stdout with:
 	 	%prog [options] --print path/to/file.root case
 
-	To clean cvs files do either:
-		%prog --doCleaning path/to/file.csv
-	which will produce a file_clean.csv or process directories by:
-		%prog --doCleaning path/to/directory/
-	where it will look for subdirectories containing server.cvs files and clean those
+	Cases can be referred to by the path to the directory which contains the ROOT file,
+	e.g. data/Aug7/eFEROLs/EvB/32x2x4_RMS_0.5_useLogNormal_true
+	I tested until up to four cases per plot.
 	"""
 
 	parser = OptionParser(usage=usage)
@@ -498,15 +493,21 @@ if __name__ == "__main__":
 	                  action="store", type="int", dest="verbose",
 	                  help="Verbose level [default: %default (semi-quiet)]")
 
-	parser.add_option("--maxy", default="5000",
-	                  action="store", type="float", dest="maxy",
-	                  help="Y axis range, maximum")
 	parser.add_option("--miny", default="0",
 	                  action="store", type="float", dest="miny",
 	                  help="Y axis range, minimum")
-	parser.add_option("--frag", default=False,
+	parser.add_option("--maxy", default="5500",
+	                  action="store", type="float", dest="maxy",
+	                  help="Y axis range, maximum")
+	parser.add_option("--minx", default="250",
+	                  action="store", type="float", dest="minx",
+	                  help="X axis range, minimum")
+	parser.add_option("--maxx", default="17000",
+	                  action="store", type="float", dest="maxx",
+	                  help="X axis range, maximum")
+	parser.add_option("--frag", default=True,
 	                  action="store_true", dest="frag",
-	                  help="Plot vs fragment size instead of superfragment size")
+	                  help="Set to false to plot vs super fragment size instead of fragment size")
 	parser.add_option("--logx", default=True,
 	                  action="store_true", dest="logx",
 	                  help="Use logarithmic scale on x axis")
@@ -532,7 +533,7 @@ if __name__ == "__main__":
 			printTable(args[0], args[1])
 			exit(0)
 		else:
-			makeMultiPlot(args[0], args[1:], miny=options.miny, maxy=options.maxy, frag=options.frag, oname=options.outputName, logx=options.logx, logy=options.logy)
+			makeMultiPlot(args[0], args[1:], rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), frag=options.frag, oname=options.outputName, logx=options.logx, logy=options.logy)
 			exit(0)
 
 	## Argument is a csv file
