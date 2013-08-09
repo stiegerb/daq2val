@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+
+## Replace .pop() by [-1] ?
 import re
 import sys, os
 
@@ -185,8 +187,11 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	checked = False
 
 	LOWERLIMIT=32
-	UPPERLIMIT=16384
-	if nStreams==8: UPPERLIMIT*=2
+	UPPERLIMIT=16000
+	if nStreams/nRus==4:  UPPERLIMIT = 64000 ## This is only true for eFEROLs!
+	if nStreams/nRus==8:  UPPERLIMIT = 32000
+	if nStreams/nRus==12: UPPERLIMIT = 21000
+	if nStreams/nRus==16: UPPERLIMIT = 16000
 
 	### Adding up nBU lines of event rates
 	prev_size = 0
@@ -273,27 +278,32 @@ def printTable(filename, case):
 
 	f = TFile(filename)
 	if not f.IsOpen(): raise RuntimeError, "Cannot open "+filename+"\n"
-	treeloc = "d"+case+"/t"
-	t = gDirectory.Get(treeloc)
+	treeloc = case+"/t"
+	try:
+		t = gDirectory.Get(treeloc)
 
-	entries = t.GetEntriesFast()
+		entries = t.GetEntriesFast()
 
-	## Loop on the tree
-	print "--------------------------------------------------------------------------------------"
-	print "Case: " + case
-	print "--------------------------------------------------------------------------------------"
-	print "Superfrag. Size (B) : Fragment Size (B) : Av. Throughput (MB/s) :       Av. Rate     :"
-	print "--------------------------------------------------------------------------------------"
-	for	jentry in xrange(entries):
-		if t.GetEntry(jentry) <= 0: continue
-		# if t.BU+1==t.nBUs: ## Only check the sums
-			# deltaTP =
-		print "             %6d :            %6d :      %6.1f +- %6.1f :  %8.1f +- %6.1f" % \
-		(t.SuFragSize, t.FragSize, t.ThroughPut, t.ThroughPutE, t.AvRate, t.SigmaRate)
+		## Loop on the tree
+		print "--------------------------------------------------------------------------------------"
+		print "Case: " + case
+		print "--------------------------------------------------------------------------------------"
+		print "Superfrag. Size (B) : Fragment Size (B) : Av. Throughput (MB/s) :       Av. Rate     :"
+		print "--------------------------------------------------------------------------------------"
+		for	jentry in xrange(entries):
+			if t.GetEntry(jentry) <= 0: continue
+			# if t.BU+1==t.nBUs: ## Only check the sums
+				# deltaTP =
+			print "             %6d :            %6d :      %6.1f +- %6.1f :  %8.1f +- %6.1f" % \
+			(t.SuFragSize, t.FragSize, t.ThroughPut, t.ThroughPutE, t.AvRate, t.SigmaRate)
 
-	print "--------------------------------------------------------------------------------------"
+		print "--------------------------------------------------------------------------------------"
+	except AttributeError as e:
+		print "Didn't find tree", treeloc, "in file", file
+		raise e
+
 	f.Close()
-def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(0,0), oname='', frag=False, logx=True, logy=False, tag=''):
+def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname='', frag=False, logx=True, logy=False, tag=''):
 	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TPaveText
 	from operator import itemgetter
 
@@ -392,8 +402,8 @@ def getGraph(file, subdir, frag=False):
 	try:
 		t = gDirectory.Get(treeloc)
 		entries = t.GetEntriesFast()
-		nsteps = t.GetEntries()
-		step = 0
+		nsteps  = t.GetEntries()
+		step    = 0
 
 		g = TGraphErrors(nsteps)
 
@@ -418,29 +428,35 @@ def makeStandardPlots():
 	# gevbfile = 'data/eFEROLs/gevb2g/dummyFerol.root'
 	# evbfile  = 'data/eFEROLs/EvB.root'
 
+	# outputdir = 'plots/test/'
+	outputdir = 'plots/Aug8/'
 	rootfile  = 'data/Aug7.root'
-	outputdir = 'plots/Aug7/'
 	prefix = 'data/Aug7/eFEROLs/'
-	rangex=(250, 17000)
 
 	list_8x1x2_lognormals_gevb2g  = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_0.5_useLogNormal_true', '8x1x2_RMS_1_useLogNormal_true', '8x1x2_RMS_2_useLogNormal_true']]
 	list_16x1x2_lognormals_gevb2g = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_0.5_useLogNormal_true', '16x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_2_useLogNormal_true']]
+	list_x1x2_lognormals_gevb2g   = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_1_useLogNormal_true']]
 
-	list_8x1x4_lognormals_EvB =  [ prefix + 'EvB/' + x for x in ['8x1x4_RMS_0_useLogNormal_false',  '8x1x4_RMS_0.5_useLogNormal_true', '8x1x4_RMS_1_useLogNormal_true', '8x1x4_RMS_2_useLogNormal_true']]
-	list_16x1x4_lognormals_EvB = [ prefix + 'EvB/' + x for x in ['16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_0.5_useLogNormal_true', '16x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_2_useLogNormal_true']]
+	list_8x1x4_lognormals_EvB     = [ prefix + 'EvB/' + x for x in ['8x1x4_RMS_0_useLogNormal_false',  '8x1x4_RMS_0.5_useLogNormal_true', '8x1x4_RMS_1_useLogNormal_true', '8x1x4_RMS_2_useLogNormal_true']]
+	list_16x1x4_lognormals_EvB    = [ prefix + 'EvB/' + x for x in ['16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_0.5_useLogNormal_true', '16x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_2_useLogNormal_true']]
+	list_16x2x4_lognormals_EvB    = [ prefix + 'EvB/' + x for x in ['16x2x4_RMS_0_useLogNormal_false', '16x2x4_RMS_0.5_useLogNormal_true', '16x2x4_RMS_1_useLogNormal_true', '16x2x4_RMS_2_useLogNormal_true']]
 
-	# makeMultiPlot(rootfile, list_8x1x2_lognormals_gevb2g,  oname=outputdir+'8x1x2_lognormals_gevb2g_frag.pdf',  frag=True, tag='gevb2g')
-	# makeMultiPlot(rootfile, list_16x1x2_lognormals_gevb2g, oname=outputdir+'16x1x2_lognormals_gevb2g_frag.pdf', frag=True, tag='gevb2g')
-	makeMultiPlot(rootfile, list_8x1x4_lognormals_EvB,  rangex=rangex, oname=outputdir+'8x1x4_lognormals_EvB_frag.pdf',  frag=True, tag="EvB")
-	makeMultiPlot(rootfile, list_16x1x4_lognormals_EvB, rangex=rangex, oname=outputdir+'16x1x4_lognormals_EvB_frag.pdf', frag=True, tag="EvB")
+	list_32x2x4_lognormals_EvB    = [ prefix + 'EvB/' + x for x in ['32x2x4_RMS_0_useLogNormal_false', '32x2x4_RMS_0.5_useLogNormal_true', '32x2x4_RMS_1_useLogNormal_true', '32x2x4_RMS_2_useLogNormal_true']]
+	list_x1x4_lognormals_EvB      = [ prefix + 'EvB/' + x for x in ['8x1x4_RMS_0_useLogNormal_false', '8x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_1_useLogNormal_true']]
 
-	# list_x1x2_lognormals_gevb2g = [ prefix + 'gevb2g/dummyFerol/' + x for x in ['8x1x2_RMS_0_useLogNormal_false', '8x1x2_RMS_1_useLogNormal_true', '16x1x2_RMS_0_useLogNormal_false', '16x1x2_RMS_1_useLogNormal_true']]
-	# makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g, oname=outputdir+'x1x2_lognormals_gevb2g_sufrag.pdf', frag=False)
-	# makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g, oname=outputdir+'x1x2_lognormals_gevb2g_frag.pdf',   frag=True)
 
-	# list_x1x4_lognormals_EvB = [ prefix + 'EvB/' + x for x in ['8x1x4_RMS_0_useLogNormal_false', '8x1x4_RMS_1_useLogNormal_true', '16x1x4_RMS_0_useLogNormal_false', '16x1x4_RMS_1_useLogNormal_true']]
-	# makeMultiPlot(rootfile, list_x1x4_lognormals_EvB, oname=outputdir+'x1x4_lognormals_EvB_sufrag.pdf',    frag=False)
-	# makeMultiPlot(rootfile, list_x1x4_lognormals_EvB, oname=outputdir+'x1x4_lognormals_EvB_frag.pdf',      frag=True)
+
+	makeMultiPlot(rootfile, list_8x1x2_lognormals_gevb2g,  oname=outputdir+'8x1x2_lognormals_gevb2g_frag.pdf',  frag=True,  tag='gevb2g')
+	makeMultiPlot(rootfile, list_16x1x2_lognormals_gevb2g, oname=outputdir+'16x1x2_lognormals_gevb2g_frag.pdf', frag=True,  tag='gevb2g')
+	makeMultiPlot(rootfile, list_8x1x4_lognormals_EvB,     oname=outputdir+'8x1x4_lognormals_EvB_frag.pdf',     frag=True,  tag="EvB")
+	makeMultiPlot(rootfile, list_16x1x4_lognormals_EvB,    oname=outputdir+'16x1x4_lognormals_EvB_frag.pdf',    frag=True,  tag="EvB")
+	makeMultiPlot(rootfile, list_16x2x4_lognormals_EvB,    oname=outputdir+'16x2x4_lognormals_EvB_frag.pdf',    frag=True,  tag="EvB")
+	makeMultiPlot(rootfile, list_32x2x4_lognormals_EvB,    oname=outputdir+'32x2x4_lognormals_EvB_frag.pdf',    frag=True,  tag="EvB")
+	makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g,   oname=outputdir+'x1x2_lognormals_gevb2g_frag.pdf',   frag=True,  tag='gevb2g')
+	makeMultiPlot(rootfile, list_x1x4_lognormals_EvB,      oname=outputdir+'x1x4_lognormals_EvB_frag.pdf',      frag=True,  tag='EvB')
+
+	makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g,   rangex=(1500, 150000), oname=outputdir+'x1x2_lognormals_gevb2g_sufrag.pdf', frag=False, tag='gevb2g')
+	makeMultiPlot(rootfile, list_x1x4_lognormals_EvB,      rangex=(1500, 150000), oname=outputdir+'x1x4_lognormals_EvB_sufrag.pdf',    frag=False, tag='EvB')
 
 
 ##---------------------------------------------------------------------------------
