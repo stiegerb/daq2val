@@ -581,6 +581,28 @@ class daq2Control(object):
 
 ##########################################
 ## Interface:
+def testBuilding(d2c, minevents=1000, verbose=0):
+	if verbose>1: print separator
+	if verbose>1: print 'Testing event building'
+	eventCounter = []
+	for n,bu in enumerate(d2c._BUs):
+		if options.useEVB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
+		else:              nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong')
+		eventCounter.append(nEvts)
+		if verbose>1: print bu.name, 'number of events built: ', nEvts
+	print separator
+
+	totEvents = 0
+	for evtCount in eventCounter:
+		if evtCount < minevents:
+			if verbose>0: print 'Test failed, built less than %d events!' % minevents
+			return -1
+		else:
+			totEvents += evtCount
+
+	if verbose>0: print 'Test successful (built %d events), continuing...' % totEvents
+	return totEvents
+
 def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10):
 	"""Usage: runTest(configfile, fragSize)
 Run a test reading the setup from configfile and using fragment size fragSize"""
@@ -594,37 +616,55 @@ Run a test reading the setup from configfile and using fragment size fragSize"""
 	print separator
 	d2c.sleep(10)
 
-	## For example:
-	# d2c.changeSize(2048)
-	# d2c.sleep(duration)
-	#
-	# d2c.changeSize(1024, fragSizeStd=1024) ## With a std dev for the lognormal generator (default is 0)
-	# d2c.sleep(duration)
-	#
-	# d2c.changeSize(1024, rate=100)         ## With a limited rate in kHz (default is maximum rate)
-	# d2c.sleep(duration)
-
-	print 'Testing event building'
-	eventCounter = []
-	for n,bu in enumerate(d2c._BUs):
-		if options.useEVB: nEvts = d2c.getParam(bu.host, bu.port, 'evb::BU',    str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
-		else:      nEvts = d2c.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'eventCounter',  'xsd:unsignedLong')
-		eventCounter.append(nEvts)
-		print bu.name, 'number of events built: ', nEvts
-	print separator
-
-	if eventCounter[0] < 1000:
-		print 'Test failed, built less than 1000 events!'
+	if testBuilding(d2c, verbose=1) < 1:
 		d2c.stopXDAQs()
-		return
-	else: 'Test successful, continuing...'
-	print separator
+		exit(-1)
 
 	print "Building events ..."
 	d2c.sleep(duration)
 	d2c.getResults()
 
 	# raw_input("Press Enter to stop the XDAQs...")
+	print separator
+	d2c.stopXDAQs()
+
+def getListOfSizes(maxSize, minSize=256):
+	steps = [ n*minSize for n in xrange(1, 1000) if n*minSize <= 8192] ## multiples of minSize up to 8192
+	if maxSize > 9000: steps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
+	return steps
+
+def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10):
+	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
+Run a test reading the setup from configfile and using fragment size fragSize"""
+	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
+	print separator
+	d2c.setup(configfile)
+
+	d2c.stopXDAQs()
+	d2c.start(minSize)
+
+	print separator
+	d2c.sleep(10)
+
+	if testBuilding(d2c, verbose=1) < 1:
+		d2c.stopXDAQs()
+		exit(-1)
+
+
+	steps = getListOfSizes(nSteps, minSize, maxSize)
+	for step in steps:
+		d2c.changeSize(step)
+		print "Building events at fragment size %d for %d seconds..." % (step, duration)
+		d2c.sleep(duration)
+
+	# d2c.changeSize(1024, fragSizeStd=1024) ## With a std dev for the lognormal generator (default is 0)
+	# d2c.sleep(duration)
+	#
+	# d2c.changeSize(1024, rate=100)         ## With a limited rate in kHz (default is maximum rate)
+	# d2c.sleep(duration)
+
+	d2c.getResults()
+
 	print separator
 	d2c.stopXDAQs()
 
@@ -640,23 +680,35 @@ if __name__ == "__main__":
 	usage = """ %prog [options] --runTest config.xml fragsize	"""
 
 	parser = OptionParser(usage=usage)
-	#                   action="store", type="string", dest="filename",
-	#                   help="input .csv file [default: %default]")
 	parser.add_option("--runTest", default=False,
 	                  action="store_true", dest="runTest",
 	                  help="Run a test setup, needs two arguments: config and fragment size")
+	parser.add_option("--runScan", default=True,
+	                  action="store_true", dest="runScan",
+	                  help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
 	parser.add_option("--useEVB", default=False,
 	                  action="store_true", dest="useEVB",
 	                  help="Set true to use EvB instead of gevb [default is gevb]")
 	parser.add_option("-d", "--duration", default=30,
 	                  action="store", type="int", dest="duration",
-	                  help="Test duration in seconds, [default: %default s]")
+	                  help="Duration of a single step in seconds, [default: %default s]")
+	parser.add_option("--maxSize", default=16000,
+	                  action="store", type="int", dest="maxSize",
+	                  help="Maximum fragment size of a scan in bytes, [default: %default]")
+	parser.add_option("--minSize", default=256,
+	                  action="store", type="int", dest="minSize",
+	                  help="Minimum fragment size of a scan in bytes, [default: %default]")
+	parser.add_option("--nSteps", default=100,
+	                  action="store", type="int", dest="nSteps",
+	                  help="Number of steps between minSize and maxSize, [default: %default]")
+
 	parser.add_option("--test", default=False,
 	                  action="store_true", dest="test",
 	                  help="Just run the test method and quit (for debugging)")
 	parser.add_option("--dry", default=False,
 	                  action="store_true", dest="dry",
 	                  help="Just print the commands without sending anything")
+
 	parser.add_option("--kill", default=False,
 	                  action="store_true", dest="kill",
 	                  help="Stop all the XDAQ launchers and exit")
@@ -671,6 +723,8 @@ if __name__ == "__main__":
 	                  help="Use a symbolmap different from the one set in the environment")
 	(options, args) = parser.parse_args()
 
+
+	# raw_input("Press Enter to stop the XDAQs...")
 
 	if options.kill:
 		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
@@ -695,6 +749,10 @@ if __name__ == "__main__":
 
 	if options.runTest and len(args) > 1:
 		runTest(args[0], int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration)
+		exit(0)
+
+	if options.runScan and len(args) > 3:
+		runScan(args[0], options.nSteps, options.minSize, options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration)
 		exit(0)
 
 	parser.print_help()
