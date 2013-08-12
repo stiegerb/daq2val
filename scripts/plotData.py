@@ -43,7 +43,13 @@ def fillTreeForDir(treefile, subdir, files):
 		print feedback
 
 	customFactor = 1
+
+
+	############################################
 	if '16s8fx1x2' in subdir: customFactor = 2
+	############################################
+
+
 	fillTree(subdir+'/server.csv', treefile, subdir, nstreams, nbus, nrus, rms, doCleaning=options.doCleaning, customFactor=customFactor)
 	if options.doCleaning:
 		cleanFile(subdir+'/server.csv')
@@ -142,20 +148,19 @@ def cleanFilesInDir(subdir):
 
 ##---------------------------------------------------------------------------------
 ## Storing information in a ROOT tree for later plotting
-##  (this is where the magic happens)
+##  (this is where the meat is)
 def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=128, doCleaning=False, customFactor=1):
 	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 	from array import array
 	from numpy import mean,std
 	from math import sqrt
 	from logNormalTest import averageFractionSize
-	# def averageFractionSize(mean, sigma, lowerLimit, upperLimit):
 
 	f = open(filename,'r')
 	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
 
 
-	## Process .cvs files first
+	## Process .cvs file first
 	data = {} ## store everything in this dictionary of size -> rate
 	for line in f:
 		if len(line.strip()) == 0 or line.strip()[0] == '#': continue
@@ -229,6 +234,9 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 		## Extract fragment size / super fragment size
 		if added: ## fragmentsize
 			fragsize[0] = float(size)
+			############################################
+			if customFactor != 1: fragsize[0] *= customFactor
+			############################################
 			if rms is not None and rms != 0.0:
 				fragsize[0] = averageFractionSize(fragsize[0], rms*fragsize[0], LOWERLIMIT, UPPERLIMIT)
 
@@ -237,15 +245,14 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 
 		else: ## superfragmentsize
 			eventsize = float(size)
+			############################################
+			if customFactor != 1: eventsize *= customFactor
+			############################################
 			fragsize[0]    = eventsize/nStreams
 			sufragsize[0]  = eventsize/nRus
 			if rms is not None and rms != 0.0:
 				fragsize[0] = averageFractionSize(eventsize/nStreams, rms*eventsize/nStreams, LOWERLIMIT, UPPERLIMIT)
 				sufragsize[0] = fragsize[0]*nStreams/nRus
-
-		if customFactor != 1:
-			fragsize[0]   *= customFactor
-			sufragsize[0] *= customFactor
 
 
 		avrate[0]      = mean(data[size])
@@ -254,143 +261,6 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 		throughputE[0] = sufragsize[0]*stdrate[0]/1e6
 
 		t.Fill()
-
-	of.Write()
-	of.Close()
-	f.close()
-def fillTreeOriginal(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=128, doCleaning=False):
-	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
-	from array import array
-	from numpy import mean,std
-	from math import sqrt
-	from logNormalTest import averageFractionSize
-	# def averageFractionSize(mean, sigma, lowerLimit, upperLimit):
-
-	f = open(filename,'r')
-	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
-
-	of = TFile(treefile, 'update')
-	if not of.GetDirectory(dirname):
-		of.mkdir(dirname)
-	of.cd(dirname)
-
-	t = TTree('t', 'daq2val tree')
-
-	fragsize    = array('f', [0])
-	sufragsize  = array('f', [0])
-	throughput  = array('f', [0])
-	throughputE = array('f', [0])
-	nruns       = array('i', [0])
-	maxruns     = 200
-	rate        = array('i', maxruns*[0])
-	avrate      = array('f', [0])
-	stdrate     = array('f', [0])
-	nfes        = array('i', [0])
-	nbus        = array('i', [0])
-	nrus        = array('i', [0])
-
-	t.Branch('FragSize',    fragsize,    'FragSize/F')
-	t.Branch('SuFragSize',  sufragsize,  'SuFragSize/F')
-	t.Branch('nRuns',       nruns,       'nRuns/I')
-	t.Branch('Rate',        rate,        'Rate[nRuns]/I')
-	t.Branch('AvRate',      avrate,      'AvRate/F')
-	t.Branch('SigmaRate',   stdrate,     'SigmaRate/F')
-	t.Branch('ThroughPut',  throughput,  'ThroughPut/F')
-	t.Branch('ThroughPutE', throughputE, 'ThroughPutE/F')
-	t.Branch('nFEROLs',     nfes,        'nFEROLs/I')
-	t.Branch('nBUs',        nbus,        'nBUs/I')
-	t.Branch('nRUs',        nrus,        'nRUs/I')
-
-	sufragsize[0] = -1
-
-	nfes[0] = nStreams
-	nbus[0] = nBus
-	nrus[0] = nRus
-
-	added   = False
-	checked = False
-
-	# LOWERLIMIT=32
-	LOWERLIMIT=24
-	UPPERLIMIT=16000
-	if nStreams/nRus==4:  UPPERLIMIT = 64000 ## This is only true for eFEROLs!
-	if nStreams/nRus==8:  UPPERLIMIT = 32000
-	if nStreams/nRus==12: UPPERLIMIT = 21000
-	if nStreams/nRus==16: UPPERLIMIT = 16000
-
-	### Adding up nBU lines of event rates
-	prev_size = 0
-	prev_rate = []
-
-	for line in f:
-		if len(line.strip()) == 0 or line.strip()[0] == '#': continue
-		spline = line.replace("\n","").split(",")
-
-		## Fill the tree variables
-		nruns[0] = len(spline)-1
-		if nruns[0]>maxruns: raise RuntimeError("Number of runs (%d) exceeds maximum (%d). Increase maxruns!\n"%(len(spline[1:]),maxruns))
-
-		rate = map(lambda x: int(float(x)), spline[1:])
-		if doCleaning: rate = metaCleaning(rate)
-		# if doCleaning: rate = cleanData(rate)
-
-		## Two cases of output files (Grrrr):
-		##  1. beginning of line is super frag size, and BU's are not added
-		##  2. beginning of line is fragment size, and BU's are already added up
-
-		if not checked: ## only do this for the first time
-			checked = True
-			if int(spline[0])//nStreams < startfragsize: added = True
-			else: added = False
-
-		if added: ## fragmentsize, BUs added
-			fragsize[0]    = float(spline[0])
-			if abs(mean(rate)) < 0.01 and abs(std(rate)) < 0.01: continue ## skip empty lines
-
-			if rms is not None and rms != 0.0:
-				fragsize[0] = averageFractionSize(fragsize[0], rms*fragsize[0], LOWERLIMIT, UPPERLIMIT)
-
-			eventsize = nStreams*fragsize[0]
-
-			avrate[0]      = mean(rate)
-			stdrate[0]     = std(rate)
-			# fragsize[0]    = eventsize/nStreams
-			sufragsize[0]  = eventsize/nRus
-			throughput[0]  = sufragsize[0]*avrate[0]/1e6 ## in MB/s
-			throughputE[0] = sufragsize[0]*stdrate[0]/1e6
-
-			t.Fill()
-			continue
-
-		else: ## superfragmentsize, BUs not added
-			eventsize = float(spline[0])
-			prev_rate = rate
-			for i in xrange(nBus-1):
-				line = next(f, 'EOF')
-				if len(line.strip()) == 0 or line.strip()[0] == '#': line = next(f, 'EOF')
-				spline = line.replace("\n","").split(",")
-				rate = map(lambda x: int(float(x)), spline[1:])
-				if doCleaning: rate = metaCleaning(rate)
-				# if doCleaning: rate = cleanData(rate)
-
-				prev_rate = map(lambda a,b:a+b, prev_rate, rate) ## add up the elements of the two rate lists
-
-			avrate[0]      = mean(prev_rate)
-			stdrate[0]     = std(prev_rate)
-			fragsize[0]    = eventsize/nStreams
-			sufragsize[0]  = eventsize/nRus
-
-			if rms is not None and rms != 0.0:
-				fragsize[0] = averageFractionSize(eventsize/nStreams, rms*eventsize/nStreams, LOWERLIMIT, UPPERLIMIT)
-				sufragsize[0] = fragsize[0]*nStreams/nRus
-
-			throughput[0]  = sufragsize[0]*avrate[0]/1e6 ## in MB/s
-			throughputE[0] = sufragsize[0]*stdrate[0]/1e6
-
-			prev_size = eventsize
-			prev_rate      = rate
-
-			t.Fill()
 
 	of.Write()
 	of.Close()
