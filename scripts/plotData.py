@@ -13,8 +13,12 @@ def getConfig(string):
 	string = string.split('_')
 	case = string[0].split('x')
 	rms = None
-	if re.match(r'([0-9]+)s[0-9]+f', case[0]):
-		nstreams = int(re.match(r'([0-9]+)s[0-9]+f', case[0]).group(1))
+	strperfrl = 1
+	pattern = re.compile(r'([0-9]+)s([0-9]+)f')
+	if pattern.match(case[0]):
+		nstreams = int(pattern.match(case[0]).group(1))
+		if nstreams > int(pattern.match(case[0]).group(2)): strperfrl = 2
+
 	else: nstreams = int(case[0])
 	nrus = int(case[1]) ## Introduces notation: no _ before the trailing tags
 	nbus = int(case[2])
@@ -27,18 +31,20 @@ def getConfig(string):
 				print 'RMS needs to be a floating point number'
 				rms = None
 
-	return nstreams, nrus, nbus, rms
+	return nstreams, nrus, nbus, rms, strperfrl
 def fillTreeForDir(treefile, subdir, files):
 	if options.verbose > 0: print "  ... processing", subdir
 	if not 'server.csv' in files: return
 
-	nstreams, nrus, nbus, rms = getConfig(subdir.split('/').pop())
+	nstreams, nrus, nbus, rms, strperfrl = getConfig(subdir.split('/').pop())
 	if options.verbose > 1:
 		feedback = "    with %2s streams, %1d readout units, and %1d builder units." % (nstreams, nrus, nbus)
 		if rms is not None: feedback += " RMS is %4.2f" % rms
 		print feedback
 
-	fillTree(subdir+'/server.csv', treefile, subdir, nstreams, nbus, nrus, rms, doCleaning=options.doCleaning)
+	customFactor = 1
+	if '16s8fx1x2' in subdir: customFactor = 2
+	fillTree(subdir+'/server.csv', treefile, subdir, nstreams, nbus, nrus, rms, doCleaning=options.doCleaning, customFactor=customFactor)
 	if options.doCleaning:
 		cleanFile(subdir+'/server.csv')
 
@@ -63,30 +69,32 @@ def cleanData(data, step=1, length=4, cutoff=3, quality=0.05):
 	# 1. find a stretch of data where the std is less than X% of the mean, store that mean/std
 	# 2. loop on the data and replace values more than 10% off with the mean of the clean stretch
 	seterr(invalid='raise')
-	if mean(data) > 0 and std(data)/mean(data) > quality:
-		clean_data = []
-		pos = 0
-		stretch = data[:length]
-		try:
-			# while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality and pos+length < len(data):
-			while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality:
-				# print stretch
-				# print pos, len(data)
-				pos += step
-				stretch = data[pos:length+pos]
-		except FloatingPointError, KeyError:
-			# print "Didn't find a clean stretch in:"
-			# print data
-			return data
+	found_clean_stretch = False
 
-		for r in data:
-			if abs(r-mean(stretch)) > cutoff*std(stretch):
-				clean_data.append(mean(stretch))
-			else: clean_data.append(r)
+	if mean(data) < 0.01 or std(data)/mean(data) < quality: return data
 
-		# print std(clean_data)/mean(clean_data)
-		return clean_data
-	else: return data
+	pos, stretch = 0, data[:length]
+	try:
+		# while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality and pos+length < len(data):
+		while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality and pos+length < len(data):
+			if options.verbose > 4: print stretch
+			if options.verbose > 4: print pos, pos+length, std(stretch)/mean(stretch)
+			pos += step
+			stretch = data[pos:length+pos]
+	except FloatingPointError, KeyError:
+		# print "Didn't find a clean stretch in:"
+		# print data
+		return data
+
+	if not std(stretch)/mean(stretch) <= quality: return data
+
+	clean_data = []
+	for r in data:
+		if abs(r-mean(stretch)) > cutoff*std(stretch):
+			clean_data.append(mean(stretch))
+		else: clean_data.append(r)
+
+	return clean_data
 def metaCleaning(data, maxlength=15, minlength=4, cutoff=3, quality=0.05):
 	from numpy import mean,std,seterr
 
@@ -100,6 +108,7 @@ def metaCleaning(data, maxlength=15, minlength=4, cutoff=3, quality=0.05):
 		while std(data)/mean(data) > quality and length >= minlength:
 			data = cleanData(data, step=1, length=length, cutoff=cutoff, quality=quality)
 			length -= 1
+
 	except FloatingPointError, KeyError:
 		print "Didn't find a clean stretch in:", data
 		return data
@@ -134,7 +143,122 @@ def cleanFilesInDir(subdir):
 ##---------------------------------------------------------------------------------
 ## Storing information in a ROOT tree for later plotting
 ##  (this is where the magic happens)
-def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=128, doCleaning=False):
+def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=128, doCleaning=False, customFactor=1):
+	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
+	from array import array
+	from numpy import mean,std
+	from math import sqrt
+	from logNormalTest import averageFractionSize
+	# def averageFractionSize(mean, sigma, lowerLimit, upperLimit):
+
+	f = open(filename,'r')
+	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
+
+
+	## Process .cvs files first
+	data = {} ## store everything in this dictionary of size -> rate
+	for line in f:
+		if len(line.strip()) == 0 or line.strip()[0] == '#': continue
+		spline = line.replace("\n","").split(",")
+
+		rate = map(lambda x: int(float(x)), spline[1:])
+		if doCleaning: rate = metaCleaning(rate)
+
+		if int(spline[0]) not in data.keys():
+			data[int(spline[0])] = rate
+		else:
+			prev_rate = data[int(spline[0])]
+			data[int(spline[0])] = map(lambda a,b:a+b, prev_rate, rate)
+
+
+	of = TFile(treefile, 'update')
+	if not of.GetDirectory(dirname):
+		of.mkdir(dirname)
+	of.cd(dirname)
+
+	t = TTree('t', 'daq2val tree')
+
+	fragsize    = array('f', [0])
+	sufragsize  = array('f', [0])
+	throughput  = array('f', [0])
+	throughputE = array('f', [0])
+	avrate      = array('f', [0])
+	stdrate     = array('f', [0])
+	nfes        = array('i', [0])
+	nbus        = array('i', [0])
+	nrus        = array('i', [0])
+
+	t.Branch('FragSize',    fragsize,    'FragSize/F')
+	t.Branch('SuFragSize',  sufragsize,  'SuFragSize/F')
+	t.Branch('AvRate',      avrate,      'AvRate/F')
+	t.Branch('SigmaRate',   stdrate,     'SigmaRate/F')
+	t.Branch('ThroughPut',  throughput,  'ThroughPut/F')
+	t.Branch('ThroughPutE', throughputE, 'ThroughPutE/F')
+	t.Branch('nFEROLs',     nfes,        'nFEROLs/I')
+	t.Branch('nBUs',        nbus,        'nBUs/I')
+	t.Branch('nRUs',        nrus,        'nRUs/I')
+
+	nfes[0] = nStreams
+	nbus[0] = nBus
+	nrus[0] = nRus
+
+	added   = False
+	checked = False
+
+	# LOWERLIMIT=32
+	LOWERLIMIT=24
+	UPPERLIMIT=16000
+	if nStreams/nRus==4:  UPPERLIMIT = 64000 ## This is only true for eFEROLs!
+	if nStreams/nRus==8:  UPPERLIMIT = 32000
+	if nStreams/nRus==12: UPPERLIMIT = 21000
+	if nStreams/nRus==16: UPPERLIMIT = 16000
+
+	for size in sorted(data.keys()):
+		if abs(mean(data[size])) < 0.01 and abs(std(data[size])) < 0.01: continue ## skip empty lines
+
+		## Fill the tree variables
+		## Two cases of output files (Grrrr):
+		##  1. beginning of line is super frag size
+		##  2. beginning of line is fragment size
+
+		if not checked: ## only do this for the first time
+			checked = True
+			if int(size)//nStreams < startfragsize: added = True
+			else: added = False
+
+		## Extract fragment size / super fragment size
+		if added: ## fragmentsize
+			fragsize[0] = float(size)
+			if rms is not None and rms != 0.0:
+				fragsize[0] = averageFractionSize(fragsize[0], rms*fragsize[0], LOWERLIMIT, UPPERLIMIT)
+
+			eventsize = nStreams*fragsize[0]
+			sufragsize[0]  = eventsize/nRus
+
+		else: ## superfragmentsize
+			eventsize = float(size)
+			fragsize[0]    = eventsize/nStreams
+			sufragsize[0]  = eventsize/nRus
+			if rms is not None and rms != 0.0:
+				fragsize[0] = averageFractionSize(eventsize/nStreams, rms*eventsize/nStreams, LOWERLIMIT, UPPERLIMIT)
+				sufragsize[0] = fragsize[0]*nStreams/nRus
+
+		if customFactor != 1:
+			fragsize[0]   *= customFactor
+			sufragsize[0] *= customFactor
+
+
+		avrate[0]      = mean(data[size])
+		stdrate[0]     = std(data[size])
+		throughput[0]  = sufragsize[0]*avrate[0]/1e6 ## in MB/s
+		throughputE[0] = sufragsize[0]*stdrate[0]/1e6
+
+		t.Fill()
+
+	of.Write()
+	of.Close()
+	f.close()
+def fillTreeOriginal(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=128, doCleaning=False):
 	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 	from array import array
 	from numpy import mean,std
@@ -186,7 +310,8 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	added   = False
 	checked = False
 
-	LOWERLIMIT=32
+	# LOWERLIMIT=32
+	LOWERLIMIT=24
 	UPPERLIMIT=16000
 	if nStreams/nRus==4:  UPPERLIMIT = 64000 ## This is only true for eFEROLs!
 	if nStreams/nRus==8:  UPPERLIMIT = 32000
@@ -299,7 +424,7 @@ def printTable(filename, case):
 
 		print "--------------------------------------------------------------------------------------"
 	except AttributeError as e:
-		print "Didn't find tree", treeloc, "in file", file
+		print "Didn't find tree", treeloc, "in file", filename
 		raise e
 
 	f.Close()
@@ -424,6 +549,28 @@ def getGraph(file, subdir, frag=False):
 		raise e
 
 def makeStandardPlots():
+	outputdir = 'plots/Aug12/'
+	rootfile  = 'data/Aug12.root'
+	prefix = 'data/Aug12/FEROLs/'
+
+	## Case lists:
+	list_8s8fx1x2_lognormals_gevb2g  = ['data/Aug12/8s8fx1x2_ptfrl'] + [ prefix + 'gevb2g/' + x for x in ['8s8fx1x2_RMS_0.5', '8s8fx1x2_RMS_1', '8s8fx1x2_RMS_2']]
+
+	list_16s8fx1x2_lognormals_gevb2g   = [ prefix + 'gevb2g/' + x for x in ['16s8fx1x2_RMS_0', '16s8fx1x2_RMS_0.5', '16s8fx1x2_RMS_1', '16s8fx1x2_RMS_2']]
+	list_16s16fx2x2_lognormals_gevb2g  = [ prefix + 'gevb2g/' + x for x in ['16s16fx2x2_RMS_0', '16s16fx2x2_RMS_0.5', '16s16fx2x2_RMS_1', '16s16fx2x2_RMS_2']]
+	list_32s16fx4x4_lognormals_gevb2g  = [ prefix + 'gevb2g/' + x for x in ['32s16fx4x4_c6220_RMS_0', '32s16fx4x4_c6220_RMS_0.5', '32s16fx4x4_c6220_RMS_1', '32s16fx4x4_c6220_RMS_2']]
+
+
+	## Do the plots
+	makeMultiPlot(rootfile, list_8s8fx1x2_lognormals_gevb2g,   oname=outputdir+'8s8fx1x2_lognormals_gevb2g_frag.pdf',   frag=True,  tag='gevb2g')
+	makeMultiPlot(rootfile, list_16s8fx1x2_lognormals_gevb2g,  oname=outputdir+'16s8fx1x2_lognormals_gevb2g_frag.pdf',  frag=True,  tag='gevb2g')
+	makeMultiPlot(rootfile, list_16s16fx2x2_lognormals_gevb2g, oname=outputdir+'16s16fx2x2_lognormals_gevb2g_frag.pdf', frag=True,  tag='gevb2g')
+	makeMultiPlot(rootfile, list_32s16fx4x4_lognormals_gevb2g, oname=outputdir+'32s16fx4x4_lognormals_gevb2g_frag.pdf', frag=True,  tag='gevb2g')
+
+	# makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g,   rangex=(1500, 150000), oname=outputdir+'x1x2_lognormals_gevb2g_sufrag.pdf', frag=False, tag='gevb2g')
+	# makeMultiPlot(rootfile, list_x1x4_lognormals_EvB,      rangex=(1500, 150000), oname=outputdir+'x1x4_lognormals_EvB_sufrag.pdf',    frag=False, tag='EvB')
+
+def makeStandardPlotsAug8():
 	outputdir = 'plots/Aug8/'
 	rootfile  = 'data/Aug7.root'
 	prefix = 'data/Aug7/eFEROLs/'
