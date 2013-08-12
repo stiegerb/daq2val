@@ -5,6 +5,15 @@ import re
 
 import xml.etree.ElementTree as ET
 
+######################################################################
+#  ToDo:                                                             #
+#	- Implement change size for eFEROLs                              #
+#	- Implement scanning for eFEROLs                                 #
+#	- Implement getoutput for EvB (ala testRubuilder.pl)             #
+#	- Fix generation of steps                                        #
+#	- Implement webPing script to check status of hosts              #
+#	- Testing testing testing                                        #
+######################################################################
 
 separator = 70*'-'
 
@@ -325,8 +334,8 @@ class daq2Control(object):
 
 		## Set fragment size for eFEROLs
 		for n,efrl in enumerate(self._eFEROLs):
-			if options.useEVB: self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSize', 'unsignedInt', fragSize) ## EVB
-			else:      self.setParam(efrl.host, efrl.port, 'Client', n, 'currentSize', 'unsignedLong', fragSize)
+			if options.useEVB: self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSize',     'unsignedInt',  fragSize
+			else:              self.setParam(efrl.host, efrl.port, 'Client',                n, 'currentSize', 'unsignedLong', fragSize)
 
 
 		## Set super-fragment size for BUs
@@ -468,7 +477,7 @@ class daq2Control(object):
 			file.write(configureCmd)
 		print separator
 
-	def start(self, fragSize):
+	def start(self, fragSize, fragSizeStd=0):
 		"""Start all XDAQ processes, set configuration for fragSize and start running"""
 		print "Starting XDAQ processes"
 		for h in self._hosts:
@@ -483,7 +492,7 @@ class daq2Control(object):
 		print separator
 
 		self.sleep(2)
-		self.setSize(fragSize)
+		self.setSize(fragSize, fragSizeStd)
 		self.sleep(5)
 		self.sendCmdToRUEVMBU('Enable')
 		print separator
@@ -588,7 +597,7 @@ def testBuilding(d2c, minevents=1000, verbose=0):
 	for n,bu in enumerate(d2c._BUs):
 		if options.useEVB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
 		else:              nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong')
-		eventCounter.append(nEvts)
+		eventCounter.append(int(nEvts))
 		if verbose>1: print bu.name, 'number of events built: ', nEvts
 	print separator
 
@@ -629,6 +638,9 @@ Run a test reading the setup from configfile and using fragment size fragSize"""
 	d2c.stopXDAQs()
 
 def getListOfSizes(maxSize, minSize=256):
+#####################################
+	return [256, 512, 768, 1024, 2048, 4096, 8192, 16000]
+#####################################
 	steps = [ n*minSize for n in xrange(1, 1000) if n*minSize <= 8192] ## multiples of minSize up to 8192
 	if maxSize > 9000: steps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
 	return steps
@@ -651,7 +663,7 @@ Run a test reading the setup from configfile and using fragment size fragSize"""
 		exit(-1)
 
 
-	steps = getListOfSizes(nSteps, minSize, maxSize)
+	steps = getListOfSizes(maxSize, minSize=minSize)
 	for step in steps:
 		d2c.changeSize(step)
 		print "Building events at fragment size %d for %d seconds..." % (step, duration)
@@ -751,7 +763,7 @@ if __name__ == "__main__":
 		runTest(args[0], int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration)
 		exit(0)
 
-	if options.runScan and len(args) > 3:
+	if options.runScan and len(args) > 0:
 		runScan(args[0], options.nSteps, options.minSize, options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration)
 		exit(0)
 
