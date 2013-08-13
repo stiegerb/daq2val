@@ -4,14 +4,15 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
-#	- Implement lognormal distribution for eFEROLs                   #
 #	- Implement getoutput for EvB (ala testRubuilder.pl)             #
 #	- FED ID for eFEROLS? Automatically?                             #
 #	- Fix generation of steps                                        #
 #	- Implement webPing script to check status of hosts              #
+#	- Organize output                                                #
 #	- Update usage                                                   #
 #	- Testing testing testing:                                       #
 #	   > Scanning for eFEROLs                                        #
+#	   > Lognormal for eFEROLs                                       #
 #	   > FEROLs  with gevb2g, fixed size ! and changing size !       #
 #	   > eFEROLs with gevb2g, fixed size ! and changing size ?       #
 #	   > FEROLs with EvB,     fixed size and changing size ??        #
@@ -19,8 +20,7 @@
 ######################################################################
 
 import subprocess
-import os, shlex, glob
-import re
+import re, os, shlex
 
 separator = 70*'-'
 
@@ -54,12 +54,11 @@ class FEROL(host):
 ######################################################################
 class daq2Control(object):
 	"""docstring for daq2Control"""
-	def __init__(self,dryrun=False,symbolMap=''):
+	def __init__(self, dryrun=False, symbolMap='', useEvB=False):
 		try:
 			self._symbolMapFile = os.environ['TESTS_SYMBOL_MAP']
 			self._testDir       = os.environ['RUB_TESTER_HOME']
 			self._outputDir     = self._testDir + '/data/'
-			self._testCase      = ''
 			self._platform      = os.environ['XDAQ_PLATFORM']
 			self._runDir        = self._testDir + '/' + self._platform + '/'
 			self._user          = os.environ['USER']
@@ -74,10 +73,11 @@ class daq2Control(object):
 			self._symbolMapFile = symbolMap
 
 		self._dryRun    = dryrun ## if true, only print commands without doing anything
-		self._testEnv   = ""
 		self._symbolMap = {} ## a dictionary of all symbols in the map
 
-		self.verbose   = 0
+		self.verbose      = 0
+		self.useLogNormal = False
+		self.useEvB       = useEvB
 
 		self._hosts     = [] ## a list of the hosts defined in the xml config
 		self._allHosts  = [] ## a list of all soap hosts defined in the symbol map
@@ -93,6 +93,7 @@ class daq2Control(object):
 		                   'BU'              : self._BUs,
 		                   'EVM'             : self._EVM}
 
+		self._testEnv   = ""
 		if len(self._testType) > 0: self._testEnv = "-"+self._testType
 		self.fillSymbolMap()
 
@@ -111,7 +112,7 @@ class daq2Control(object):
 '''
 
 		self.namespace = 'gevb2g::'
-		if options.useEVB: self.namespace = 'evb::'
+		if self.useEvB: self.namespace = 'evb::'
 
 	## Core
 	def fillSymbolMap(self):
@@ -277,25 +278,14 @@ class daq2Control(object):
 		cmd = self._SOAPEnvelope % body
 		cmd = cmd.replace('\"','\\\"') ## need to escape the quotes when passing as argument
 		return self.sendCmdToApp(host, port, classname, str(instance), cmd)
-	# def tryWebPing(self, host, port):
-	# 	if self._dryRun:
-	# 		print '%-18s %25s:%-5d' % ('webPing', host, port)
-	# 		return
-	# 	cmd = "wget -o /dev/null -O /dev/null http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
-	# 	return subprocess.call(shlex.split(cmd))
+	def downloadMeasurements(self, host, port, classname, instance, outputfile):
+		if self.verbose > 1: print separator
+		url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
+		url = url % (host, int(port), classname, int(instance))
+		if self._dryRun: print 'curl -o', outputfile, url
+		else: subprocess.check_call(['curl', '-o', outputfile, url])
 
-	# def webPingXDAQ(self):
-	# 	print "Checking availability of all hosts"
-	# 	for host in self._allHosts:
-	# 		print " ... checking %25s:%-5d" % (host.host, host.port)
-	# 		if tryWebPing(host.host, host.port): continue
-
-	# 		self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
-	# 	print separator
-
-	# 	else: return subprocess.check_call(["webPingXDAQ"])
-
-
+	## Launchers
 	def stopXDAQLaunchers(self):
 		"""Kills the xdaqLauncher process on all the SOAP hosts defined in the symbolmap"""
 		for host in self._allHosts:
@@ -324,13 +314,14 @@ class daq2Control(object):
 			print "Starting xdaqLauncher for %-20s on %s:%d(LAUNCHER):%d(SOAP)" % (host.name, host.host, host.lport, host.port)
 			self.startXDAQLauncher(host.host,host.lport,logfile)
 
+	##
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
 		if self.verbose > 1: print separator
 		for n,evm in enumerate(self._EVM):
 			self.sendSimpleCmdToApp(evm.host, evm.port, self.namespace+'EVM', str(n), cmd)
 		for n,ru in enumerate(self._RUs):
 			classname = 'RU'
-			if options.useEVB and n==0: classname = 'EVM'
+			if self.useEvB and n==0: classname = 'EVM'
 			self.sendSimpleCmdToApp(ru.host, ru.port, self.namespace+classname, str(n), cmd)
 		for n,bu in enumerate(self._BUs):
 			self.sendSimpleCmdToApp(bu.host, bu.port, self.namespace+'BU', str(n), cmd)
@@ -338,7 +329,7 @@ class daq2Control(object):
 		if self.verbose > 1: print separator
 		for n,ru in enumerate(self._RUs):
 			classname = 'RU'
-			if options.useEVB and n==0: classname = 'EVM'
+			if self.useEvB and n==0: classname = 'EVM'
 			self.sendSimpleCmdToApp(ru.host, ru.port, self.namespace+classname, str(n), cmd)
 		for n,evm in enumerate(self._EVM):
 			self.sendSimpleCmdToApp(evm.host, evm.port, self.namespace+'EVM', str(n), cmd)
@@ -348,7 +339,7 @@ class daq2Control(object):
 		if self.verbose > 1: print separator
 		for frl in self._FEROLs:
 			self.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd)
-	def setSizeFEROLs(self, fragSize, fragSizeStd, rate='max'):
+	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
 		if self.verbose > 1: print separator
 		delay=20
 		if not rate=='max':
@@ -358,55 +349,26 @@ class daq2Control(object):
 		for frl in self._FEROLs:
 			if frl.enableStream0:
 				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED0',       'unsignedInt', fragSize)
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', fragSizeStd)
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', fragSizeRMS)
 				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED0',           'unsignedInt', delay)
 			if frl.enableStream1:
 				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', fragSize)
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', fragSizeStd)
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', fragSizeRMS)
 				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', delay)
-	def downloadMeasurements(self, host, port, classname, instance, outputfile):
-		if self.verbose > 1: print separator
-		url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
-		url = url % (host, int(port), classname, int(instance))
-		if self._dryRun: print 'curl -o', outputfile, url
-		else: subprocess.check_call(['curl', '-o', outputfile, url])
-
-	## Untested
-	def sendSOAPMsg(self, host, port, classname, instance, message):
-		curlCmd  = "curl --stderr /dev/null -H \"Content-Type: text/xml\" -H \"Content-Description: SOAP Message\" -H \"SOAPAction: urn:xdaq-application:class=%s,instance=%d\" http://%s:%d -d \"%s\"" % (classname, instance, host, port, soapmsg)
-		return subprocess.call(shlex.split(curlCmd))
-	def sendSimpleCmdToAppNew(self, host, port, classname, instance, cmdName):
-		"""Usage sendSimpleCmdToApp host port class instance cmdName"""
-
-		soapbody = '<xdaq:%s xmlns:xdaq="urn:xdaq-soap:3.0"/>' % cmdName
-		soapmsg  = self._SOAPEnvelope % soapbody
-
-		self.sendSOAPMsg(host, port, classname, instance, soapmsg)
-
-		## Need to add output handling
-		# if($reply =~ m#<(\w+):${cmdName}Response\s[^>]*>(.*)</\1:${cmdName}Response>#) {
-		#   my $returnValue = $2;
-		#   print "$returnValue\n";
-		# } elsif($reply =~ m#<\w+:${cmdName}Response\s[^>]*\>#) {
-		#   print "EMPTY SOAP MESSAGE\n";
-		# } else {
-		#   print "ERROR\n";
-		#   print "$reply\n";
-		# }
 
 	## Control methods
-	def setSize(self, fragSize, fragSizeStd=0, rate='max'):
+	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
 		if self.verbose > 0: print separator
-		if self.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s rate" % (fragSize, fragSizeStd, str(rate))
+		if self.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
 
 		## In case of FEROLs:
 		if len(self._FEROLs) > 0:
 			## Set fragment size and delay for FEROLs:
-			self.setSizeFEROLs(fragSize, fragSizeStd, rate)
+			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
 
 			## Set super-fragment size for BUs
-			if not options.useEVB:
+			if not self.useEvB:
 				if self.verbose > 1: print separator
 				for n,bu in enumerate(self._BUs):
 					self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
@@ -451,12 +413,18 @@ class daq2Control(object):
 			## Set fragment size for eFEROLs
 			if self.verbose > 1: print separator
 			for n,efrl in enumerate(self._eFEROLs):
-				if options.useEVB: self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSize',     'unsignedInt',  fragSize)
-				else:              self.setParam(efrl.host, efrl.port, 'Client',                n, 'currentSize', 'unsignedLong', fragSize)
+				if self.useEvB or self.useLogNormal: self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSize',     'unsignedInt',  fragSize)
+				else:                                self.setParam(efrl.host, efrl.port, 'Client',                n, 'currentSize', 'unsignedLong', fragSize)
 
+			## Set lognormal rms for eFEROLs (when running with --useLogNormal)
+			if self.useLogNormal:
+				if self.verbose > 1: print separator
+				for n,efrl in enumerate(self._eFEROLs):
+					self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSizeStdDev', 'xsd:unsignedInt', fragSizeRMS)
+					self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'useLogNormal',  'boolean',         True)
 
 			## Set super-fragment size for BUs
-			if not options.useEVB:
+			if not self.useEvB and not self.useLogNormal:
 				if self.verbose > 1: print separator
 				for n,bu in enumerate(self._BUs):
 					self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
@@ -465,8 +433,10 @@ class daq2Control(object):
 						print bu.name, 'dummyFedPayloadSize', self.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong')
 
 			if self.verbose > 1: print separator
-			for n,efrl in enumerate(self._eFEROLs):
-				self.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Configure')
+
+			if self.useEvB:
+				for n,efrl in enumerate(self._eFEROLs):
+					self.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Configure')
 
 			self.sendCmdToEVMRUBU('Configure')
 			self.sendCmdToRUEVMBU('Enable') ## Have to enable RUs/EVM/BUs here?
@@ -474,19 +444,19 @@ class daq2Control(object):
 			if self.verbose > 1: print separator
 			## Enable eFEROL clients
 			for n,efrl in enumerate(self._eFEROLs):
-				if options.useEVB: self.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Enable')
-				else:              self.sendSimpleCmdToApp(efrl.host, efrl.port, 'Client',                n, 'start')
-	def changeSize(self, fragSize, fragSizeStd=0, rate='max'):
+				if self.useEvB or self.useLogNormal: self.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Enable')
+				else:                                self.sendSimpleCmdToApp(efrl.host, efrl.port, 'Client',                n, 'start')
+	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## For FEROLs: pause, change size, resume
 		if len(self._FEROLs) > 0:
 			if self.verbose > 0: print separator
-			if self.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeStd, str(rate))
+			if self.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
 
 			## Pause FEROLs
 			self.sendCmdToFEROLs('Pause')
 
 			## Change fragment size and delay for FEROLs:
-			self.setSizeFEROLs(fragSize, fragSizeStd, rate)
+			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
 
 			## Halt EVM/RUs/BUs
 			self.sendCmdToEVMRUBU('Halt')
@@ -508,7 +478,7 @@ class daq2Control(object):
 			self.stopXDAQs()
 			self.stopXDAQs()
 			self.sleep(5)
-			self.start(fragSize, fragSizeStd=fragSizeStd)
+			self.start(fragSize, fragSizeRMS=fragSizeRMS)
 
 		else: return
 	def setup(self, configfile):
@@ -530,7 +500,7 @@ class daq2Control(object):
 			configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
 			configureCmd = self._SOAPEnvelope % configureBody
 			file.write(configureCmd)
-	def start(self, fragSize, fragSizeStd=0):
+	def start(self, fragSize, fragSizeRMS=0):
 		"""Start all XDAQ processes, set configuration for fragSize and start running"""
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Starting XDAQ processes"
@@ -546,7 +516,7 @@ class daq2Control(object):
 		if self.verbose > 0: print separator
 
 		self.sleep(2)
-		self.setSize(fragSize, fragSizeStd)
+		self.setSize(fragSize, fragSizeRMS)
 		self.sleep(5)
 		self.sendCmdToRUEVMBU('Enable')
 		self.sendCmdToFEROLs('Enable')
@@ -574,6 +544,47 @@ class daq2Control(object):
 				with open(fname, 'r') as infile:
 					outfile.write(infile.read())
 					outfile.write('\n')
+
+	## Untested
+	def sendSOAPMsg(self, host, port, classname, instance, message):
+		curlCmd  = "curl --stderr /dev/null -H \"Content-Type: text/xml\" -H \"Content-Description: SOAP Message\" -H \"SOAPAction: urn:xdaq-application:class=%s,instance=%d\" http://%s:%d -d \"%s\"" % (classname, instance, host, port, soapmsg)
+		return subprocess.call(shlex.split(curlCmd))
+	def sendSimpleCmdToAppNew(self, host, port, classname, instance, cmdName):
+		"""Usage sendSimpleCmdToApp host port class instance cmdName"""
+
+		soapbody = '<xdaq:%s xmlns:xdaq="urn:xdaq-soap:3.0"/>' % cmdName
+		soapmsg  = self._SOAPEnvelope % soapbody
+
+		self.sendSOAPMsg(host, port, classname, instance, soapmsg)
+
+		## Need to add output handling
+		# if($reply =~ m#<(\w+):${cmdName}Response\s[^>]*>(.*)</\1:${cmdName}Response>#) {
+		#   my $returnValue = $2;
+		#   print "$returnValue\n";
+		# } elsif($reply =~ m#<\w+:${cmdName}Response\s[^>]*\>#) {
+		#   print "EMPTY SOAP MESSAGE\n";
+		# } else {
+		#   print "ERROR\n";
+		#   print "$reply\n";
+		# }
+	def tryWebPing(self, host, port):
+		######### UNTESTED ##########
+		if self._dryRun:
+			print '%-18s %25s:%-5d' % ('webPing', host, port)
+			return
+		cmd = "wget -o /dev/null -O /dev/null http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
+		return subprocess.call(shlex.split(cmd))
+	def webPingXDAQ(self):
+		######### UNTESTED ##########
+		print "Checking availability of all hosts"
+		for host in self._allHosts:
+			print " ... checking %25s:%-5d" % (host.host, host.port)
+			if tryWebPing(host.host, host.port): continue
+
+			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+		print separator
+
+		# else: return subprocess.check_call(["webPingXDAQ"])
 
 ######################################################################
 ## Interface:
@@ -611,15 +622,16 @@ def getListOfSizes(maxSize, minSize=256):
 
 ######################################################################
 ## Run a single test
-def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10):
+def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0):
 	"""Usage: runTest(configfile, fragSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
-	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
+	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap, useEvB=options.useEvB)
 	d2c.verbose = options.verbose
+	d2c.useLogNormal = useLogNormal
 	d2c.setup(configfile)
 
 	d2c.stopXDAQs()
-	d2c.start(fragSize)
+	d2c.start(fragSize, float(relRMS)*fragSize)
 	d2c.sleep(10)
 
 	if testBuilding(d2c) < 1:
@@ -638,15 +650,16 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10):
 
 ######################################################################
 ## Run a scan over fragment sizes
-def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10):
+def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0):
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
-	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
+	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap, useEvB=options.useEvB)
 	d2c.verbose = options.verbose
+	d2c.useLogNormal = useLogNormal
 	d2c.setup(configfile)
 
 	d2c.stopXDAQs()
-	d2c.start(minSize)
+	d2c.start(minSize, float(relRMS)*minSize)
 
 	d2c.sleep(10)
 
@@ -656,7 +669,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 
 	steps = getListOfSizes(maxSize, minSize=minSize)
 	for step in steps:
-		d2c.changeSize(step)
+		d2c.changeSize(step, float(relRMS)*step)
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, duration)
 		d2c.sleep(duration)
 		## For eFEROLs, get results after each step
@@ -665,7 +678,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 	## For FEROLs, get results at the end
 	if len(d2c._FEROLs) > 0: d2c.getResults()
 
-	# d2c.changeSize(1024, fragSizeStd=1024) ## With a std dev for the lognormal generator (default is 0)
+	# d2c.changeSize(1024, relRMS=1024) ## With a std dev for the lognormal generator (default is 0)
 	# d2c.sleep(duration)
 
 	d2c.stopXDAQs()
@@ -677,7 +690,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 ## main
 if __name__ == "__main__":
 	from optparse import OptionParser
-	usage = """ %prog [options] --runTest config.xml fragsize	"""
+	usage = """ %prog [options] --runTest config.xml fragsize"""
 
 	parser = OptionParser(usage=usage)
 	parser.add_option("--runTest", default=False,
@@ -686,9 +699,12 @@ if __name__ == "__main__":
 	parser.add_option("--runScan", default=True,
 	                  action="store_true", dest="runScan",
 	                  help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
-	parser.add_option("--useEVB", default=False,
-	                  action="store_true", dest="useEVB",
-	                  help="Set true to use EvB instead of gevb [default is gevb]")
+	parser.add_option("--useEvB", default=False,
+	                  action="store_true", dest="useEvB",
+	                  help="Use EvB instead of gevb2g [default is gevb2g]")
+	parser.add_option("--useLogNormal", default=False,
+	                  action="store_true", dest="useLogNormal",
+	                  help="Use lognormal generator for eFEROLs (will use the dummyFerol instead of the Client)")
 	parser.add_option("-d", "--duration", default=30,
 	                  action="store", type="int", dest="duration",
 	                  help="Duration of a single step in seconds, [default: %default s]")
@@ -746,12 +762,28 @@ if __name__ == "__main__":
 		exit(0)
 
 	if options.runTest and len(args) > 1:
-		runTest(args[0], int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration)
-		exit(0)
+		if options.useLogNormal:
+			if len(args) < 3:
+				print "You need give an RMS argument when using --useLogNormal"
+				exit(-1)
+			else:
+				runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[2])
+				exit(0)
+		else:
+			runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False)
+			exit(0)
 
 	if options.runScan and len(args) > 0:
-		runScan(args[0], options.nSteps, options.minSize, options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration)
-		exit(0)
+		if options.useLogNormal:
+			if len(args) < 2:
+				print "You need give an RMS argument when using --useLogNormal"
+				exit(-1)
+			else:
+				runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[1])
+				exit(0)
+		else:
+			runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False)
+			exit(0)
 
 	parser.print_help()
 	exit(-1)
