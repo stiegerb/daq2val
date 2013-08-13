@@ -6,12 +6,12 @@
 #  ToDo-List:                                                        #
 #	- Implement lognormal distribution for eFEROLs                   #
 #	- Implement getoutput for EvB (ala testRubuilder.pl)             #
-#	- Implement scanning for eFEROLs ! (need to test)                #
 #	- FED ID for eFEROLS? Automatically?                             #
 #	- Fix generation of steps                                        #
 #	- Implement webPing script to check status of hosts              #
 #	- Update usage                                                   #
 #	- Testing testing testing:                                       #
+#	   > Scanning for eFEROLs                                        #
 #	   > FEROLs  with gevb2g, fixed size ! and changing size !       #
 #	   > eFEROLs with gevb2g, fixed size ! and changing size ?       #
 #	   > FEROLs with EvB,     fixed size and changing size ??        #
@@ -77,6 +77,7 @@ class daq2Control(object):
 		self._testEnv   = ""
 		self._symbolMap = {} ## a dictionary of all symbols in the map
 
+		self.verbose   = 0
 
 		self._hosts     = [] ## a list of the hosts defined in the xml config
 		self._allHosts  = [] ## a list of all soap hosts defined in the symbol map
@@ -182,8 +183,8 @@ class daq2Control(object):
 		for host in self._EVM:
 			print host
 	def sleep(self,time=0.5):
-		if self._dryRun: print 'sleep', time
-		else: subprocess.call(['sleep', str(time)])
+		if self._dryRun and self.verbose > 1: print 'sleep', time
+		if not self._dryRun: subprocess.call(['sleep', str(time)])
 	def readXDAQConfigTemplate(self, configfile):
 		import xml.etree.ElementTree as ET
 		self._testCase = os.path.dirname(configfile).split('/').pop()
@@ -198,7 +199,7 @@ class daq2Control(object):
 			try:
 				soap_host, soap_port = self._symbolMap[h+n+'_SOAP_HOST_NAME'], self._symbolMap[h+n+'_SOAP_PORT']
 				try:
-					print 'Adding', h+n, 'at', soap_host+':'+str(soap_port)
+					if self.verbose > 0: print 'Adding', h+n, 'at', soap_host+':'+str(soap_port)
 					ho = host(h+n, int(n), soap_host, int(soap_port), h)
 					ho.lport = self._symbolMap[h+n+'_LAUNCHER_PORT']
 
@@ -242,32 +243,32 @@ class daq2Control(object):
 
 	## Wrappers
 	def sendSimpleCmdToApp(self, host, port, classname, instance, cmdName):
-		if self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-12s' % ('sendSimpleCmdToApp', host, port, classname, instance, cmdName)
-		else: return subprocess.check_call(['sendSimpleCmdToApp', host, str(port), classname, str(instance), cmdName])
+		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-12s' % ('sendSimpleCmdToApp', host, port, classname, instance, cmdName)
+		if not self._dryRun: return subprocess.check_call(['sendSimpleCmdToApp', host, str(port), classname, str(instance), cmdName])
 	def sendCmdToLauncher(self, host, port, cmd):
-		if self._dryRun: print '%-18s %25s:%-5d %-15s' % ('sendCmdToLauncher', host, port, cmd)
-		else: return subprocess.check_call(['sendCmdToLauncher', host, str(port), cmd])
+		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %-15s' % ('sendCmdToLauncher', host, port, cmd)
+		if not self._dryRun: return subprocess.check_call(['sendCmdToLauncher', host, str(port), cmd])
 	def sendCmdToExecutive(self, host, port, cmdfile):
-		if self._dryRun: print '%-18s %25s:%-5d %-35s' % ('sendCmdToExecutive', host, port, cmdfile)
-		else: return subprocess.check_call(['sendCmdToExecutive', host, str(port), cmdfile])
+		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %-35s' % ('sendCmdToExecutive', host, port, cmdfile)
+		if not self._dryRun: return subprocess.check_call(['sendCmdToExecutive', host, str(port), cmdfile])
 	def sendCmdToApp(self, host, port, classname, instance, cmd):
 		"""Sends a SOAP message contained in cmd to the application with classname and instance on host:port"""
 		## Note that there are two versions of sendCmdToApp, the original taking a FILE as input, the new one taking directly the command string
 		## I renamed the old one to be 'sendCmdFileToApp'
-		if self._dryRun: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, cmd)
-		else: return subprocess.check_call(['/nfshome0/stiegerb/cmsosrad/trunk/daq/benchmark/test/scripts/sendCmdToApp', host, str(port), classname, str(instance), cmd])
+		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, cmd)
+		if not self._dryRun: return subprocess.check_call(['/nfshome0/stiegerb/cmsosrad/trunk/daq/benchmark/test/scripts/sendCmdToApp', host, str(port), classname, str(instance), cmd])
 		# else: return subprocess.check_call(['sendCmdToApp', host, str(port), classname, str(instance), cmd])
 	def sendCmdFileToApp(self, host, port, classname, instance, cmdFile):
 		"""Sends a SOAP message contained in cmdFile to the application with classname and instance on host:port"""
 		## This will call the old version of sendCmdToApp (see comment above)
-		if self._dryRun: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, cmdFile)
-		else: return subprocess.check_call(['sendCmdFileToApp', host, str(port), classname, str(instance), cmdFile])
+		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, cmdFile)
+		if not self._dryRun: return subprocess.check_call(['sendCmdFileToApp', host, str(port), classname, str(instance), cmdFile])
 	def setParam(self, host, port, classname, instance, paramName, paramType, paramValue):
-		if self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s %6s' % ('setParam', host, port, classname, instance, paramName, paramType, paramValue)
-		else: return subprocess.check_call(['setParam', host, str(port), classname, str(instance), paramName, paramType, str(paramValue)])
+		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s %6s' % ('setParam', host, port, classname, instance, paramName, paramType, paramValue)
+		if not self._dryRun: return subprocess.check_call(['setParam', host, str(port), classname, str(instance), paramName, paramType, str(paramValue)])
 	def getParam(self, host, port, classname, instance, paramName, paramType):
-		if self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s' % ('getParam', host, port, classname, instance, paramName, paramType)
-		else:
+		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s' % ('getParam', host, port, classname, instance, paramName, paramType)
+		if not self._dryRun:
 			call = subprocess.Popen(['getParam', host, str(port), classname, str(instance), paramName, paramType], stdout=subprocess.PIPE)
 			out,err = call.communicate()
 			return out
@@ -303,8 +304,8 @@ class daq2Control(object):
 			self.sendCmdToLauncher(host.host, host.lport, 'STOPLAUNCHER')
 	def stopXDAQs(self):
 		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap"""
-		print separator
-		print "Stopping XDAQs"
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print "Stopping XDAQs"
 		for host in self._allHosts:
 			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
 	def startXDAQLauncher(self, host, port,logfile):
@@ -324,7 +325,7 @@ class daq2Control(object):
 			self.startXDAQLauncher(host.host,host.lport,logfile)
 
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
-		print separator
+		if self.verbose > 1: print separator
 		for n,evm in enumerate(self._EVM):
 			self.sendSimpleCmdToApp(evm.host, evm.port, self.namespace+'EVM', str(n), cmd)
 		for n,ru in enumerate(self._RUs):
@@ -334,7 +335,7 @@ class daq2Control(object):
 		for n,bu in enumerate(self._BUs):
 			self.sendSimpleCmdToApp(bu.host, bu.port, self.namespace+'BU', str(n), cmd)
 	def sendCmdToRUEVMBU(self, cmd): ## ordering for enable
-		print separator
+		if self.verbose > 1: print separator
 		for n,ru in enumerate(self._RUs):
 			classname = 'RU'
 			if options.useEVB and n==0: classname = 'EVM'
@@ -344,11 +345,11 @@ class daq2Control(object):
 		for n,bu in enumerate(self._BUs):
 			self.sendSimpleCmdToApp(bu.host, bu.port, self.namespace+'BU', str(n), cmd)
 	def sendCmdToFEROLs(self, cmd):
-		print separator
+		if self.verbose > 1: print separator
 		for frl in self._FEROLs:
 			self.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd)
 	def setSizeFEROLs(self, fragSize, fragSizeStd, rate='max'):
-		print separator
+		if self.verbose > 1: print separator
 		delay=20
 		if not rate=='max':
 			# delay = int(1000000.0 / rate - fragSize/8.0*6.4 - 150) # Obsolete according to Petr
@@ -364,7 +365,7 @@ class daq2Control(object):
 				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', fragSizeStd)
 				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', delay)
 	def downloadMeasurements(self, host, port, classname, instance, outputfile):
-		print separator
+		if self.verbose > 1: print separator
 		url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
 		url = url % (host, int(port), classname, int(instance))
 		if self._dryRun: print 'curl -o', outputfile, url
@@ -396,8 +397,8 @@ class daq2Control(object):
 	## Control methods
 	def setSize(self, fragSize, fragSizeStd=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
-		print separator
-		print "Setting fragment size to %5d bytes +- %-5d at %s rate" % (fragSize, fragSizeStd, str(rate))
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s rate" % (fragSize, fragSizeStd, str(rate))
 
 		## In case of FEROLs:
 		if len(self._FEROLs) > 0:
@@ -406,20 +407,20 @@ class daq2Control(object):
 
 			## Set super-fragment size for BUs
 			if not options.useEVB:
-				print separator
+				if self.verbose > 1: print separator
 				for n,bu in enumerate(self._BUs):
 					self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
 				if not self._dryRun:
 					for n,bu in enumerate(self._BUs):
 						print bu.name, 'dummyFedPayloadSize', self.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong')
-				print separator
+				if self.verbose > 1: print separator
 
 			self.sendCmdToFEROLs('Configure')
-			print separator
+			if self.verbose > 1: print separator
 			self.sleep(5)
 
 			## Configure FED ids
-			print "Setting FED ids on FEROLs"
+			if self.verbose > 0: print "Setting FED ids on FEROLs"
 			fedid = 0
 			for frl in self._FEROLs:
 				if frl.enableStream0:
@@ -430,27 +431,25 @@ class daq2Control(object):
 					fedid += 1
 
 
-			print separator
-
-			print separator
+			if self.verbose > 1: print separator
 			self.sendCmdToEVMRUBU('Configure')
-			print separator
+			if self.verbose > 1: print separator
 			self.sendCmdToRUEVMBU('Enable') ## Have to enable RUs/EVM/BUs here?
-			print separator
+			if self.verbose > 1: print separator
 
 		## In case of eFEROLs:
 		elif len(self._eFEROLs) > 0:
 			## Configure and enable pt::frl application on eFEROLs:
-			print separator
+			if self.verbose > 1: print separator
 			for n,efrl in enumerate(self._eFEROLs):
 				self.sendSimpleCmdToApp(efrl.host, efrl.port, 'pt::frl::Application', n, 'Configure')
-			print separator
+			if self.verbose > 1: print separator
 			for n,efrl in enumerate(self._eFEROLs):
 				self.sendSimpleCmdToApp(efrl.host, efrl.port, 'pt::frl::Application', n, 'Enable')
 			self.sleep(2)
 
 			## Set fragment size for eFEROLs
-			print separator
+			if self.verbose > 1: print separator
 			for n,efrl in enumerate(self._eFEROLs):
 				if options.useEVB: self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSize',     'unsignedInt',  fragSize)
 				else:              self.setParam(efrl.host, efrl.port, 'Client',                n, 'currentSize', 'unsignedLong', fragSize)
@@ -458,21 +457,21 @@ class daq2Control(object):
 
 			## Set super-fragment size for BUs
 			if not options.useEVB:
-				print separator
+				if self.verbose > 1: print separator
 				for n,bu in enumerate(self._BUs):
 					self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
 				if not self._dryRun:
 					for n,bu in enumerate(self._BUs):
 						print bu.name, 'dummyFedPayloadSize', self.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong')
 
-			print separator
+			if self.verbose > 1: print separator
 			for n,efrl in enumerate(self._eFEROLs):
 				self.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Configure')
 
 			self.sendCmdToEVMRUBU('Configure')
 			self.sendCmdToRUEVMBU('Enable') ## Have to enable RUs/EVM/BUs here?
 
-			print separator
+			if self.verbose > 1: print separator
 			## Enable eFEROL clients
 			for n,efrl in enumerate(self._eFEROLs):
 				if options.useEVB: self.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Enable')
@@ -480,8 +479,8 @@ class daq2Control(object):
 	def changeSize(self, fragSize, fragSizeStd=0, rate='max'):
 		## For FEROLs: pause, change size, resume
 		if len(self._FEROLs) > 0:
-			print separator
-			print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeStd, str(rate))
+			if self.verbose > 0: print separator
+			if self.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeStd, str(rate))
 
 			## Pause FEROLs
 			self.sendCmdToFEROLs('Pause')
@@ -513,38 +512,38 @@ class daq2Control(object):
 
 		else: return
 	def setup(self, configfile):
-		print separator
+		if self.verbose > 0: print separator
 		"""Read config file, clean up and re-create run directory, fill config templates"""
 		self.readXDAQConfigTemplate(configfile)
 		self._runDir += self._testCase
 		subprocess.check_call(['rm', '-rf', self._runDir])
 		subprocess.check_call(['mkdir', '-p', self._runDir])
 
-		print separator
-		print 'Filling configuration template in ' + self._runDir + '/configuration.xml'
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print 'Filling configuration template in ' + self._runDir + '/configuration.xml'
 		filledconfig = self.fillTemplate(configfile)
 		with open(self._runDir+'/configuration.xml', 'w') as file:
 			file.write(filledconfig)
 
-		print 'Producing configuration command file in ' + self._runDir + '/configure.cmd.xml'
+		if self.verbose > 0: print 'Producing configuration command file in ' + self._runDir + '/configure.cmd.xml'
 		with open(self._runDir+'/configure.cmd.xml', 'w') as file:
 			configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
 			configureCmd = self._SOAPEnvelope % configureBody
 			file.write(configureCmd)
 	def start(self, fragSize, fragSizeStd=0):
 		"""Start all XDAQ processes, set configuration for fragSize and start running"""
-		print separator
-		print "Starting XDAQ processes"
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print "Starting XDAQ processes"
 		for h in self._hosts:
 			self.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port))
-		print separator
+		if self.verbose > 0: print separator
 
 		# self.webPingXDAQ()
 
-		print "Configuring XDAQ processes"
+		if self.verbose > 0: print "Configuring XDAQ processes"
 		for h in self._hosts:
 			self.sendCmdToExecutive(h.host, h.port, self._runDir+'/configure.cmd.xml')
-		print separator
+		if self.verbose > 0: print separator
 
 		self.sleep(2)
 		self.setSize(fragSize, fragSizeStd)
@@ -554,10 +553,10 @@ class daq2Control(object):
 	def getResults(self):
 		"""Create output directory and download results for each BU, store them in server.csv"""
 		from time import strftime
-		print separator
+		if self.verbose > 0: print separator
 		outputdir = self._outputDir + self._testCase + '/'
 		# outputdir = self._outputDir + strftime('%b%d_%Y') + '/' + self._testCase + '/'
-		print outputdir
+		if self.verbose > 0: print 'Saving output to:', outputdir
 		subprocess.check_call(['mkdir', '-p', outputdir])
 
 		if self._dryRun: return
@@ -579,27 +578,27 @@ class daq2Control(object):
 ######################################################################
 ## Interface:
 ######################################################################
-def testBuilding(d2c, minevents=1000, verbose=0):
+def testBuilding(d2c, minevents=1000):
+	if options.verbose > 0: print separator
+	if options.verbose > 0: print 'Testing event building'
 	if d2c._dryRun: return 10000
-	if verbose>1: print separator
-	if verbose>1: print 'Testing event building'
 	eventCounter = []
 	for n,bu in enumerate(d2c._BUs):
 		if options.useEVB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
 		else:              nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong')
 		eventCounter.append(int(nEvts))
-		if verbose>1: print bu.name, 'number of events built: ', nEvts
+		if options.verbose > 1: print bu.name, 'number of events built: ', nEvts
 	print separator
 
 	totEvents = 0
 	for evtCount in eventCounter:
 		if evtCount < minevents:
-			if verbose>0: print 'Test failed, built less than %d events!' % minevents
+			if options.verbose > 0: print 'Test failed, built less than %d events!' % minevents
 			return -1
 		else:
 			totEvents += evtCount
 
-	if verbose>0: print 'Test successful (built %d events), continuing...' % totEvents
+	if options.verbose > 0: print 'Test successful (built %d events), continuing...' % totEvents
 	return totEvents
 def getListOfSizes(maxSize, minSize=256):
 	#####################################
@@ -616,17 +615,18 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10):
 	"""Usage: runTest(configfile, fragSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
 	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
+	d2c.verbose = options.verbose
 	d2c.setup(configfile)
 
 	d2c.stopXDAQs()
 	d2c.start(fragSize)
 	d2c.sleep(10)
 
-	if testBuilding(d2c, verbose=1) < 1:
+	if testBuilding(d2c) < 1:
 		d2c.stopXDAQs()
 		exit(-1)
 
-	print "Building events ..."
+	if self.verbose > 0: print "Building events ..."
 	d2c.sleep(duration)
 	d2c.getResults()
 
@@ -642,6 +642,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
 	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
+	d2c.verbose = options.verbose
 	d2c.setup(configfile)
 
 	d2c.stopXDAQs()
@@ -649,14 +650,14 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 
 	d2c.sleep(10)
 
-	if testBuilding(d2c, verbose=1) < 1:
+	if testBuilding(d2c) < 1:
 		d2c.stopXDAQs()
 		exit(-1)
 
 	steps = getListOfSizes(maxSize, minSize=minSize)
 	for step in steps:
 		d2c.changeSize(step)
-		print "Building events at fragment size %d for %d seconds..." % (step, duration)
+		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, duration)
 		d2c.sleep(duration)
 		## For eFEROLs, get results after each step
 		if len(d2c._eFEROLs) > 0: d2c.getResults()
@@ -704,6 +705,9 @@ if __name__ == "__main__":
 	parser.add_option("--dry", default=False,
 	                  action="store_true", dest="dry",
 	                  help="Just print the commands without sending anything")
+	parser.add_option("-v", "--verbose", default=1,
+	                  action="store", type='int', dest="verbose",
+	                  help="Set the verbose level, [default: %default (quiet)]")
 
 	parser.add_option("--kill", default=False,
 	                  action="store_true", dest="kill",
@@ -725,18 +729,19 @@ if __name__ == "__main__":
 
 	if options.kill:
 		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
+		d2c.verbose = options.verbose
 		d2c.stopXDAQs()
 		d2c.stopXDAQLaunchers()
 		exit(0)
-
 	if options.stop:
 		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
+		d2c.verbose = options.verbose
 		d2c.stopXDAQs()
 		exit(0)
-
 	if options.start:
 		with open('launcherLog.txt', 'w') as logfile:
 			d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
+			d2c.verbose = options.verbose
 			d2c.startXDAQLaunchers(logfile)
 		exit(0)
 
