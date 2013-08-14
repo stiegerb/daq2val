@@ -4,23 +4,24 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
-#	- Implement getoutput for EvB (ala testRubuilder.pl)             #
 #	- FED ID for eFEROLS? Automatically?                             #
 #	- Fix generation of steps                                        #
 #	- Implement webPing script to check status of hosts              #
 #	- Organize output                                                #
 #	- Update usage                                                   #
 #	- Testing testing testing:                                       #
+#	   - Test and fix getResultsEvB()                                #
 #	   > Scanning for eFEROLs                                        #
 #	   > Lognormal for eFEROLs                                       #
 #	   > FEROLs  with gevb2g, fixed size ! and changing size !       #
 #	   > eFEROLs with gevb2g, fixed size ! and changing size ?       #
 #	   > FEROLs with EvB,     fixed size and changing size ??        #
-#	   > eFEROLs with EvB,    fixed size ! and changing size ?       #
+#      > eFEROLs with EvB,    fixed size ! and changing size ?       #
 ######################################################################
 
 import subprocess
 import re, os, shlex
+import time
 
 separator = 70*'-'
 
@@ -183,9 +184,10 @@ class daq2Control(object):
 		print 'EVM:'
 		for host in self._EVM:
 			print host
-	def sleep(self,time=0.5):
-		if self._dryRun and self.verbose > 1: print 'sleep', time
-		if not self._dryRun: subprocess.call(['sleep', str(time)])
+	def sleep(self,naptime=0.5):
+		if self._dryRun and self.verbose > 1: print 'sleep', naptime
+		if not self._dryRun: time.sleep(naptime)
+		# if not self._dryRun: subprocess.call(['sleep', str(time)])
 	def readXDAQConfigTemplate(self, configfile):
 		import xml.etree.ElementTree as ET
 		self._testCase = os.path.dirname(configfile).split('/').pop()
@@ -348,19 +350,19 @@ class daq2Control(object):
 
 		for frl in self._FEROLs:
 			if frl.enableStream0:
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED0',       'unsignedInt', fragSize)
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', fragSizeRMS)
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED0',           'unsignedInt', delay)
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED0',       'unsignedInt', int(fragSize))
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', int(fragSizeRMS))
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED0',           'unsignedInt', int(delay))
 			if frl.enableStream1:
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', fragSize)
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', fragSizeRMS)
-				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', delay)
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', int(fragSize))
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(fragSizeRMS))
+				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delay))
 
 	## Control methods
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
 		if self.verbose > 0: print separator
-		if self.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
+		if self.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s kHz rate" % (fragSize, fragSizeRMS, str(rate))
 
 		## In case of FEROLs:
 		if len(self._FEROLs) > 0:
@@ -386,10 +388,12 @@ class daq2Control(object):
 			fedid = 0
 			for frl in self._FEROLs:
 				if frl.enableStream0:
-					self.writeItem(frl.host, frl.port, 'ferol::FerolController', 0, 'GEN_FED_SOURCE_BX_FED0', fedid)
+					# self.writeItem(frl.host, frl.port, 'ferol::FerolController', 0, 'GEN_FED_SOURCE_BX_FED0', fedid)
+					self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'expectedFedId_0', 'unsignedInt', fedid)
 					fedid += 1
 				if frl.enableStream1:
-					self.writeItem(frl.host, frl.port, 'ferol::FerolController', 0, 'GEN_FED_SOURCE_BX_FED1', fedid)
+					# self.writeItem(frl.host, frl.port, 'ferol::FerolController', 0, 'GEN_FED_SOURCE_BX_FED1', fedid)
+					self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'expectedFedId_1', 'unsignedInt', fedid)
 					fedid += 1
 
 
@@ -482,25 +486,34 @@ class daq2Control(object):
 
 		else: return
 	def setup(self, configfile):
+		"""Read config file, clean up and re-create run directory, fill config templates, create output directory"""
 		if self.verbose > 0: print separator
-		"""Read config file, clean up and re-create run directory, fill config templates"""
+
+		## Read config file, cleanup run dir
+		if self.verbose > 0: print 'Reading config file', configfile
 		self.readXDAQConfigTemplate(configfile)
 		self._runDir += self._testCase
 		subprocess.check_call(['rm', '-rf', self._runDir])
 		subprocess.check_call(['mkdir', '-p', self._runDir])
 
-		if self.verbose > 0: print separator
+		## Create output dir
+		self._outputDir += self._testCase + '/'
+		if self.verbose > 0: print 'Creating output directory in:', self._outputDir
+		subprocess.check_call(['mkdir', '-p', self._outputDir])
+
+		## Fill configuration template
 		if self.verbose > 0: print 'Filling configuration template in ' + self._runDir + '/configuration.xml'
 		filledconfig = self.fillTemplate(configfile)
 		with open(self._runDir+'/configuration.xml', 'w') as file:
 			file.write(filledconfig)
 
+		## Produce configure command file
 		if self.verbose > 0: print 'Producing configuration command file in ' + self._runDir + '/configure.cmd.xml'
 		with open(self._runDir+'/configure.cmd.xml', 'w') as file:
 			configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
 			configureCmd = self._SOAPEnvelope % configureBody
 			file.write(configureCmd)
-	def start(self, fragSize, fragSizeRMS=0):
+	def start(self, fragSize, fragSizeRMS=0, rate='max'):
 		"""Start all XDAQ processes, set configuration for fragSize and start running"""
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Starting XDAQ processes"
@@ -516,34 +529,57 @@ class daq2Control(object):
 		if self.verbose > 0: print separator
 
 		self.sleep(2)
-		self.setSize(fragSize, fragSizeRMS)
+		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		self.sleep(5)
 		self.sendCmdToRUEVMBU('Enable')
 		self.sendCmdToFEROLs('Enable')
-	def getResults(self):
-		"""Create output directory and download results for each BU, store them in server.csv"""
-		from time import strftime
-		if self.verbose > 0: print separator
-		outputdir = self._outputDir + self._testCase + '/'
-		# outputdir = self._outputDir + strftime('%b%d_%Y') + '/' + self._testCase + '/'
-		if self.verbose > 0: print 'Saving output to:', outputdir
-		subprocess.check_call(['mkdir', '-p', outputdir])
-
+	def getResultsEvB(self, duration, interval=10):
+		"""Python implementation of testRubuilder.pl script
+		This will get the parameter RATE from the BU after an interval time for
+		a total duration."""
+		## ANDREA: Why only for one BU in testRubuilder.pl?
 		if self._dryRun: return
+		if self.useEvB:
+			## get event size from BU:
+			whichbu = 0
+			## ANDREA: How to do this?
+			eventsize = self.getParam(self._BUs[whichbu].host, self._BUs[whichbu].port, self.namespace+'BU', str(whichbu), 'currentSize', 'xsd:unsignedInt')
+			ratesamples = []
+			starttime = time.time()
+			while(time.time() < starttime+duration):
+				time.sleep(interval)
+				## ANDREA: How to do this?
+				rate = self.getParam(self._BUs[whichbu].host, self._BUs[whichbu].port, self.namespace+'BU', str(whichbu), 'RATE', 'xsd:unsignedInt')
+				ratesamples.append(rate)
 
-		## Download output
-		outputfiles = []
-		for n,h in enumerate(self._BUs):
-			outputfile = '%s/server%d.csv' % (outputdir, n)
-			self.downloadMeasurements(h.host, h.port, self.namespace+'BU', n, outputfile)
-			outputfiles.append(outputfile)
+			with open(self._outputDir+'/server.csv', 'a') as outfile:
+				outfile.write(str(eventsize)+' ')
+				for rate in ratesamples:
+					outfile.write(', ')
+					outfile.write(str(rate))
 
-		## Concatenate output files
-		with open(outputdir+'/server.csv', 'w') as outfile:
-			for fname in outputfiles:
-				with open(fname, 'r') as infile:
-					outfile.write(infile.read())
-					outfile.write('\n')
+		else:
+			print "getResultsEvB() only works when running with the EvB, try getResults()"
+			return
+	def getResults(self):
+		"""Download results for each BU, concatenate them, and store them in server.csv. Only works for the gevb2g!"""
+		if self._dryRun: return
+		if not self.useEvB:
+			outputfiles = []
+			for n,h in enumerate(self._BUs):
+				outputfile = '%s/server%d.csv' % (self._outputDir, n)
+				self.downloadMeasurements(h.host, h.port, self.namespace+'BU', n, outputfile) ## need namespace here? this only works for gevb2g anyway
+				outputfiles.append(outputfile)
+
+			## Concatenate output files
+			with open(self._outputDir+'/server.csv', 'w') as outfile:
+				for fname in outputfiles:
+					with open(fname, 'r') as infile:
+						outfile.write(infile.read())
+						outfile.write('\n')
+		else:
+			print "getResults() only works when running with the gevb2g, try getResultsEvB()"
+			return
 
 	## Untested
 	def sendSOAPMsg(self, host, port, classname, instance, message):
@@ -592,10 +628,10 @@ class daq2Control(object):
 def testBuilding(d2c, minevents=1000):
 	if options.verbose > 0: print separator
 	if options.verbose > 0: print 'Testing event building'
-	if d2c._dryRun: return 10000
+	if d2c._dryRun: return True
 	eventCounter = []
 	for n,bu in enumerate(d2c._BUs):
-		if options.useEVB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
+		if options.useEvB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
 		else:              nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong')
 		eventCounter.append(int(nEvts))
 		if options.verbose > 1: print bu.name, 'number of events built: ', nEvts
@@ -604,13 +640,10 @@ def testBuilding(d2c, minevents=1000):
 	totEvents = 0
 	for evtCount in eventCounter:
 		if evtCount < minevents:
-			if options.verbose > 0: print 'Test failed, built less than %d events!' % minevents
-			return -1
+			return False
 		else:
 			totEvents += evtCount
-
-	if options.verbose > 0: print 'Test successful (built %d events), continuing...' % totEvents
-	return totEvents
+	return True
 def getListOfSizes(maxSize, minSize=256):
 	#####################################
 	## Shortcut for now:
@@ -622,7 +655,7 @@ def getListOfSizes(maxSize, minSize=256):
 
 ######################################################################
 ## Run a single test
-def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0):
+def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
 	"""Usage: runTest(configfile, fragSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
 	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap, useEvB=options.useEvB)
@@ -631,16 +664,25 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLo
 	d2c.setup(configfile)
 
 	d2c.stopXDAQs()
-	d2c.start(fragSize, float(relRMS)*fragSize)
+	d2c.start(fragSize, float(relRMS)*fragSize, rate=rate)
 	d2c.sleep(10)
 
-	if testBuilding(d2c) < 1:
+	if not testBuilding(d2c, 1000):
+		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		d2c.stopXDAQs()
 		exit(-1)
+	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 
-	if self.verbose > 0: print "Building events ..."
-	d2c.sleep(duration)
-	d2c.getResults()
+	if d2c.verbose > 0: print "Building events ..."
+	if d2c.useEvB:
+		## Get results ala testRubuilder script every 10 seconds
+		d2c.getResultsEvB(duration, interval=10)
+	else:
+		## Wait for the full duration, then get all the results at once
+		d2c.sleep(duration)
+		d2c.getResults()
+
+	if options.waitBeforeStop: raw_input("Press Enter to stop the XDAQs...")
 
 	d2c.stopXDAQs()
 	print separator
@@ -650,7 +692,7 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLo
 
 ######################################################################
 ## Run a scan over fragment sizes
-def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0):
+def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
 	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap, useEvB=options.useEvB)
@@ -659,27 +701,31 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 	d2c.setup(configfile)
 
 	d2c.stopXDAQs()
-	d2c.start(minSize, float(relRMS)*minSize)
+	d2c.start(minSize, float(relRMS)*minSize, rate=rate)
 
 	d2c.sleep(10)
 
-	if testBuilding(d2c) < 1:
+	if not testBuilding(d2c, 1000):
+		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		d2c.stopXDAQs()
 		exit(-1)
+	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 
 	steps = getListOfSizes(maxSize, minSize=minSize)
 	for step in steps:
-		d2c.changeSize(step, float(relRMS)*step)
+		d2c.changeSize(step, float(relRMS)*step, rate=rate)
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, duration)
-		d2c.sleep(duration)
-		## For eFEROLs, get results after each step
-		if len(d2c._eFEROLs) > 0: d2c.getResults()
+		if d2c.useEvB:
+			## Get results ala testRubuilder script every 10 seconds
+			d2c.getResultsEvB(duration, interval=10)
+		else:
+			## Wait for the full duration and get results at the end
+			d2c.sleep(duration)
+			## For eFEROLs, get results after each step
+			if len(d2c._eFEROLs) > 0: d2c.getResults()
 
 	## For FEROLs, get results at the end
-	if len(d2c._FEROLs) > 0: d2c.getResults()
-
-	# d2c.changeSize(1024, relRMS=1024) ## With a std dev for the lognormal generator (default is 0)
-	# d2c.sleep(duration)
+	if len(d2c._FEROLs) > 0 and not d2c.useEvB: d2c.getResults()
 
 	d2c.stopXDAQs()
 	print separator
@@ -693,6 +739,8 @@ if __name__ == "__main__":
 	usage = """ %prog [options] --runTest config.xml fragsize"""
 
 	parser = OptionParser(usage=usage)
+
+	## Standard interface:
 	parser.add_option("--runTest", default=False,
 	                  action="store_true", dest="runTest",
 	                  help="Run a test setup, needs two arguments: config and fragment size")
@@ -708,6 +756,9 @@ if __name__ == "__main__":
 	parser.add_option("-d", "--duration", default=30,
 	                  action="store", type="int", dest="duration",
 	                  help="Duration of a single step in seconds, [default: %default s]")
+	parser.add_option("--useRate", default=0,
+	                  action="store", type="int", dest="useRate",
+	                  help="Event rate in kHz, [default: %default]")
 	parser.add_option("--maxSize", default=16000,
 	                  action="store", type="int", dest="maxSize",
 	                  help="Maximum fragment size of a scan in bytes, [default: %default]")
@@ -718,13 +769,18 @@ if __name__ == "__main__":
 	                  action="store", type="int", dest="nSteps",
 	                  help="Number of steps between minSize and maxSize, [default: %default]")
 
+	## Debugging options:
 	parser.add_option("--dry", default=False,
 	                  action="store_true", dest="dry",
 	                  help="Just print the commands without sending anything")
+	parser.add_option("-w", "--waitBeforeStop", default=False,
+	                  action="store_true", dest="waitBeforeStop",
+	                  help="For for key press before stopping the event building")
 	parser.add_option("-v", "--verbose", default=1,
 	                  action="store", type='int', dest="verbose",
 	                  help="Set the verbose level, [default: %default (quiet)]")
 
+	## Control:
 	parser.add_option("--kill", default=False,
 	                  action="store_true", dest="kill",
 	                  help="Stop all the XDAQ launchers and exit")
@@ -761,16 +817,18 @@ if __name__ == "__main__":
 			d2c.startXDAQLaunchers(logfile)
 		exit(0)
 
+	if options.useRate == 0: options.useRate = 'max'
+
 	if options.runTest and len(args) > 1:
 		if options.useLogNormal:
 			if len(args) < 3:
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[2])
+				runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[2], rate=options.useRate)
 				exit(0)
 		else:
-			runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False)
+			runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False, rate=options.useRate)
 			exit(0)
 
 	if options.runScan and len(args) > 0:
@@ -779,10 +837,10 @@ if __name__ == "__main__":
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[1])
+				runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[1], rate=options.useRate)
 				exit(0)
 		else:
-			runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False)
+			runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False, rate=options.useRate)
 			exit(0)
 
 	parser.print_help()
