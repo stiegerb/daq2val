@@ -460,8 +460,6 @@ def makeStandardPlots():
 	makeMultiPlot(rootfile, list_x1x2_lognormals_gevb2g,   rangex=(1500, 150000), oname=outputdir+'x1x2_lognormals_gevb2g_sufrag.pdf', frag=False, tag='eFEROL:gevb2g')
 	makeMultiPlot(rootfile, list_x1x4_lognormals_EvB,      rangex=(1500, 150000), oname=outputdir+'x1x4_lognormals_EvB_sufrag.pdf',    frag=False, tag='eFEROL:EvB')
 
-
-
 ##---------------------------------------------------------------------------------
 ## User interface
 if __name__ == "__main__":
