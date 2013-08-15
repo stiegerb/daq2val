@@ -376,7 +376,7 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 			func = get100kHzRateGraph(c[0]/c[1], frag=frag)
 			func.SetLineColor(colors[n])
 			func.SetLineWidth(1)
-			leg.AddEntry(func, '100 kHz (%d streams)'% c[0], 'l')
+			leg.AddEntry(func, '100 kHz (%d streams)'% c[0]/c[1], 'l')
 			func.DrawCopy("same")
 
 	leg.Draw()
