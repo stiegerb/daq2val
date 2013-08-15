@@ -4,10 +4,12 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
-#	- Add option to use dummyFerol                                   #
-#	- Implement webPing script to check status of hosts              #
-#	- Testing testing testing:                                       #
-#	   > FEROLs with EvB,     fixed size and changing size ??        #
+#   - Add option to run a quicker scan                               #
+#   - Add option for running meta scans                              #
+#   - Add option to use dummyFerol                                   #
+#   - Implement webPing script to check status of hosts              #
+#   - Testing testing testing:                                       #
+#      > FEROLs with EvB,     fixed size and changing size ??        #
 ######################################################################
 
 import subprocess
@@ -656,7 +658,7 @@ def getListOfSizes(maxSize, minSize=256):
 	#####################################
 	## Shortcut for now:
 	# return [1024, 4096]
-	return [1024, 2048, 2560, 4096, 8192, 16000]
+	# return [1024, 2048, 2560, 4096, 8192, 16000]
 	#####################################
 	steps = [ n*minSize for n in xrange(1, 1000) if n*minSize <= 8192] ## multiples of minSize up to 8192
 	if maxSize > 9000: steps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
