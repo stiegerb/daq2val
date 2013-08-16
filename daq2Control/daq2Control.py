@@ -183,6 +183,8 @@ class daq2Control(object):
 		# if not self._dryRun: subprocess.call(['sleep', str(time)])
 	def readXDAQConfigTemplate(self, configfile):
 		import xml.etree.ElementTree as ET
+		if not os.path.exists(configfile):
+			raise IOError('File '+configfile+' not found')
 		self._testCase      = os.path.dirname(configfile[configfile.find('cases/')+6:])
 		self._testCaseShort = os.path.dirname(configfile).split('/').pop()
 		self._runDir += self._testCaseShort
@@ -484,7 +486,7 @@ class daq2Control(object):
 
 		## Clean up and create output dir
 		self._outputDir += self._testCase
-		if self.useLogNormal: self._outputDir += 'RMS_%3.1f/' % float(relRMS)
+		if self.useLogNormal: self._outputDir += '_RMS_%3.1f/' % float(relRMS)
 		if not self._outputDir.endswith('/'): self._outputDir += '/'
 		if self.verbose > 0: print 'Creating output directory in:', self._outputDir
 		subprocess.check_call(['rm', '-f'] + glob.glob(self._outputDir+'server*.csv'))
@@ -546,7 +548,7 @@ class daq2Control(object):
 				ratesamples.append(int(self.getParam(self._RUs[0].host, self._RUs[0].port, 'evb::EVM', str(0), 'eventRate', 'xsd:unsignedInt')))
 
 			with open(self._outputDir+'/server.csv', 'a') as outfile:
-				if self.verbose > 1: print 'Saving output to', self._outputDir+'server.csv'
+				if self.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
 				outfile.write(str(sufragsize))
 				for rate in ratesamples:
 					outfile.write(', ')
@@ -568,7 +570,7 @@ class daq2Control(object):
 
 			## Concatenate output files
 			with open(self._outputDir+'/server.csv', 'a') as outfile:
-				if self.verbose > 1: print 'Saving output to', self._outputDir+'server.csv'
+				if self.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
 				for fname in outputfiles:
 					with open(fname, 'r') as infile:
 						outfile.write(infile.read())
@@ -743,6 +745,8 @@ if __name__ == "__main__":
 	%prog [options] --runScan config.xml
 	%prog [options] --runScan --useLogNormal config.xml fragsizerms
 
+	%prog [options] --runRMSScan config.xml
+
 	Examples:
 	%prog [options] --runTest --useEvB --duration 30 /nfshome0/mommsen/daq/dev/daq/evb/test/cases/daq2val/FEROLs/16s8fx1x4/configuration.template.xml 1024
 	%prog [options] --runTest --useLogNormal ~/andrea_test/cases/eFEROLs/gevb2g/dummyFerol/16x2x2/configuration.template.xml 1024 0.5
@@ -769,6 +773,8 @@ if __name__ == "__main__":
 	                  help="Run a test setup, needs two arguments: config and fragment size")
 	parser.add_option("--runScan", default=False, action="store_true", dest="runScan",
 	                  help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
+	parser.add_option("--runRMSScan", default=False, action="store_true", dest="runRMSScan",
+	                  help="Run four scans over fragment sizes with different RMS values")
 	parser.add_option("--useEvB", default=False, action="store_true", dest="useEvB",
 	                  help="Use EvB instead of gevb2g [default is gevb2g]")
 	parser.add_option("--useLogNormal", default=False, action="store_true", dest="useLogNormal",
@@ -867,7 +873,6 @@ if __name__ == "__main__":
 				exit(-1)
 			if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 			exit(0)
-
 	if options.changeSize and len(args) > 1:
 		if options.useLogNormal:
 			if len(args) < 3:
@@ -902,7 +907,6 @@ if __name__ == "__main__":
 		else:
 			runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False, rate=options.useRate)
 			exit(0)
-
 	if options.runScan and len(args) > 0:
 		if options.useLogNormal:
 			if len(args) < 2:
@@ -914,6 +918,22 @@ if __name__ == "__main__":
 		else:
 			runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False, rate=options.useRate)
 			exit(0)
+	if options.runRMSScan and len(args) > 0:
+		config = args[0]
+		rms_values = [0.0, 0.5, 1.0, 2.0]
+		for rms in rms_values:
+			print 80*'#'
+			print 80*'#'
+			print '## STARTING SCAN OF RMS =', rms
+			print 80*'#'
+			print 80*'#'
+			runScan(config, nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=rms, rate=options.useRate)
+		print 80*'#'
+		print 80*'#'
+		print '## EVERYTHING DONE'
+		print 80*'#'
+		print 80*'#'
+		exit(0)
 
 	parser.print_help()
 	exit(-1)
