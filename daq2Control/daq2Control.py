@@ -185,6 +185,7 @@ class daq2Control(object):
 		import xml.etree.ElementTree as ET
 		self._testCase      = os.path.dirname(configfile[configfile.find('cases/')+6:])
 		self._testCaseShort = os.path.dirname(configfile).split('/').pop()
+		self._runDir += self._testCaseShort
 		config = ET.parse(configfile)
 		partition = config.getroot()
 		for context in partition:
@@ -378,20 +379,6 @@ class daq2Control(object):
 			if self.verbose > 1: print separator
 			self.sleep(5)
 
-			## Configure FED ids
-			if self.verbose > 0: print "Setting FED ids on FEROLs"
-			fedid = 0
-			for frl in self._FEROLs:
-				if frl.enableStream0:
-					self.writeItem(frl.host, frl.port, 'ferol::FerolController', 0, 'GEN_FED_SOURCE_BX_FED0', fedid)
-					# self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'expectedFedId_0', 'unsignedInt', fedid)
-					fedid += 1
-				if frl.enableStream1:
-					self.writeItem(frl.host, frl.port, 'ferol::FerolController', 0, 'GEN_FED_SOURCE_BX_FED1', fedid)
-					# self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'expectedFedId_1', 'unsignedInt', fedid)
-					fedid += 1
-
-
 			if self.verbose > 1: print separator
 			self.sendCmdToEVMRUBU('Configure')
 			if self.verbose > 1: print separator
@@ -492,7 +479,6 @@ class daq2Control(object):
 		## Read config file, cleanup run dir
 		if self.verbose > 0: print 'Reading config file', configfile
 		self.readXDAQConfigTemplate(configfile)
-		self._runDir += self._testCaseShort
 		subprocess.check_call(['rm', '-rf', self._runDir])
 		subprocess.check_call(['mkdir', '-p', self._runDir])
 
@@ -748,6 +734,10 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 if __name__ == "__main__":
 	from optparse import OptionParser
 	usage = """
+	%prog [options] --start config.xml fragsize
+	%prog [options] --changeSize config.xml newfragsize
+	%prog [options] --changeSize --useLogNormal config.xml newfragsize relRMS
+
 	%prog [options] --runTest config.xml fragsize
 	%prog [options] --runTest --useLogNormal config.xml fragsize fragsizerms
 	%prog [options] --runScan config.xml
@@ -766,92 +756,140 @@ if __name__ == "__main__":
 		--symbolMap      (use a custom symbol map)
 
 	Launcher options:
-		--start   (start XDAQ launchers on all machines defined in symbol map)
-		--stop    (start XDAQ processes on all machines defined in symbol map)
-		--kill    (kill XDAQ launchers on all machines defined in symbol map)
+		--startLaunchers   (start XDAQ launchers on all machines defined in symbol map)
+		--stopLaunchers    (start XDAQ processes on all machines defined in symbol map)
+		--stopXDAQs        (kill XDAQ launchers on all machines defined in symbol map)
 
 	"""
 
 	parser = OptionParser(usage=usage)
 
 	## Standard interface:
-	parser.add_option("--runTest", default=False,
-	                  action="store_true", dest="runTest",
+	parser.add_option("--runTest", default=False, action="store_true", dest="runTest",
 	                  help="Run a test setup, needs two arguments: config and fragment size")
-	parser.add_option("--runScan", default=False,
-	                  action="store_true", dest="runScan",
+	parser.add_option("--runScan", default=False, action="store_true", dest="runScan",
 	                  help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
-	parser.add_option("--useEvB", default=False,
-	                  action="store_true", dest="useEvB",
+	parser.add_option("--useEvB", default=False, action="store_true", dest="useEvB",
 	                  help="Use EvB instead of gevb2g [default is gevb2g]")
-	parser.add_option("--useLogNormal", default=False,
-	                  action="store_true", dest="useLogNormal",
+	parser.add_option("--useLogNormal", default=False, action="store_true", dest="useLogNormal",
 	                  help="Use lognormal generator for e/FEROLs (will use the dummyFerol instead of the Client in case of the eFEROLS). You need to provide the relative rms (i.e. in multiples of the fragment size) as an argument.")
-	parser.add_option("-d", "--duration", default=60,
-	                  action="store", type="int", dest="duration",
+	parser.add_option("-d", "--duration", default=60, action="store", type="int", dest="duration",
 	                  help="Duration of a single step in seconds, [default: %default s]")
-	parser.add_option("--useRate", default=0,
-	                  action="store", type="int", dest="useRate",
+	parser.add_option("--useRate", default=0, action="store", type="int", dest="useRate",
 	                  help="Event rate in kHz, [default is maximum rate]")
-	parser.add_option("--maxSize", default=16000,
-	                  action="store", type="int", dest="maxSize",
+	parser.add_option("--maxSize", default=16000, action="store", type="int", dest="maxSize",
 	                  help="Maximum fragment size of a scan in bytes, [default: %default]")
-	parser.add_option("--minSize", default=256,
-	                  action="store", type="int", dest="minSize",
+	parser.add_option("--minSize", default=256, action="store", type="int", dest="minSize",
 	                  help="Minimum fragment size of a scan in bytes, [default: %default]")
-	parser.add_option("--nSteps", default=100,
-	                  action="store", type="int", dest="nSteps",
+	parser.add_option("--nSteps", default=100, action="store", type="int", dest="nSteps",
 	                  help="Number of steps between minSize and maxSize, [default: %default]")
 
 	## Debugging options:
-	parser.add_option("--dry", default=False,
-	                  action="store_true", dest="dry",
+	parser.add_option("--dry", default=False, action="store_true", dest="dry",
 	                  help="Just print the commands without sending anything")
-	parser.add_option("-w", "--waitBeforeStop", default=False,
-	                  action="store_true", dest="waitBeforeStop",
+	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true", dest="waitBeforeStop",
 	                  help="For for key press before stopping the event building")
-	parser.add_option("-v", "--verbose", default=1,
-	                  action="store", type='int', dest="verbose",
+	parser.add_option("-v", "--verbose", default=1, action="store", type='int', dest="verbose",
 	                  help="Set the verbose level, [default: %default (semi-quiet)]")
 
 	## Control:
-	parser.add_option("--kill", default=False,
-	                  action="store_true", dest="kill",
+	parser.add_option("--stopLaunchers", default=False, action="store_true", dest="stopLaunchers",
 	                  help="Stop all the XDAQ launchers and exit")
-	parser.add_option("--start", default=False,
-	                  action="store_true", dest="start",
+	parser.add_option("--startLaunchers", default=False, action="store_true", dest="startLaunchers",
 	                  help="Start all the XDAQ launchers and exit")
-	parser.add_option("--stop", default=False,
-	                  action="store_true", dest="stop",
+	parser.add_option("--stopXDAQs", default=False, action="store_true", dest="stopXDAQs",
 	                  help="Stop all the XDAQ processes and exit")
 
-	parser.add_option("-m", "--symbolMap", default='',
-	                  action="store", type="string", dest="symbolMap",
+	parser.add_option("--start", default=False, action="store_true", dest="start",
+	                  help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
+	parser.add_option("--changeSize", default=False, action="store_true", dest="changeSize",
+	                  help="Halt, change size and resume. Needs config and new size as arguments.")
+
+	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap",
 	                  help="Use a symbolmap different from the one set in the environment")
 	(options, args) = parser.parse_args()
 
+	if options.useRate == 0: options.useRate = 'max'
 
 	# raw_input("Press Enter to stop the XDAQs...")
 
-	if options.kill:
+	if options.stopLaunchers:
 		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
 		d2c.verbose = options.verbose
 		d2c.stopXDAQs()
 		d2c.stopXDAQLaunchers()
 		exit(0)
-	if options.stop:
+	if options.stopXDAQs:
 		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
 		d2c.verbose = options.verbose
 		d2c.stopXDAQs()
 		exit(0)
-	if options.start:
+	if options.startLaunchers:
 		with open('launcherLog.txt', 'w') as logfile:
 			d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
 			d2c.verbose = options.verbose
 			d2c.startXDAQLaunchers(logfile)
 		exit(0)
 
-	if options.useRate == 0: options.useRate = 'max'
+	if options.start and len(args) > 1:
+		## this creates also output and run dirs
+		if options.useLogNormal:
+			if len(args) < 3:
+				print "You need give an RMS argument when using --useLogNormal"
+				exit(-1)
+			else:
+				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+				d2c.verbose = options.verbose
+				d2c.useLogNormal = True
+				relRMS = float(args[2])
+				fragSize = int(args[1])
+
+				d2c.setup(args[0], relRMS=relRMS)
+				d2c.start(fragSize, float(relRMS)*fragSize, rate=options.useRate)
+				d2c.sleep(10)
+
+				if not testBuilding(d2c, 1000):
+					if options.verbose > 0: print 'Test failed, built less than 1000 events!'
+					exit(-1)
+				if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
+				exit(0)
+		else:
+			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+			d2c.verbose = options.verbose
+			d2c.useLogNormal = False
+			fragSize = int(args[1])
+
+			d2c.setup(args[0])
+			d2c.start(fragSize, rate=options.useRate)
+			d2c.sleep(10)
+			if not testBuilding(d2c, 1000):
+				if options.verbose > 0: print 'Test failed, built less than 1000 events!'
+				exit(-1)
+			if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
+			exit(0)
+
+	if options.changeSize and len(args) > 1:
+		if options.useLogNormal:
+			if len(args) < 3:
+				print "You need give an RMS argument when using --useLogNormal"
+				exit(-1)
+			else:
+				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+				d2c.verbose = options.verbose
+				d2c.useLogNormal = True
+				relRMS = float(args[2])
+				fragSize = int(args[1])
+				d2c.readXDAQConfigTemplate(args[0])
+				d2c.changeSize(fragSize, relRMS*fragSize, rate=options.useRate)
+				exit(0)
+		else:
+			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+			d2c.verbose = options.verbose
+			d2c.useLogNormal = False
+			fragSize = int(args[1])
+			d2c.readXDAQConfigTemplate(args[0])
+			d2c.changeSize(fragSize, rate=options.useRate)
+			exit(0)
 
 	if options.runTest and len(args) > 1:
 		if options.useLogNormal:
