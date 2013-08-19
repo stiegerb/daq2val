@@ -217,6 +217,7 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	if nStreams/nRus==8:  UPPERLIMIT = 32000
 	if nStreams/nRus==12: UPPERLIMIT = 21000
 	if nStreams/nRus==16: UPPERLIMIT = 16000
+	if nStreams/nRus==24: UPPERLIMIT = 10000
 
 	for size in sorted(data.keys()):
 		if abs(mean(data[size])) < 0.01 and abs(std(data[size])) < 0.01: continue ## skip empty lines
@@ -376,10 +377,13 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 			func = get100kHzRateGraph(c[0]/c[1], frag=frag)
 			func.SetLineColor(colors[n])
 			func.SetLineWidth(1)
-			leg.AddEntry(func, '100 kHz (%d streams)'% c[0]/c[1], 'l')
+			leg.AddEntry(func, '100 kHz (%d streams)'% (c[0]/c[1]), 'l')
 			func.DrawCopy("same")
 
 	leg.Draw()
+
+	for graph in graphs: graph.Draw("PL")
+
 	if len(oname)==0: ## default
 		oname = 'plot_' + reduce(lambda x,y:x+'_'+y, caselist) + '.pdf'
 	canv.Print(oname)
