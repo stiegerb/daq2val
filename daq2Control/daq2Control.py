@@ -643,11 +643,10 @@ def testBuilding(d2c, minevents=1000):
 			totEvents += evtCount
 	return True
 def getListOfSizes(maxSize, minSize=256):
-	#####################################
-	## Shortcut for now:
-	# return [1024, 4096]
-	# return [1024, 2048, 2560, 4096, 8192, 16000]
-	#####################################
+	if options.short:
+		steps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192]
+		if maxSize > 9000: steps += [12288, 16000]
+		return steps
 	steps = [ n*minSize for n in xrange(1, 1000) if n*minSize <= 8192] ## multiples of minSize up to 8192
 	if maxSize > 9000: steps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
 	return steps
@@ -789,6 +788,8 @@ if __name__ == "__main__":
 	                  help="Minimum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--nSteps", default=100, action="store", type="int", dest="nSteps",
 	                  help="Number of steps between minSize and maxSize, [default: %default]")
+	parser.add_option("--short", default=False, action="store_true", dest="short",
+	                  help="Run a short scan with only a few points")
 
 	## Debugging options:
 	parser.add_option("--dry", default=False, action="store_true", dest="dry",
