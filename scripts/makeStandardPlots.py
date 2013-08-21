@@ -39,6 +39,38 @@ def makeStandardPlots(rootfile, outDir):
 	legends = ['RMS 0.0, OFED-v1.5.3-4', 'RMS 0.0, OFED-v1.5.3-3', 'RMS 1.0, OFED-v1.5.3-4', 'RMS 1.0, OFED-v1.5.3-3']
 	makeMultiPlot(rootfile, list_16s16fx2x2, oname=outputdir+'16s16fx2x2_lognormals_gevb2g.pdf', tag='FEROL:gevb2g', legends=map(lambda x:'16s16fx2x2 '+x, legends))
 
+	outputdir = createDir(outDir+'Aug19/FEROLs/')
+	prefix = 'data/%s/FEROLs/gevb2g/'
+	list_12s12fx1x2 =  [ prefix%'Aug19' + '12s12fx1x2_RMS_0.0']
+	list_12s12fx1x2 += [ prefix%'Aug19' + '12s12fx1x2_RMS_0.5']
+	list_12s12fx1x2 += [ prefix%'Aug19' + '12s12fx1x2_RMS_1.0']
+	list_12s12fx1x2 += [ prefix%'Aug19' + '12s12fx1x2_RMS_2.0']
+	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
+	makeMultiPlot(rootfile, list_12s12fx1x2, oname=outputdir+'12s12fx1x2_lognormals_gevb2g.pdf', tag='FEROL:gevb2g', legends=map(lambda x:'12s12fx1x2, '+x, legends))
+
+	prefix = 'data/%s/FEROLs/gevb2g/'
+	list_24s12fx1x2 =  [ prefix%'Aug19' + '24s12fx1x2_RMS_0.0']
+	list_24s12fx1x2 += [ prefix%'Aug19' + '24s12fx1x2_RMS_0.5']
+	list_24s12fx1x2 += [ prefix%'Aug19' + '24s12fx1x2_RMS_1.0']
+	list_24s12fx1x2 += [ prefix%'Aug19' + '24s12fx1x2_RMS_2.0']
+	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
+	makeMultiPlot(rootfile, list_24s12fx1x2, oname=outputdir+'24s12fx1x2_lognormals_gevb2g.pdf', tag='FEROL:gevb2g', legends=map(lambda x:'24s12fx1x2, '+x, legends))
+
+	prefix = 'data/%s/FEROLs/EvB/'
+	list_8s8fx1x4 =  [ prefix%'Aug19' + '8s8fx1x4_RMS_0.0']
+	list_8s8fx1x4 += [ prefix%'Aug19' + '8s8fx1x4_RMS_0.5']
+	list_8s8fx1x4 += [ prefix%'Aug19' + '8s8fx1x4_RMS_1.0']
+	list_8s8fx1x4 += [ prefix%'Aug19' + '8s8fx1x4_RMS_2.0']
+	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
+	makeMultiPlot(rootfile, list_8s8fx1x4, oname=outputdir+'8s8fx1x4_lognormals_EvB.pdf', tag='FEROL:EvB', legends=map(lambda x:'8s8fx1x4, '+x, legends))
+
+	list_16s8fx1x4 =  [ prefix%'Aug19' + '16s8fx1x4_RMS_0.0']
+	list_16s8fx1x4 += [ prefix%'Aug19' + '16s8fx1x4_RMS_0.5']
+	list_16s8fx1x4 += [ prefix%'Aug19' + '16s8fx1x4_RMS_1.0']
+	list_16s8fx1x4 += [ prefix%'Aug19' + '16s8fx1x4_RMS_2.0']
+	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
+	makeMultiPlot(rootfile, list_16s8fx1x4, oname=outputdir+'16s8fx1x4_lognormals_EvB.pdf', tag='FEROL:EvB', legends=map(lambda x:'16s8fx1x4, '+x, legends))
+
 	#### eFEROLs:
 	prefix = 'data/Aug13/eFEROLs/'
 	outputdir = createDir(outDir+'Aug13/eFEROLs/')
@@ -83,7 +115,7 @@ if __name__ == "__main__":
 	(options, args) = parser.parse_args()
 
 	if len(args) > 0:
-		makeStandardPlots(args[0], outputdir=options.outDir)
+		makeStandardPlots(args[0], outDir=options.outDir)
 		exit(0)
 
 	parser.print_help()
