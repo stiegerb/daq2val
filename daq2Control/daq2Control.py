@@ -6,6 +6,7 @@
 #  ToDo-List:                                                        #
 #   - Add option to run a quicker scan                               #
 #   - Add option for running meta scans                              #
+#   - For option start, add a stopping of previous running setups    #
 #   - Add option to use dummyFerol                                   #
 #   - Implement webPing script to check status of hosts              #
 #   - Testing testing testing:                                       #
@@ -538,14 +539,21 @@ class daq2Control(object):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
 		a total duration."""
+		from sys import stdout
 		if self._dryRun: return
 		if self.useEvB:
 			sufragsize = self._nStreams/len(self._RUs) * self.currentFragSize
 			ratesamples = []
 			starttime = time.time()
+			stdout.write('Rate samples: ')
 			while(time.time() < starttime+duration):
 				time.sleep(interval)
-				ratesamples.append(int(self.getParam(self._RUs[0].host, self._RUs[0].port, 'evb::EVM', str(0), 'eventRate', 'xsd:unsignedInt')))
+				sample = int(self.getParam(self._RUs[0].host, self._RUs[0].port, 'evb::EVM', str(0), 'eventRate', 'xsd:unsignedInt'))
+				ratesamples.append(sample)
+				if self.verbose > 0:
+					stdout.write(str(sample)+' ')
+					stdout.flush()
+			print '\n'
 
 			with open(self._outputDir+'/server.csv', 'a') as outfile:
 				if self.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
@@ -648,7 +656,8 @@ def getListOfSizes(maxSize, minSize=256):
 		if maxSize > 9000: steps += [12288, 16000]
 		return steps
 	steps = [ n*minSize for n in xrange(1, 1000) if n*minSize <= 8192] ## multiples of minSize up to 8192
-	if maxSize > 9000: steps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
+	for step in [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]:
+		if step <= maxSize: steps.append(step)
 	return steps
 
 ######################################################################
