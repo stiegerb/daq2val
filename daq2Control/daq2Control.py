@@ -4,13 +4,9 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
-#   - Add option to run a quicker scan                               #
-#   - Add option for running meta scans                              #
-#   - For option start, add a stopping of previous running setups    #
 #   - Add option to use dummyFerol                                   #
 #   - Implement webPing script to check status of hosts              #
-#   - Testing testing testing:                                       #
-#      > FEROLs with EvB,     fixed size and changing size ??        #
+#   - Testing testing testing                                        #
 ######################################################################
 
 import subprocess
@@ -474,24 +470,21 @@ class daq2Control(object):
 			self.start(fragSize, fragSizeRMS=fragSizeRMS)
 
 		else: return
-	def setup(self, configfile, relRMS=-1):
+	def prepareOutputDir(self, relRMS):
 		import glob
-		"""Read config file, clean up and re-create run directory, fill config templates, create output directory"""
-		if self.verbose > 0: print separator
-
-		## Read config file, cleanup run dir
-		if self.verbose > 0: print 'Reading config file', configfile
-		self.readXDAQConfigTemplate(configfile)
-		subprocess.check_call(['rm', '-rf', self._runDir])
-		subprocess.check_call(['mkdir', '-p', self._runDir])
-
-		## Clean up and create output dir
 		self._outputDir += self._testCase
 		if self.useLogNormal: self._outputDir += '_RMS_%3.1f/' % float(relRMS)
 		if not self._outputDir.endswith('/'): self._outputDir += '/'
-		if self.verbose > 0: print 'Creating output directory in:', self._outputDir
-		subprocess.check_call(['rm', '-f'] + glob.glob(self._outputDir+'server*.csv'))
-		subprocess.check_call(['mkdir', '-p', self._outputDir])
+		if self.verbose > 0: print 'Storing output in:', self._outputDir
+		if self._dryRun: return
+
+		if os.path.exists(self._outputDir):
+			newdir = self._outputDir + 'previous/' + time.strftime('%b%d-%H%M%S')
+			os.makedirs(newdir)
+			if len(glob.glob(self._outputDir+'*.csv')) > 0:
+				subprocess.check_call(['mv'] + glob.glob(self._outputDir+'*.csv') + [newdir])
+		else:
+			os.makedirs(self._outputDir)
 
 		## Prepare output file:
 		with open(self._outputDir+'/server.csv', 'a') as outfile:
@@ -501,19 +494,34 @@ class daq2Control(object):
 			outfile.write('\n')
 			outfile.close()
 
+	def setup(self, configfile, relRMS=-1):
+		"""Read config file, clean up and re-create run directory, fill config templates, create output directory"""
+		if self.verbose > 0: print separator
+
+		## Read config file, cleanup run dir
+		if self.verbose > 0: print 'Reading config file', configfile
+		self.readXDAQConfigTemplate(configfile)
+		if not self._dryRun:
+			subprocess.check_call(['rm', '-rf', self._runDir])
+			subprocess.check_call(['mkdir', '-p', self._runDir])
+
+		## Clean up and create output dir
+		self.prepareOutputDir(relRMS)
 
 		## Fill configuration template
 		if self.verbose > 0: print 'Filling configuration template in ' + self._runDir + '/configuration.xml'
-		filledconfig = self.fillTemplate(configfile)
-		with open(self._runDir+'/configuration.xml', 'w') as file:
-			file.write(filledconfig)
+		if not self._dryRun:
+			filledconfig = self.fillTemplate(configfile)
+			with open(self._runDir+'/configuration.xml', 'w') as file:
+				file.write(filledconfig)
 
 		## Produce configure command file
 		if self.verbose > 0: print 'Producing configuration command file in ' + self._runDir + '/configure.cmd.xml'
-		with open(self._runDir+'/configure.cmd.xml', 'w') as file:
-			configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
-			configureCmd = self._SOAPEnvelope % configureBody
-			file.write(configureCmd)
+		if not self._dryRun:
+			with open(self._runDir+'/configure.cmd.xml', 'w') as file:
+				configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
+				configureCmd = self._SOAPEnvelope % configureBody
+				file.write(configureCmd)
 	def start(self, fragSize, fragSizeRMS=0, rate='max'):
 		"""Start all XDAQ processes, set configuration for fragSize and start running"""
 		self.currentFragSize = fragSize
@@ -856,7 +864,11 @@ if __name__ == "__main__":
 			else:
 				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
 				d2c.verbose = options.verbose
+
+				## Stop previously running things
+				d2c.stopXDAQs()
 				d2c.useLogNormal = True
+
 				relRMS = float(args[2])
 				fragSize = int(args[1])
 
@@ -872,6 +884,10 @@ if __name__ == "__main__":
 		else:
 			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
 			d2c.verbose = options.verbose
+
+			## Stop previously running things
+			d2c.stopXDAQs()
+
 			d2c.useLogNormal = False
 			fragSize = int(args[1])
 
