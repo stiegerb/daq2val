@@ -412,7 +412,8 @@ class daq2Control(object):
 					self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'useLogNormal',  'boolean',     'true')
 
 			## Set super-fragment size for BUs
-			if not self.useEvB and not self.useLogNormal:
+			if not self.useEvB:
+			# if not self.useEvB and not self.useLogNormal: ## pre Aug25
 				if self.verbose > 1: print separator
 				for n,bu in enumerate(self._BUs):
 					self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
@@ -946,6 +947,7 @@ if __name__ == "__main__":
 			exit(0)
 	if options.runRMSScan and len(args) > 0:
 		config = args[0]
+		# rms_values = [0.5, 1.0, 2.0]
 		rms_values = [0.0, 0.5, 1.0, 2.0]
 		for rms in rms_values:
 			print 80*'#'
