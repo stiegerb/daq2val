@@ -4,6 +4,7 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
+#   - Automatize maximum size and scan limits from table             #
 #   - Add option to use dummyFerol                                   #
 #   - Implement webPing script to check status of hosts              #
 #   - Testing testing testing                                        #
@@ -660,13 +661,20 @@ def testBuilding(d2c, minevents=1000):
 			totEvents += evtCount
 	return True
 def getListOfSizes(maxSize, minSize=256):
+	stepsize = 256
 	if options.short:
 		steps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192]
 		if maxSize > 9000: steps += [12288, 16000]
 		return steps
-	steps = [ n*minSize for n in xrange(1, 1000) if n*minSize <= 8192] ## multiples of minSize up to 8192
+	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
 	for step in [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]:
-		if step <= maxSize: steps.append(step)
+		allsteps.append(step)
+
+	steps = []
+	for step in allsteps:
+		if step >= minSize and step <= maxSize: steps.append(step)
+
+	print steps
 	return steps
 
 ######################################################################
