@@ -42,15 +42,7 @@ def fillTreeForDir(treefile, subdir, files):
 		if rms is not None: feedback += " RMS is %4.2f" % rms
 		print feedback
 
-	customFactor = 1
-
-
-	############################################
-	if '16s8fx1x2' in subdir: customFactor = 2
-	############################################
-
-
-	fillTree(subdir+'/server.csv', treefile, subdir, nstreams, nbus, nrus, rms, doCleaning=options.doCleaning, customFactor=customFactor)
+	fillTree(subdir+'/server.csv', treefile, subdir, nstreams, nbus, nrus, rms, doCleaning=options.doCleaning)
 	if options.doCleaning:
 		cleanFile(subdir+'/server.csv')
 
@@ -146,10 +138,11 @@ def cleanFilesInDir(subdir):
 		return
 	cleanFile(subdir+'/server.csv')
 
+
 ##---------------------------------------------------------------------------------
 ## Storing information in a ROOT tree for later plotting
 ##  (this is where the meat is)
-def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=128, doCleaning=False, customFactor=1):
+def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=256, doCleaning=False):
 	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 	from array import array
 	from numpy import mean,std
@@ -207,7 +200,7 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	nbus[0] = nBus
 	nrus[0] = nRus
 
-	added   = False
+	output_case = 0 ## 0 (fragsize), 1 (superfragsize), 2 (eventsize)
 	checked = False
 
 	# LOWERLIMIT=32
@@ -219,43 +212,37 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	if nStreams/nRus==16: UPPERLIMIT = 16000
 	if nStreams/nRus==24: UPPERLIMIT = 10000
 
+	if 'Aug25' in dirname and nStreams/nRus==24: UPPERLIMIT = 21000
+
+	if options.verbose > 4: print 'UPPERLIMIT is ', UPPERLIMIT
+
 	for size in sorted(data.keys()):
 		if abs(mean(data[size])) < 0.01 and abs(std(data[size])) < 0.01: continue ## skip empty lines
 
-		## Fill the tree variables
-		## Two cases of output files (Grrrr):
-		##  1. beginning of line is super frag size
-		##  2. beginning of line is fragment size
-
+		## Determine what the first item in the server.csv file stands for
 		if not checked: ## only do this for the first time
 			checked = True
-			if int(size)//nStreams < startfragsize: added = True
-			else: added = False
+			if   int(size)//startfragsize == 1:             output_case = 0
+			elif int(size)//startfragsize == nStreams/nRus: output_case = 1
+			elif int(size)//startfragsize == nStreams:      output_case = 2
+			else:                                           output_case = 1 ## default
 
-		## Extract fragment size / super fragment size
-		if added: ## fragmentsize
-			fragsize[0] = float(size)
-			############################################
-			if customFactor != 1: fragsize[0] *= customFactor
-			############################################
-			if rms is not None and rms != 0.0:
-				fragsize[0] = averageFractionSize(fragsize[0], rms*fragsize[0], LOWERLIMIT, UPPERLIMIT)
-
-			eventsize = nStreams*fragsize[0]
-			sufragsize[0]  = eventsize/nRus
-
-		else: ## superfragmentsize
+		## Extract event size
+		if output_case == 0: ## fragment size
+			eventsize = float(size)*nStreams
+		if output_case == 1: ## superfragment size
+			eventsize = float(size)*nRus
+		if output_case == 2: ## event size
 			eventsize = float(size)
-			############################################
-			if customFactor != 1: eventsize *= customFactor
-			############################################
-			fragsize[0]    = eventsize/nStreams
-			sufragsize[0]  = eventsize/nRus
-			if rms is not None and rms != 0.0:
-				fragsize[0] = averageFractionSize(eventsize/nStreams, rms*eventsize/nStreams, LOWERLIMIT, UPPERLIMIT)
-				sufragsize[0] = fragsize[0]*nStreams/nRus
 
+		## Calculate fragment and super fragment sizes
+		fragsize[0]    = eventsize/nStreams
+		sufragsize[0]  = eventsize/nRus
+		if rms is not None and rms != 0.0:
+			fragsize[0] = averageFractionSize(eventsize/nStreams, rms*eventsize/nStreams, LOWERLIMIT, UPPERLIMIT)
+			sufragsize[0] = fragsize[0]*nStreams/nRus
 
+		## Calculate rate
 		avrate[0]      = mean(data[size])
 		stdrate[0]     = std(data[size])
 		throughput[0]  = sufragsize[0]*avrate[0]/1e6 ## in MB/s

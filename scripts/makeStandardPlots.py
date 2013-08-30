@@ -73,12 +73,12 @@ def makeStandardPlots(rootfile, outDir):
 
 	outputdir = createDir(outDir+'Aug21/FEROLs/')
 	prefix = 'data/%s/FEROLs/EvB/'
-	list_12s12fx1x4 =  [ prefix%'Aug21' + '12s12fx1x4_RMS_0.0']
-	list_12s12fx1x4 += [ prefix%'Aug21' + '12s12fx1x4_RMS_0.5']
-	list_12s12fx1x4 += [ prefix%'Aug21' + '12s12fx1x4_RMS_1.0']
-	list_12s12fx1x4 += [ prefix%'Aug21' + '12s12fx1x4_RMS_2.0']
+	list_12s12fx1x4_r720 =  [ prefix%'Aug21' + '12s12fx1x4_RMS_0.0']
+	list_12s12fx1x4_r720 += [ prefix%'Aug21' + '12s12fx1x4_RMS_0.5']
+	list_12s12fx1x4_r720 += [ prefix%'Aug21' + '12s12fx1x4_RMS_1.0']
+	list_12s12fx1x4_r720 += [ prefix%'Aug21' + '12s12fx1x4_RMS_2.0']
 	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
-	makeMultiPlot(rootfile, list_12s12fx1x4, oname=outputdir+'12s12fx1x4_lognormals_EvB.pdf', tag='FEROL:EvB', legends=map(lambda x:'12s12fx1x4, '+x, legends))
+	makeMultiPlot(rootfile, list_12s12fx1x4_r720, oname=outputdir+'12s12fx1x4_lognormals_EvB.pdf', tag='FEROL:EvB', legends=map(lambda x:'12s12fx1x4, '+x, legends))
 
 	prefix = 'data/%s/FEROLs/%s/'
 	list_12s_evb_gevb  = [prefix %('Aug21','EvB')    + '12s12fx1x4_RMS_0.0']
@@ -88,6 +88,56 @@ def makeStandardPlots(rootfile, outDir):
 	legends = ['12s12fx1x4, RMS 0.0, EvB', '12s12fx1x2, RMS 0.0, gevb2g', '12s12fx1x4, RMS 1.0, EvB', '12s12fx1x2, RMS 1.0, gevb2g']
 	makeMultiPlot(rootfile, list_12s_evb_gevb, oname=outputdir+'12s12fx1x2,4_lognormals_EvBvsgevb2g.pdf', tag='FEROL:EvB/gevb2g', legends=legends)
 
+	outputdir = createDir(outDir+'Aug23/FEROLs/')
+	prefix = 'data/%s/FEROLs/EvB/'
+	list_12s12fx1x4_r620  = [prefix % 'Aug23' + '12s12fx1x4_RMS_0.0']
+	list_12s12fx1x4_r620 += [prefix % 'Aug23' + '12s12fx1x4_RMS_0.5']
+	list_12s12fx1x4_r620 += [prefix % 'Aug23' + '12s12fx1x4_RMS_1.0']
+	list_12s12fx1x4_r620 += [prefix % 'Aug23' + '12s12fx1x4_RMS_2.0']
+	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
+	makeMultiPlot(rootfile, list_12s12fx1x4_r620, oname=outputdir+'12s12fx1x4_R620.pdf', tag='FEROL:EvB:R620', legends=map(lambda x:'12s12fx1x4, ' + x + ', R620', legends))
+	makeMultiPlot(rootfile, list_12s12fx1x4_r720, oname=outputdir+'12s12fx1x4_R720.pdf', tag='FEROL:EvB:R720', legends=map(lambda x:'12s12fx1x4, ' + x + ', R720', legends))
+
+	r6720_list = [list_12s12fx1x4_r620[0], list_12s12fx1x4_r720[0], list_12s12fx1x4_r620[2], list_12s12fx1x4_r720[2]]
+	legends = ['RMS 0.0, R620', 'RMS 0.0, R720', 'RMS 1.0, R620', 'RMS 1.0, R720']
+	makeMultiPlot(rootfile, r6720_list, oname=outputdir+'12s12fx1x4_R620_R720.pdf', tag='FEROL:EvB', legends=map(lambda x:'12s12fx1x4, ' + x, legends))
+
+	outputdir = createDir(outDir+'Aug25/FEROLs/')
+	prefix = 'data/%s/FEROLs/EvB/'
+	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
+
+	list_16s8fx1x4  = [prefix % 'Aug25' + '16s8fx1x4_RMS_0.0']
+	list_16s8fx1x4 += [prefix % 'Aug25' + '16s8fx1x4_RMS_0.5']
+	list_16s8fx1x4 += [prefix % 'Aug25' + '16s8fx1x4_RMS_1.0']
+	list_16s8fx1x4 += [prefix % 'Aug25' + '16s8fx1x4_RMS_2.0']
+	makeMultiPlot(rootfile, list_16s8fx1x4, oname=outputdir+'16s8fx1x4.pdf', tag='FEROL:EvB', legends=map(lambda x:'16s8fx1x4, ' + x, legends))
+
+	list_16s16fx2x4  = [prefix % 'Aug25' + '16s16fx2x4_RMS_0.0']
+	list_16s16fx2x4 += [prefix % 'Aug25' + '16s16fx2x4_RMS_0.5']
+	list_16s16fx2x4 += [prefix % 'Aug25' + '16s16fx2x4_RMS_1.0']
+	list_16s16fx2x4 += [prefix % 'Aug25' + '16s16fx2x4_RMS_2.0']
+	makeMultiPlot(rootfile, list_16s16fx2x4, oname=outputdir+'16s16fx2x4.pdf', tag='FEROL:EvB', legends=map(lambda x:'16s16fx2x4, ' + x, legends))
+
+	list_24s12fx1x4  = [prefix % 'Aug25' + '24s12fx1x4_RMS_0.0']
+	list_24s12fx1x4 += [prefix % 'Aug25' + '24s12fx1x4_RMS_0.5']
+	list_24s12fx1x4 += [prefix % 'Aug25' + '24s12fx1x4_RMS_1.0']
+	list_24s12fx1x4 += [prefix % 'Aug25' + '24s12fx1x4_RMS_2.0']
+	makeMultiPlot(rootfile, list_24s12fx1x4, oname=outputdir+'24s12fx1x4.pdf', tag='FEROL:EvB', legends=map(lambda x:'24s12fx1x4, ' + x, legends))
+
+	list_32s16fx2x4  = [prefix % 'Aug25' + '32s16fx2x4_RMS_0.0']
+	list_32s16fx2x4 += [prefix % 'Aug25' + '32s16fx2x4_RMS_0.5']
+	list_32s16fx2x4 += [prefix % 'Aug25' + '32s16fx2x4_RMS_1.0']
+	list_32s16fx2x4 += [prefix % 'Aug25' + '32s16fx2x4_RMS_2.0']
+	makeMultiPlot(rootfile, list_32s16fx2x4, oname=outputdir+'32s16fx2x4.pdf', tag='FEROL:EvB', legends=map(lambda x:'32s16fx2x4, ' + x, legends))
+
+	outputdir = createDir(outDir+'Aug26/FEROLs/')
+	prefix = 'data/%s/'
+	legends = ['Try 1', 'Try 2', 'Try 3']
+
+	list_16s16fx2x4  = [prefix % 'Aug26' + '16s16fx2x4_RMS_0.0_1']
+	list_16s16fx2x4 += [prefix % 'Aug26' + '16s16fx2x4_RMS_0.0_2']
+	list_16s16fx2x4 += [prefix % 'Aug26' + '16s16fx2x4_RMS_0.0_3']
+	makeMultiPlot(rootfile, list_16s16fx2x4, oname=outputdir+'16s16fx2x4_segment.pdf', tag='FEROL:EvB', legends=map(lambda x:'16s16fx2x4, RMS 0.0, ' + x, legends))
 
 	#### eFEROLs:
 	prefix = 'data/Aug13/eFEROLs/'
@@ -115,6 +165,17 @@ def makeStandardPlots(rootfile, outDir):
 	makeMultiPlot(rootfile, list_x1x4_lognormals_EvB,      rangex=(1500, 150000), oname=outputdir+'x1x4_lognormals_EvB_sufrag.pdf',    frag=False, tag='eFEROL:EvB')
 
 
+	outputdir = createDir(outDir+'Aug28/eFEROLs/')
+	prefix = 'data/%s/eFEROLs/EvB/'
+	legends = ['RMS 0.0', 'RMS 0.5', 'RMS 1.0', 'RMS 2.0']
+
+	list_32x4x4_c6220  = [prefix % 'Aug28' + '32x4x4_RMS_0.0_c6220']
+	list_32x4x4_c6220 += [prefix % 'Aug28' + '32x4x4_RMS_0.5_c6220']
+	list_32x4x4_c6220 += [prefix % 'Aug28' + '32x4x4_RMS_1.0_c6220']
+	list_32x4x4_c6220 += [prefix % 'Aug28' + '32x4x4_RMS_2.0_c6220']
+	makeMultiPlot(rootfile, list_32x4x4_c6220, oname=outputdir+'32x4x4_c6220.pdf', tag='eFEROL:EvB', legends=map(lambda x:'32x4x4 (C6220), ' + x, legends))
+
+
 ##---------------------------------------------------------------------------------
 ## User interface
 if __name__ == "__main__":
@@ -136,5 +197,11 @@ if __name__ == "__main__":
 		makeStandardPlots(args[0], outDir=options.outDir)
 		exit(0)
 
-	parser.print_help()
-	exit(-1)
+	makeStandardPlots('data.root', outDir=options.outDir)
+	exit(0)
+
+	# parser.print_help()
+	# exit(-1)
+
+
+
