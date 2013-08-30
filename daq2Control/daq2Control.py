@@ -4,6 +4,8 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
+#   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
+#   - Automatize setting of useEvB                                   #
 #   - Automatize maximum size and scan limits from table             #
 #   - Add option to use dummyFerol                                   #
 #   - Implement webPing script to check status of hosts              #
@@ -293,6 +295,10 @@ class daq2Control(object):
 		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap"""
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Stopping XDAQs"
+		for host in self._allHosts:
+			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+		for host in self._allHosts:
+			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
 		for host in self._allHosts:
 			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
 	def startXDAQLauncher(self, host, port,logfile):
@@ -674,7 +680,7 @@ def getListOfSizes(maxSize, minSize=256):
 	for step in allsteps:
 		if step >= minSize and step <= maxSize: steps.append(step)
 
-	print steps
+	print ' Will scan over the following sizes:', steps
 	return steps
 
 ######################################################################
