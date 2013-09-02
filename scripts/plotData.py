@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 
-## Replace .pop() by [-1] ?
+## TODO:
+#  - implement this as a class
+#  - fix --makePNGs option
 import re
 import sys, os
 
@@ -212,7 +214,9 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	if nStreams/nRus==16: UPPERLIMIT = 16000
 	if nStreams/nRus==24: UPPERLIMIT = 10000
 
+	##################################################
 	if 'Aug25' in dirname and nStreams/nRus==24: UPPERLIMIT = 21000
+	##################################################
 
 	if options.verbose > 4: print 'UPPERLIMIT is ', UPPERLIMIT
 
@@ -286,7 +290,7 @@ def printTable(filename, case):
 		raise e
 
 	f.Close()
-def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, logx=True, logy=False, tag='', legends=[]):
+def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, logx=True, logy=False, tag='', legends=[], makePNGs=True):
 	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TPaveText
 	from operator import itemgetter
 
@@ -295,15 +299,19 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	f = TFile(filename)
 	if not f.IsOpen(): raise RuntimeError, "Cannot open "+filename+"\n"
 
-	canv = TCanvas("Plot", "Plot", 0, 0, 1024, 768)
+	if oname.endswith('.pdf') or oname.endswith('.png'): oname = oname[:-4]
+	if len(oname)==0: ## default
+		oname = 'plot_' + reduce(lambda x,y:x+'_'+y, caselist)
+
+	canv = TCanvas(oname, "Plot", 0, 0, 1024, 768)
 	canv.cd()
 	if logx: canv.SetLogx()
 	if logy: canv.SetLogy()
 	canv.SetGridx()
 	canv.SetGridy()
 	## Cosmetics
-	canv.DrawFrame(rangex[0], rangey[0], rangex[1], rangey[1])
-	axes = TH2D('axes', 'A', 10, rangex[0], rangex[1], 10, rangey[0], rangey[1])
+	# canv.DrawFrame(rangex[0], rangey[0], rangex[1], rangey[1])
+	axes = TH2D('axes', 'A', 100, rangex[0], rangex[1], 100, rangey[0], rangey[1])
 	axes.GetYaxis().SetTitle("Av. Throughput per RU (MB/s)")
 	axes.GetYaxis().SetTitleOffset(1.4)
 	axes.GetXaxis().SetTitleOffset(1.2)
@@ -313,6 +321,8 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	else:
 		axes.SetTitle("Throughput vs. Superfragment Size")
 		axes.GetXaxis().SetTitle("Superfragment Size (bytes)")
+	axes.GetXaxis().SetMoreLogLabels()
+	axes.GetXaxis().SetNoExponent()
 	axes.Draw()
 	if len(tag) > 0:
 		pave = TPaveText(0.12, 0.80, 0.40, 0.899, 'NDC')
@@ -371,9 +381,9 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 
 	for graph in graphs: graph.Draw("PL")
 
-	if len(oname)==0: ## default
-		oname = 'plot_' + reduce(lambda x,y:x+'_'+y, caselist) + '.pdf'
-	canv.Print(oname)
+	canv.Print(oname + '.pdf')
+	if makePNGs: canv.Print(oname + '.png')
+
 	f.Close()
 def get100kHzRateGraph(nStreams=4, frag=False, xmax=100000):
 	'''Returns a TF1 object corresponding to the average throughput at the RU
