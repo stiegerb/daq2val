@@ -8,7 +8,7 @@
 #   - Automatize setting of useEvB                                   #
 #   - Automatize maximum size and scan limits from table             #
 #   - Add option to use dummyFerol                                   #
-#   - Implement webPing script to check status of hosts              #
+#   - Implement sendCmdToApp to replace hard-coding                  #
 #   - Testing testing testing                                        #
 ######################################################################
 
@@ -153,7 +153,7 @@ class daq2Control(object):
 		for host in self._allHosts:
 			print host
 	def printHosts(self):
-		print 20*'-'
+		print separator
 		## Count enabled FEROL streams:
 		streams = 0
 		for host in self._FEROLs:
@@ -177,6 +177,7 @@ class daq2Control(object):
 		print 'EVM:'
 		for host in self._EVM:
 			print host
+
 	def sleep(self,naptime=0.5):
 		if self._dryRun and self.verbose > 1: print 'sleep', naptime
 		if not self._dryRun: time.sleep(naptime)
@@ -296,11 +297,12 @@ class daq2Control(object):
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Stopping XDAQs"
 		for host in self._allHosts:
-			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
-		for host in self._allHosts:
-			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
-		for host in self._allHosts:
-			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+			iterations = 0
+			while self.tryWebPing(host.host, host.port) == 0:
+				self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+				iterations += 1
+				if iterations > 1:
+					print " repeating %s:%-d" % (host.host, host.port)
 	def startXDAQLauncher(self, host, port,logfile):
 		"""Start a single xdaqLauncher process on host:port"""
 		sshCmd      = "ssh -x -n " + host
@@ -483,6 +485,7 @@ class daq2Control(object):
 		self._outputDir += self._testCase
 		if self.useLogNormal: self._outputDir += '_RMS_%3.1f/' % float(relRMS)
 		if not self._outputDir.endswith('/'): self._outputDir += '/'
+		if self.verbose > 0: print separator
 		if self.verbose > 0: print 'Storing output in:', self._outputDir
 		if self._dryRun: return
 
@@ -537,10 +540,16 @@ class daq2Control(object):
 		if self.verbose > 0: print "Starting XDAQ processes"
 		for h in self._hosts:
 			self.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port))
+		self.sleep(2)
+
+		if not self.webPingXDAQ():
+			if self.verbose > 0: print separator
+			if self.verbose > 0: print 'Waiting 3 seconds and checking again...'
+			self.sleep(3)
+			if not self.webPingXDAQ():
+				raise RuntimeError('Not all hosts ready!')
+
 		if self.verbose > 0: print separator
-
-		# self.webPingXDAQ()
-
 		if self.verbose > 0: print "Configuring XDAQ processes"
 		for h in self._hosts:
 			self.sendCmdToExecutive(h.host, h.port, self._runDir+'/configure.cmd.xml')
@@ -625,24 +634,28 @@ class daq2Control(object):
 		#   print "ERROR\n";
 		#   print "$reply\n";
 		# }
+
 	def tryWebPing(self, host, port):
-		######### UNTESTED ##########
 		if self._dryRun:
 			print '%-18s %25s:%-5d' % ('webPing', host, port)
-			return
+			return 0
 		cmd = "wget -o /dev/null -O /dev/null http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
 		return subprocess.call(shlex.split(cmd))
 	def webPingXDAQ(self):
-		######### UNTESTED ##########
-		print "Checking availability of all hosts"
-		for host in self._allHosts:
-			print " ... checking %25s:%-5d" % (host.host, host.port)
-			if tryWebPing(host.host, host.port): continue
-
-			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+		from sys import stdout
 		print separator
-
-		# else: return subprocess.check_call(["webPingXDAQ"])
+		print "Checking availability of relevant hosts"
+		for host in self._hosts:
+			stdout.write(" ... checking %25s:%-5d \t\t ... " % (host.host, host.port))
+			stdout.flush()
+			if self._dryRun or self.tryWebPing(host.host, host.port) == 0:
+				stdout.write("OK\n")
+				stdout.flush()
+			else:
+				stdout.write("FAILED\n")
+				stdout.flush()
+				return False
+		return True
 
 ######################################################################
 ## Interface:
@@ -655,7 +668,14 @@ def testBuilding(d2c, minevents=1000):
 	for n,bu in enumerate(d2c._BUs):
 		if options.useEvB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
 		else:              nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong')
-		eventCounter.append(int(nEvts))
+		try:
+			eventCounter.append(int(nEvts))
+		except ValueError:
+			print 50*'#'
+			print 'Error getting number of events built. Message was:'
+			print nEvts
+			print 50*'#'
+			return False
 		if options.verbose > 1: print bu.name, 'number of events built: ', int(nEvts)
 	print separator
 
