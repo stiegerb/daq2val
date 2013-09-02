@@ -4,6 +4,9 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
+#   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
+#   - Automatize setting of useEvB                                   #
+#   - Automatize maximum size and scan limits from table             #
 #   - Add option to use dummyFerol                                   #
 #   - Implement webPing script to check status of hosts              #
 #   - Testing testing testing                                        #
@@ -292,6 +295,10 @@ class daq2Control(object):
 		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap"""
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Stopping XDAQs"
+		for host in self._allHosts:
+			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+		for host in self._allHosts:
+			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
 		for host in self._allHosts:
 			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
 	def startXDAQLauncher(self, host, port,logfile):
@@ -660,13 +667,18 @@ def testBuilding(d2c, minevents=1000):
 			totEvents += evtCount
 	return True
 def getListOfSizes(maxSize, minSize=256):
-	if options.short:
-		steps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192]
-		if maxSize > 9000: steps += [12288, 16000]
-		return steps
-	steps = [ n*minSize for n in xrange(1, 1000) if n*minSize <= 8192] ## multiples of minSize up to 8192
+	stepsize = 256
+	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
 	for step in [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]:
-		if step <= maxSize: steps.append(step)
+		allsteps.append(step)
+
+	if options.short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16000]
+
+	steps = []
+	for step in allsteps:
+		if step >= minSize and step <= maxSize: steps.append(step)
+
+	print ' Will scan over the following sizes:', steps
 	return steps
 
 ######################################################################
@@ -710,7 +722,7 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLo
 ## Run a scan over fragment sizes
 def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
-	Run a test reading the setup from configfile and using fragment size fragSize"""
+	Run a scan of fragment sizes reading the setup from configfile"""
 	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap, useEvB=options.useEvB)
 	d2c.verbose = options.verbose
 	d2c.useLogNormal = useLogNormal
@@ -750,8 +762,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 
 ######################################################################
 ## main
-if __name__ == "__main__":
-	from optparse import OptionParser
+def addOptions(parser):
 	usage = """
 	%prog [options] --start config.xml fragsize
 	%prog [options] --changeSize config.xml newfragsize
@@ -782,61 +793,43 @@ if __name__ == "__main__":
 		--stopXDAQs        (kill XDAQ launchers on all machines defined in symbol map)
 
 	"""
-
-	parser = OptionParser(usage=usage)
+	parser.usage = usage
 
 	## Standard interface:
-	parser.add_option("--runTest", default=False, action="store_true", dest="runTest",
-	                  help="Run a test setup, needs two arguments: config and fragment size")
-	parser.add_option("--runScan", default=False, action="store_true", dest="runScan",
-	                  help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
-	parser.add_option("--runRMSScan", default=False, action="store_true", dest="runRMSScan",
-	                  help="Run four scans over fragment sizes with different RMS values")
-	parser.add_option("--useEvB", default=False, action="store_true", dest="useEvB",
-	                  help="Use EvB instead of gevb2g [default is gevb2g]")
-	parser.add_option("--useLogNormal", default=False, action="store_true", dest="useLogNormal",
-	                  help="Use lognormal generator for e/FEROLs (will use the dummyFerol instead of the Client in case of the eFEROLS). You need to provide the relative rms (i.e. in multiples of the fragment size) as an argument.")
-	parser.add_option("-d", "--duration", default=60, action="store", type="int", dest="duration",
-	                  help="Duration of a single step in seconds, [default: %default s]")
-	parser.add_option("--useRate", default=0, action="store", type="int", dest="useRate",
-	                  help="Event rate in kHz, [default is maximum rate]")
-	parser.add_option("--maxSize", default=16000, action="store", type="int", dest="maxSize",
-	                  help="Maximum fragment size of a scan in bytes, [default: %default]")
-	parser.add_option("--minSize", default=256, action="store", type="int", dest="minSize",
-	                  help="Minimum fragment size of a scan in bytes, [default: %default]")
-	parser.add_option("--nSteps", default=100, action="store", type="int", dest="nSteps",
-	                  help="Number of steps between minSize and maxSize, [default: %default]")
-	parser.add_option("--short", default=False, action="store_true", dest="short",
-	                  help="Run a short scan with only a few points")
+	parser.add_option("--runTest", default=False, action="store_true",                dest="runTest",        help="Run a test setup, needs two arguments: config and fragment size")
+	parser.add_option("--runScan", default=False, action="store_true",                dest="runScan",        help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
+	parser.add_option("--runRMSScan", default=False, action="store_true",             dest="runRMSScan",     help="Run four scans over fragment sizes with different RMS values")
+	parser.add_option("--useEvB", default=False, action="store_true",                 dest="useEvB",         help="Use EvB instead of gevb2g [default is gevb2g]")
+	parser.add_option("--useLogNormal", default=False, action="store_true",           dest="useLogNormal",   help="Use lognormal generator for e/FEROLs (will use the dummyFerol instead of the Client in case of the eFEROLS). You need to provide the relative rms (i.e. in multiples of the fragment size) as an argument.")
+	parser.add_option("-d", "--duration", default=60, action="store", type="int",     dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
+	parser.add_option("--useRate", default=0, action="store", type="int",             dest="useRate",        help="Event rate in kHz, [default is maximum rate]")
+	parser.add_option("--maxSize", default=16000, action="store", type="int",         dest="maxSize",        help="Maximum fragment size of a scan in bytes, [default: %default]")
+	parser.add_option("--minSize", default=256, action="store", type="int",           dest="minSize",        help="Minimum fragment size of a scan in bytes, [default: %default]")
+	parser.add_option("--nSteps", default=100, action="store", type="int",            dest="nSteps",         help="Number of steps between minSize and maxSize, [default: %default]")
+	parser.add_option("--short", default=False, action="store_true",                  dest="short",          help="Run a short scan with only a few points")
 
 	## Debugging options:
-	parser.add_option("--dry", default=False, action="store_true", dest="dry",
-	                  help="Just print the commands without sending anything")
-	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true", dest="waitBeforeStop",
-	                  help="For for key press before stopping the event building")
-	parser.add_option("-v", "--verbose", default=1, action="store", type='int', dest="verbose",
-	                  help="Set the verbose level, [default: %default (semi-quiet)]")
+	parser.add_option("--dry", default=False, action="store_true",                    dest="dry",            help="Just print the commands without sending anything")
+	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true",   dest="waitBeforeStop", help="For for key press before stopping the event building")
+	parser.add_option("-v", "--verbose", default=1, action="store", type='int',       dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
 
 	## Control:
-	parser.add_option("--stopLaunchers", default=False, action="store_true", dest="stopLaunchers",
-	                  help="Stop all the XDAQ launchers and exit")
-	parser.add_option("--startLaunchers", default=False, action="store_true", dest="startLaunchers",
-	                  help="Start all the XDAQ launchers and exit")
-	parser.add_option("--stopXDAQs", default=False, action="store_true", dest="stopXDAQs",
-	                  help="Stop all the XDAQ processes and exit")
+	parser.add_option("--stopLaunchers", default=False, action="store_true",          dest="stopLaunchers",  help="Stop all the XDAQ launchers and exit")
+	parser.add_option("--startLaunchers", default=False, action="store_true",         dest="startLaunchers", help="Start all the XDAQ launchers and exit")
+	parser.add_option("--stopXDAQs", default=False, action="store_true",              dest="stopXDAQs",      help="Stop all the XDAQ processes and exit")
 
-	parser.add_option("--start", default=False, action="store_true", dest="start",
-	                  help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
-	parser.add_option("--changeSize", default=False, action="store_true", dest="changeSize",
-	                  help="Halt, change size and resume. Needs config and new size as arguments.")
+	parser.add_option("--start", default=False, action="store_true",                  dest="start",          help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
+	parser.add_option("--changeSize", default=False, action="store_true",             dest="changeSize",     help="Halt, change size and resume. Needs config and new size as arguments.")
 
-	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap",
-	                  help="Use a symbolmap different from the one set in the environment")
+	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap",      help="Use a symbolmap different from the one set in the environment")
+
+if __name__ == "__main__":
+	from optparse import OptionParser
+	parser = OptionParser()
+	addOptions(parser)
 	(options, args) = parser.parse_args()
 
 	if options.useRate == 0: options.useRate = 'max'
-
-	# raw_input("Press Enter to stop the XDAQs...")
 
 	if options.stopLaunchers:
 		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
