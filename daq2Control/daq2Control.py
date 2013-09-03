@@ -7,7 +7,6 @@
 #   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
 #   - Automatize maximum size and scan limits from table             #
 #   - Add option to use dummyFerol                                   #
-#   - Implement sendCmdToApp to replace hard-coding                  #
 #   - Testing testing testing                                        #
 ######################################################################
 
@@ -174,23 +173,24 @@ class daq2Control(object):
 		for host in self._EVM:
 			print host
 
-	def sleep(self,naptime=0.5,barlength=50):
-		if self._dryRun and self.verbose > 1:
-			print 'sleep', naptime
+	def sleep(self,naptime=0.5):
+		if self._dryRun:
+			if self.verbose > 1: print 'sleep', naptime
 			return
 
+		barlength = len(separator)-1
 		starttime = time.time()
 		if self.verbose > 0:
-			stdout.write(''+barlength*' '+'.')
+			stdout.write(''+barlength*' '+'-')
 			stdout.write('\r')
 			stdout.flush()
 		while(time.time() < starttime+naptime):
 			time.sleep(naptime/float(barlength))
 			if self.verbose > 0:
-				stdout.write('.')
+				stdout.write('-')
 				stdout.flush()
 		if self.verbose > 0:
-			stdout.write('.')
+			stdout.write('-')
 			stdout.flush()
 			stdout.write('\r' + (barlength+5)*' ')
 			stdout.write('\r')
@@ -274,28 +274,89 @@ class daq2Control(object):
 				filled = filled.replace(str(key), str(self._symbolMap[key]))
 		return filled
 
-	## Wrappers
+	def sendSOAPMessage(self, host, port, message, command):
+		"""Sends a SOAP message via curl, where message could be
+			'SOAPAction: urn:xdaq-application:lid=0'
+			or
+			'Content-Location: urn:xdaq-application:class=CLASSNAME,instance=INSTANCE'
+			and command could be a file:
+			configure.cmd.xml
+			or a simple command like:
+			'Configure'
+		"""
+		cmd = "curl --stderr /dev/null -H \"Content-Type: text/xml\" -H \"Content-Description: SOAP Message\" -H \"%s\" http://%s:%d -d %s"
+		'SOAPAction: urn:xdaq-application:lid=0'
+
+		if 'SOAPAction' in message:
+			## Want to send a command file, i.e. need to prepend a \@ before the filename
+			command = '\@'+command
+		elif 'Content-Location' in message:
+			## Want to send a simple command, need to wrap it in escaped quotes
+			command = '\"'+command+'\"'
+
+		cmd = cmd % (message, host, port, command)
+
+		call = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
+		out,err = call.communicate()
+
+		if 'Response' in out:
+			print 'OK'
+			return 0
+		elif 'Fault' in out:
+			print 'FAULT'
+			return 1
+		elif len(out) == 0:
+			print 'NONE'
+			return 1
+		else:
+			print 'UNKNOWN RESPONSE:'
+			print separator
+			print out
+			print separator
+			return 1
+	def sendCmdFileToExecutive(self, host, port, cmdfile):
+		if self._dryRun:
+			if self.verbose > 1: print '%-18s %25s:%-5d %-35s' % ('sendCmdFileToExecutive', host, port, cmdfile)
+			return 0
+
+		if not os.path.exists(cmdfile):
+			raise IOError('File '+configfile+' not found')
+		stdout.write('Sending command file to executive %s:%d ... ' % (host, port))
+		stdout.flush()
+		message = 'SOAPAction: urn:xdaq-application:lid=0'
+		return self.sendSOAPMessage(host, port, message, cmdfile)
+	def sendCmdFileToApp(self, host, port, classname, instance, cmdFile): ## UNTESTED
+		"""Sends a SOAP message contained in cmdfile to the application with classname and instance on host:port"""
+		if self._dryRun:
+			if self.verbose > 1: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, cmdFile)
+			return
+
+		message = 'SOAPAction: urn:xdaq-application:class=%s,instance=%d' % (classname, instance)
+		command = '`cat %s`' % cmdfile
+		return self.sendSOAPMessage(host, port, message, command)
+
+		if not self._dryRun: return subprocess.check_call(['sendCmdFileToApp', host, str(port), classname, str(instance), cmdFile])
+	def sendCmdToApp(self, host, port, classname, instance, command):
+		"""Sends a simple command via SOAP to the application with classname and instance on host:port"""
+		if self._dryRun:
+			if self.verbose > 1: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, command)
+			return 0
+		message = 'Content-Location: urn:xdaq-application:class=%s,instance=%d' % (classname, int(instance))
+		return self.sendSOAPMessage(host, port, message, command)
+	def downloadMeasurements(self, host, port, classname, instance, outputfile):
+		if self.verbose > 1: print separator
+		url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
+		url = url % (host, int(port), classname, int(instance))
+		if self._dryRun: print 'curl -o', outputfile, url
+		else: subprocess.check_call(['curl', '-o', outputfile, url])
+
+	## Wrapper for existing perl scripts
 	def sendSimpleCmdToApp(self, host, port, classname, instance, cmdName):
 		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-12s' % ('sendSimpleCmdToApp', host, port, classname, instance, cmdName)
 		if not self._dryRun: return subprocess.check_call(['sendSimpleCmdToApp', host, str(port), classname, str(instance), cmdName])
 	def sendCmdToLauncher(self, host, port, cmd):
 		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %-15s' % ('sendCmdToLauncher', host, port, cmd)
 		if not self._dryRun: return subprocess.check_call(['sendCmdToLauncher', host, str(port), cmd])
-	def sendCmdToExecutive(self, host, port, cmdfile):
-		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %-35s' % ('sendCmdToExecutive', host, port, cmdfile)
-		if not self._dryRun: return subprocess.check_call(['sendCmdToExecutive', host, str(port), cmdfile])
-	def sendCmdToApp(self, host, port, classname, instance, cmd):
-		"""Sends a SOAP message contained in cmd to the application with classname and instance on host:port"""
-		## Note that there are two versions of sendCmdToApp, the original taking a FILE as input, the new one taking directly the command string
-		## I renamed the old one to be 'sendCmdFileToApp'
-		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, cmd)
-		if not self._dryRun: return subprocess.check_call(['/nfshome0/stiegerb/cmsosrad/trunk/daq/benchmark/test/scripts/sendCmdToApp', host, str(port), classname, str(instance), cmd])
-		# else: return subprocess.check_call(['sendCmdToApp', host, str(port), classname, str(instance), cmd])
-	def sendCmdFileToApp(self, host, port, classname, instance, cmdFile):
-		"""Sends a SOAP message contained in cmdFile to the application with classname and instance on host:port"""
-		## This will call the old version of sendCmdToApp (see comment above)
-		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s:\n%s' % ('sendCmdToApp', host, port, classname, instance, cmdFile)
-		if not self._dryRun: return subprocess.check_call(['sendCmdFileToApp', host, str(port), classname, str(instance), cmdFile])
 	def setParam(self, host, port, classname, instance, paramName, paramType, paramValue):
 		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s %6s' % ('setParam', host, port, classname, instance, paramName, paramType, paramValue)
 		if not self._dryRun: return subprocess.check_call(['setParam', host, str(port), classname, str(instance), paramName, paramType, str(paramValue)])
@@ -310,12 +371,6 @@ class daq2Control(object):
 		cmd = self._SOAPEnvelope % body
 		cmd = cmd.replace('\"','\\\"') ## need to escape the quotes when passing as argument
 		return self.sendCmdToApp(host, port, classname, str(instance), cmd)
-	def downloadMeasurements(self, host, port, classname, instance, outputfile):
-		if self.verbose > 1: print separator
-		url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
-		url = url % (host, int(port), classname, int(instance))
-		if self._dryRun: print 'curl -o', outputfile, url
-		else: subprocess.check_call(['curl', '-o', outputfile, url])
 
 	## Launchers
 	def stopXDAQLaunchers(self):
@@ -324,17 +379,6 @@ class daq2Control(object):
 			# host,port = self._symbolMap[hostkey+"_SOAP_HOST_NAME"], self._symbolMap[hostkey+"_SOAP_PORT"]
 			print "Stopping xdaqLauncher for %-20s on %s:%d" % (host.name, host.host, host.port)
 			self.sendCmdToLauncher(host.host, host.lport, 'STOPLAUNCHER')
-	def stopXDAQs(self):
-		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
-		if self.verbose > 0: print separator
-		if self.verbose > 0: print "Stopping XDAQs"
-		for host in self._allHosts:
-			iterations = 0
-			while self.tryWebPing(host.host, host.port) == 0:
-				self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
-				iterations += 1
-				if iterations > 1:
-					print " repeating %s:%-d" % (host.host, host.port)
 	def startXDAQLauncher(self, host, port,logfile):
 		"""Start a single xdaqLauncher process on host:port"""
 		sshCmd      = "ssh -x -n " + host
@@ -583,13 +627,25 @@ class daq2Control(object):
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Configuring XDAQ processes"
 		for h in self._hosts:
-			self.sendCmdToExecutive(h.host, h.port, self._runDir+'/configure.cmd.xml')
+			if self.sendCmdFileToExecutive(h.host, h.port, self._runDir+'/configure.cmd.xml') != 0:
+				raise RuntimeError('Failed to send configure command to %s at %s:%d!' % (h.name, h.host, h.port))
 
 		self.sleep(2)
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		self.sleep(5)
 		# self.sendCmdToRUEVMBU('Enable')
 		self.sendCmdToFEROLs('Enable')
+	def stopXDAQs(self):
+		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print "Stopping XDAQs"
+		for host in self._allHosts:
+			iterations = 0
+			while self.tryWebPing(host.host, host.port) == 0:
+				self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+				iterations += 1
+				if iterations > 1:
+					print " repeating %s:%-d" % (host.host, host.port)
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
@@ -640,36 +696,6 @@ class daq2Control(object):
 		else:
 			print "getResults() only works when running with the gevb2g, try getResultsEvB()"
 			return
-
-	## Untested
-	def sendSOAPMsg(self, host, port, classname, instance, message):
-		curlCmd  = "curl --stderr /dev/null -H \"Content-Type: text/xml\" -H \"Content-Description: SOAP Message\" -H \"SOAPAction: urn:xdaq-application:class=%s,instance=%d\" http://%s:%d -d \"%s\"" % (classname, instance, host, port, soapmsg)
-		return subprocess.call(shlex.split(curlCmd))
-	def sendSimpleCmdToAppNew(self, host, port, classname, instance, cmdName):
-		"""Usage sendSimpleCmdToApp host port class instance cmdName"""
-
-		soapbody = '<xdaq:%s xmlns:xdaq="urn:xdaq-soap:3.0"/>' % cmdName
-		soapmsg  = self._SOAPEnvelope % soapbody
-
-		self.sendSOAPMsg(host, port, classname, instance, soapmsg)
-
-		## Need to add output handling
-		# if($reply =~ m#<(\w+):${cmdName}Response\s[^>]*>(.*)</\1:${cmdName}Response>#) {
-		#   my $returnValue = $2;
-		#   print "$returnValue\n";
-		# } elsif($reply =~ m#<\w+:${cmdName}Response\s[^>]*\>#) {
-		#   print "EMPTY SOAP MESSAGE\n";
-		# } else {
-		#   print "ERROR\n";
-		#   print "$reply\n";
-		# }
-
-	def tryWebPing(self, host, port):
-		if self._dryRun:
-			print '%-18s %25s:%-5d' % ('webPing', host, port)
-			return 0
-		cmd = "wget -o /dev/null -O /dev/null --timeout=30 http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
-		return subprocess.call(shlex.split(cmd))
 	def webPingXDAQ(self):
 		print separator
 		print "Checking availability of relevant hosts"
@@ -684,6 +710,13 @@ class daq2Control(object):
 				stdout.flush()
 				return False
 		return True
+	def tryWebPing(self, host, port):
+		if self._dryRun:
+			print '%-18s %25s:%-5d' % ('webPing', host, port)
+			return 0
+		cmd = "wget -o /dev/null -O /dev/null --timeout=30 http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
+		return subprocess.call(shlex.split(cmd))
+
 
 ######################################################################
 ## Interface:
