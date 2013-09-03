@@ -27,19 +27,17 @@ class host(object):
 		self.port  = soapport
 		self.type  = hosttype
 		self.lport = 0 # launcher port
-
 	def __str__(self):
 		return '%-20s%3d at %25s:%-5d with launcher at %-5d' % (self.type, self.index, self.host, self.port, self.lport)
+
 class FEROL(host):
 	"""Holds additional information on FEROL configuration"""
 	def __init__(self, name,index,soaphost,soapport,hosttype, enableStream0=True, enableStream1=False):
 		super(FEROL, self).__init__()
 		self.enableStream0 = enableStream0
 		self.enableStream1 = enableStream1
-
 	def cfgStringToBool(self, string):
 		return string in ('true', 'True', '1')
-
 	def setStreams(self, enableStream0, enableStream1):
 		self.enableStream0 = self.cfgStringToBool(enableStream0)
 		self.enableStream1 = self.cfgStringToBool(enableStream1)
@@ -180,16 +178,16 @@ class daq2Control(object):
 
 		barlength = len(separator)-1
 		starttime = time.time()
-		if self.verbose > 0:
+		if self.verbose > 0 and naptime > 0.5:
 			stdout.write(''+barlength*' '+'-')
 			stdout.write('\r')
 			stdout.flush()
 		while(time.time() < starttime+naptime):
 			time.sleep(naptime/float(barlength))
-			if self.verbose > 0:
+			if self.verbose > 0 and naptime > 0.5:
 				stdout.write('-')
 				stdout.flush()
-		if self.verbose > 0:
+		if self.verbose > 0 and naptime > 0.5:
 			stdout.write('-')
 			stdout.flush()
 			stdout.write('\r' + (barlength+5)*' ')
@@ -356,7 +354,7 @@ class daq2Control(object):
 		if not self._dryRun: return subprocess.check_call(['sendSimpleCmdToApp', host, str(port), classname, str(instance), cmdName])
 	def sendCmdToLauncher(self, host, port, cmd):
 		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %-15s' % ('sendCmdToLauncher', host, port, cmd)
-		if not self._dryRun: return subprocess.check_call(['sendCmdToLauncher', host, str(port), cmd])
+		if not self._dryRun: return subprocess.call(['sendCmdToLauncher', host, str(port), cmd])
 	def setParam(self, host, port, classname, instance, paramName, paramType, paramValue):
 		if self.verbose > 1 and self._dryRun: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s %6s' % ('setParam', host, port, classname, instance, paramName, paramType, paramValue)
 		if not self._dryRun: return subprocess.check_call(['setParam', host, str(port), classname, str(instance), paramName, paramType, str(paramValue)])
@@ -377,23 +375,28 @@ class daq2Control(object):
 		"""Kills the xdaqLauncher process on all the SOAP hosts defined in the symbolmap"""
 		for host in self._allHosts:
 			# host,port = self._symbolMap[hostkey+"_SOAP_HOST_NAME"], self._symbolMap[hostkey+"_SOAP_PORT"]
-			print "Stopping xdaqLauncher for %-20s on %s:%d" % (host.name, host.host, host.port)
+			if self.verbose > 1: print "Stopping xdaqLauncher for %-20s on %s:%d" % (host.name, host.host, host.port)
 			self.sendCmdToLauncher(host.host, host.lport, 'STOPLAUNCHER')
-	def startXDAQLauncher(self, host, port,logfile):
+	def startXDAQLauncher(self, host, port, logfile):
 		"""Start a single xdaqLauncher process on host:port"""
 		sshCmd      = "ssh -x -n " + host
 		launcherCmd = '"cd /tmp && sudo rm -f /tmp/core.* && source %s/setenv%s.sh && xdaqLauncher %d"' % (self._testDir, self._testEnv, port)
 		awkCmd      = "awk '{print \"%s:%d \" $0}'" % (host, port)
-		cmd         = sshCmd + " \"sudo -u %s sh -c \\\""%self._user + launcherCmd +"\\\"\" | " +  awkCmd + " &"
+		# cmd         = sshCmd + " \"sudo -u %s sh -c \\\""%self._user + launcherCmd +"\\\"\" | " +  awkCmd + " &"
+		cmd         = sshCmd + " \"sudo -u %s sh -c \\"%self._user + launcherCmd +"\\\" | " +  awkCmd + " &"
+		# print cmd
 		if self._dryRun:
 			print cmd
-		else: return subprocess.call(shlex.split(cmd), stderr=logfile, stdout=logfile)
-		## TODO: Handle return value and failure procedure
+		else: return subprocess.call(cmd, stderr=logfile, stdout=logfile, shell=True)
+		# else: return subprocess.call(shlex.split(cmd), stderr=stdout, stdout=stdout)
 	def startXDAQLaunchers(self, logfile):
 		"""Starts an xdaqLauncher process on all the SOAP hosts defined in the symbolmap"""
 		for host in self._allHosts:
-			print "Starting xdaqLauncher for %-20s on %s:%d(LAUNCHER):%d(SOAP)" % (host.name, host.host, host.lport, host.port)
+			message = "Starting xdaqLauncher for %-20s on %s:%d(LAUNCHER):%d(SOAP)" % (host.name, host.host, host.lport, host.port)
+			logfile.write(message + '\n')
+			print message
 			self.startXDAQLauncher(host.host,host.lport,logfile)
+			self.sleep(0.2)
 
 	##
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
@@ -760,7 +763,6 @@ def getListOfSizes(maxSize, minSize=256):
 	print ' Will scan over the following sizes:', steps
 	return steps
 
-######################################################################
 ## Run a single test
 def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
 	"""Usage: runTest(configfile, fragSize)
@@ -796,8 +798,6 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLo
 	print ' DONE '
 	print separator
 
-
-######################################################################
 ## Run a scan over fragment sizes
 def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
@@ -894,9 +894,10 @@ def addOptions(parser):
 	parser.add_option("-v", "--verbose", default=1, action="store", type='int',       dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
 
 	## Control:
-	parser.add_option("--stopLaunchers", default=False, action="store_true",          dest="stopLaunchers",  help="Stop all the XDAQ launchers and exit")
-	parser.add_option("--startLaunchers", default=False, action="store_true",         dest="startLaunchers", help="Start all the XDAQ launchers and exit")
-	parser.add_option("--stopXDAQs", default=False, action="store_true",              dest="stopXDAQs",      help="Stop all the XDAQ processes and exit")
+	parser.add_option("--stopLaunchers", default=False, action="store_true",          dest="stopLaunchers",        help="Stop all the XDAQ launchers and exit")
+	parser.add_option("--startLaunchers", default=False, action="store_true",         dest="startLaunchers",       help="Start all the XDAQ launchers and exit")
+	parser.add_option("--stopXDAQs", default=False, action="store_true",              dest="stopXDAQs",            help="Stop all the XDAQ processes and exit")
+	parser.add_option("-l", "--logFile", default='launcherLog.txt', action="store", type='string', dest="logFile", help="Store stdout and stderr output of XDAQ launchers in this file, [default: %default]")
 
 	parser.add_option("--start", default=False, action="store_true",                  dest="start",          help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
 	parser.add_option("--changeSize", default=False, action="store_true",             dest="changeSize",     help="Halt, change size and resume. Needs config and new size as arguments.")
@@ -924,10 +925,21 @@ if __name__ == "__main__":
 		print separator
 		exit(0)
 	if options.startLaunchers:
-		with open('launcherLog.txt', 'w') as logfile:
+		with open(options.logFile, 'w') as logfile:
+			length = 120
+			logfile.write(length*'#' + '\n')
+			logfile.write(length*'#' + '\n')
+			logfile.write('\n')
+			logfile.write('  Starting launchers at %s \n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
+			logfile.write('\n')
+			logfile.write(length*'#' + '\n')
+			logfile.write(length*'#' + '\n')
 			d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
 			d2c.verbose = options.verbose
 			d2c.startXDAQLaunchers(logfile)
+			logfile.write(length*'#' + '\n')
+			logfile.write(length*'#' + '\n')
+			logfile.write('\n')
 		exit(0)
 
 	if options.start and len(args) > 1:
