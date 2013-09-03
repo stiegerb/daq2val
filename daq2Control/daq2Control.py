@@ -5,7 +5,6 @@
 #                                                                    #
 #  ToDo-List:                                                        #
 #   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
-#   - Automatize setting of useEvB                                   #
 #   - Automatize maximum size and scan limits from table             #
 #   - Add option to use dummyFerol                                   #
 #   - Implement sendCmdToApp to replace hard-coding                  #
@@ -15,6 +14,7 @@
 import subprocess
 import re, os, shlex
 import time
+from sys import stdout
 
 separator = 70*'-'
 
@@ -48,7 +48,7 @@ class FEROL(host):
 ######################################################################
 class daq2Control(object):
 	"""docstring for daq2Control"""
-	def __init__(self, dryrun=False, symbolMap='', useEvB=False):
+	def __init__(self, dryrun=False, symbolMap=''):
 		try:
 			self._symbolMapFile = os.environ['TESTS_SYMBOL_MAP']
 			self._testDir       = os.environ['RUB_TESTER_HOME']
@@ -71,7 +71,6 @@ class daq2Control(object):
 
 		self.verbose      = 0
 		self.useLogNormal = False
-		self.useEvB       = useEvB
 
 		self._hosts     = [] ## a list of the hosts defined in the xml config
 		self._allHosts  = [] ## a list of all soap hosts defined in the symbol map
@@ -104,9 +103,6 @@ class daq2Control(object):
       </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>
 '''
-
-		self.namespace = 'gevb2g::'
-		if self.useEvB: self.namespace = 'evb::'
 
 	## Core
 	def fillSymbolMap(self):
@@ -178,9 +174,29 @@ class daq2Control(object):
 		for host in self._EVM:
 			print host
 
-	def sleep(self,naptime=0.5):
-		if self._dryRun and self.verbose > 1: print 'sleep', naptime
-		if not self._dryRun: time.sleep(naptime)
+	def sleep(self,naptime=0.5,barlength=50):
+		if self._dryRun and self.verbose > 1:
+			print 'sleep', naptime
+			return
+
+		starttime = time.time()
+		if self.verbose > 0:
+			stdout.write(''+barlength*' '+'.')
+			stdout.write('\r')
+			stdout.flush()
+		while(time.time() < starttime+naptime):
+			time.sleep(naptime/float(barlength))
+			if self.verbose > 0:
+				stdout.write('.')
+				stdout.flush()
+		if self.verbose > 0:
+			stdout.write('.')
+			stdout.flush()
+			stdout.write('\r' + (barlength+5)*' ')
+			stdout.write('\r')
+			stdout.flush()
+
+		# if not self._dryRun: time.sleep(naptime)
 		# if not self._dryRun: subprocess.call(['sleep', str(time)])
 	def readXDAQConfigTemplate(self, configfile):
 		import xml.etree.ElementTree as ET
@@ -191,6 +207,22 @@ class daq2Control(object):
 		self._runDir += self._testCaseShort
 		config = ET.parse(configfile)
 		partition = config.getroot()
+
+		## Check <i2o:protocol> element for evb: or gevb2g: tags to determine which of the two we're dealing with here:
+		i2o_namespace = 'http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30'
+		i2o_protocol = partition.find("{%s}protocol" % i2o_namespace)
+		if 'gevb2g::' in i2o_protocol[0].attrib['class']: ## there is something with a gevb2g tag
+			if self.verbose > 0 : print "Found a gevb2g configuration"
+			self.useEvB = False
+			self.namespace = 'gevb2g::'
+		elif 'evb::' in i2o_protocol[0].attrib['class']: ## there is something with a evb tag
+			if self.verbose > 0 : print "Found an EvB configuration"
+			self.useEvB = True
+			self.namespace = 'evb::'
+		else:
+			raise RuntimeError("Couldn't determine EvB/gevb2g case!")
+
+		## Scan <xc:Context>'s to extract configuration
 		for context in partition:
 			if not context.tag.endswith('Context'): continue
 
@@ -293,7 +325,7 @@ class daq2Control(object):
 			print "Stopping xdaqLauncher for %-20s on %s:%d" % (host.name, host.host, host.port)
 			self.sendCmdToLauncher(host.host, host.lport, 'STOPLAUNCHER')
 	def stopXDAQs(self):
-		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap"""
+		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Stopping XDAQs"
 		for host in self._allHosts:
@@ -321,7 +353,7 @@ class daq2Control(object):
 
 	##
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
-		if self.verbose > 1: print separator
+		if self.verbose > 0: print separator
 		for n,evm in enumerate(self._EVM):
 			self.sendSimpleCmdToApp(evm.host, evm.port, self.namespace+'EVM', str(n), cmd)
 		for n,ru in enumerate(self._RUs):
@@ -331,7 +363,7 @@ class daq2Control(object):
 		for n,bu in enumerate(self._BUs):
 			self.sendSimpleCmdToApp(bu.host, bu.port, self.namespace+'BU', str(n), cmd)
 	def sendCmdToRUEVMBU(self, cmd): ## ordering for enable
-		if self.verbose > 1: print separator
+		if self.verbose > 0: print separator
 		for n,ru in enumerate(self._RUs):
 			classname = 'RU'
 			if self.useEvB and n==0: classname = 'EVM'
@@ -341,11 +373,11 @@ class daq2Control(object):
 		for n,bu in enumerate(self._BUs):
 			self.sendSimpleCmdToApp(bu.host, bu.port, self.namespace+'BU', str(n), cmd)
 	def sendCmdToFEROLs(self, cmd):
-		if self.verbose > 1: print separator
+		if self.verbose > 0: print separator
 		for frl in self._FEROLs:
 			self.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd)
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
-		if self.verbose > 1: print separator
+		if self.verbose > 0: print separator
 		delay=20
 		if not rate=='max':
 			# delay = int(1000000.0 / rate - fragSize/8.0*6.4 - 150) # Obsolete according to Petr
@@ -375,38 +407,33 @@ class daq2Control(object):
 
 			## Set super-fragment size for BUs
 			if not self.useEvB:
-				if self.verbose > 1: print separator
+				if self.verbose > 0: print separator
 				for n,bu in enumerate(self._BUs):
 					self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
 				if not self._dryRun:
 					for n,bu in enumerate(self._BUs):
 						print bu.name, 'dummyFedPayloadSize', int(self.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
-				if self.verbose > 1: print separator
 
 			self.sendCmdToFEROLs('Configure')
-			if self.verbose > 1: print separator
 			self.sleep(5)
 
-			if self.verbose > 1: print separator
 			self.sendCmdToEVMRUBU('Configure')
-			if self.verbose > 1: print separator
 			self.sendCmdToRUEVMBU('Enable') ## Have to enable RUs/EVM/BUs here?
-			if self.verbose > 1: print separator
 			return
 
 		## In case of eFEROLs:
 		elif len(self._eFEROLs) > 0:
 			## Configure and enable pt::frl application on eFEROLs:
-			if self.verbose > 1: print separator
+			if self.verbose > 0: print separator
 			for n,efrl in enumerate(self._eFEROLs):
 				self.sendSimpleCmdToApp(efrl.host, efrl.port, 'pt::frl::Application', n, 'Configure')
-			if self.verbose > 1: print separator
+			if self.verbose > 0: print separator
 			for n,efrl in enumerate(self._eFEROLs):
 				self.sendSimpleCmdToApp(efrl.host, efrl.port, 'pt::frl::Application', n, 'Enable')
 			self.sleep(2)
 
 			## Set fragment size for eFEROLs
-			if self.verbose > 1: print separator
+			if self.verbose > 0: print separator
 			for n,efrl in enumerate(self._eFEROLs):
 				if self.useEvB or self.useLogNormal: self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSize',     'unsignedInt',  fragSize)
 				else:                                self.setParam(efrl.host, efrl.port, 'Client',                n, 'currentSize', 'unsignedLong', fragSize)
@@ -415,7 +442,7 @@ class daq2Control(object):
 
 			## Set lognormal rms for eFEROLs (when running with --useLogNormal)
 			if self.useLogNormal:
-				if self.verbose > 1: print separator
+				if self.verbose > 0: print separator
 				for n,efrl in enumerate(self._eFEROLs):
 					self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSizeStdDev', 'unsignedInt', int(fragSizeRMS))
 					self.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'useLogNormal',  'boolean',     'true')
@@ -423,14 +450,14 @@ class daq2Control(object):
 			## Set super-fragment size for BUs
 			if not self.useEvB:
 			# if not self.useEvB and not self.useLogNormal: ## pre Aug25
-				if self.verbose > 1: print separator
+				if self.verbose > 0: print separator
 				for n,bu in enumerate(self._BUs):
 					self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
 				if not self._dryRun:
 					for n,bu in enumerate(self._BUs):
 						print bu.name, 'dummyFedPayloadSize', int(self.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
 
-			if self.verbose > 1: print separator
+			if self.verbose > 0: print separator
 
 			if self.useEvB or self.useLogNormal:
 				for n,efrl in enumerate(self._eFEROLs):
@@ -439,7 +466,7 @@ class daq2Control(object):
 			self.sendCmdToEVMRUBU('Configure')
 			self.sendCmdToRUEVMBU('Enable') ## Have to enable RUs/EVM/BUs here?
 
-			if self.verbose > 1: print separator
+			if self.verbose > 0: print separator
 			## Enable eFEROL clients
 			for n,efrl in enumerate(self._eFEROLs):
 				if self.useEvB or self.useLogNormal: self.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Enable')
@@ -463,8 +490,10 @@ class daq2Control(object):
 			self.sleep(2)
 
 			## Change super-fragment size for BUs
+			if self.verbose > 0: print separator
 			for n,bu in enumerate(self._BUs):
 				self.setParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'unsignedLong', self._nStreams*int(fragSize))
+			if self.verbose > 0: print separator
 			for n,bu in enumerate(self._BUs):
 				if not self._dryRun: print bu.name, 'dummyFedPayloadSize', int(self.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
 
@@ -472,12 +501,14 @@ class daq2Control(object):
 			self.sendCmdToRUEVMBU('Enable')
 			self.sendCmdToFEROLs('SetupEVG')
 			self.sendCmdToFEROLs('Resume')
+			return
 
 		## For eFEROLs: stop everything, set new size, start again
 		elif len(self._eFEROLs) > 0 or self.useEvB:
 			self.stopXDAQs()
 			self.sleep(5)
 			self.start(fragSize, fragSizeRMS=fragSizeRMS)
+			return
 
 		else: return
 	def prepareOutputDir(self, relRMS):
@@ -553,7 +584,6 @@ class daq2Control(object):
 		if self.verbose > 0: print "Configuring XDAQ processes"
 		for h in self._hosts:
 			self.sendCmdToExecutive(h.host, h.port, self._runDir+'/configure.cmd.xml')
-		if self.verbose > 0: print separator
 
 		self.sleep(2)
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
@@ -564,7 +594,6 @@ class daq2Control(object):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
 		a total duration."""
-		from sys import stdout
 		if self._dryRun: return
 		if self.useEvB:
 			sufragsize = self._nStreams/len(self._RUs) * self.currentFragSize
@@ -639,10 +668,9 @@ class daq2Control(object):
 		if self._dryRun:
 			print '%-18s %25s:%-5d' % ('webPing', host, port)
 			return 0
-		cmd = "wget -o /dev/null -O /dev/null http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
+		cmd = "wget -o /dev/null -O /dev/null --timeout=30 http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
 		return subprocess.call(shlex.split(cmd))
 	def webPingXDAQ(self):
-		from sys import stdout
 		print separator
 		print "Checking availability of relevant hosts"
 		for host in self._hosts:
@@ -666,8 +694,8 @@ def testBuilding(d2c, minevents=1000):
 	if d2c._dryRun: return True
 	eventCounter = []
 	for n,bu in enumerate(d2c._BUs):
-		if options.useEvB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
-		else:              nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong')
+		if d2c.useEvB: nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt')
+		else:          nEvts = d2c.getParam(bu.host, bu.port, d2c.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong')
 		try:
 			eventCounter.append(int(nEvts))
 		except ValueError:
@@ -689,9 +717,7 @@ def testBuilding(d2c, minevents=1000):
 def getListOfSizes(maxSize, minSize=256):
 	stepsize = 256
 	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
-	for step in [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]:
-		allsteps.append(step)
-
+	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
 	if options.short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16000]
 
 	steps = []
@@ -706,7 +732,7 @@ def getListOfSizes(maxSize, minSize=256):
 def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
 	"""Usage: runTest(configfile, fragSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
-	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap, useEvB=options.useEvB)
+	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
 	d2c.verbose = options.verbose
 	d2c.useLogNormal = useLogNormal
 	d2c.setup(configfile, relRMS=relRMS)
@@ -743,7 +769,7 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLo
 def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
 	Run a scan of fragment sizes reading the setup from configfile"""
-	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap, useEvB=options.useEvB)
+	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
 	d2c.verbose = options.verbose
 	d2c.useLogNormal = useLogNormal
 	d2c.setup(configfile, relRMS=relRMS)
@@ -762,6 +788,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 	steps = getListOfSizes(maxSize, minSize=minSize)
 	for step in steps:
 		d2c.changeSize(step, float(relRMS)*step, rate=rate)
+		if options.verbose > 0: print separator
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, duration)
 		if d2c.useEvB:
 			## Get results ala testRubuilder script every 5 seconds
@@ -771,6 +798,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 			d2c.sleep(duration)
 			## For eFEROLs, get results after each step
 			if len(d2c._eFEROLs) > 0: d2c.getResults()
+		if options.verbose > 0: print "Done"
 
 	## For FEROLs, get results at the end
 	if len(d2c._FEROLs) > 0 and not d2c.useEvB: d2c.getResults()
@@ -796,7 +824,7 @@ def addOptions(parser):
 	%prog [options] --runRMSScan config.xml
 
 	Examples:
-	%prog [options] --runTest --useEvB --duration 30 /nfshome0/mommsen/daq/dev/daq/evb/test/cases/daq2val/FEROLs/16s8fx1x4/configuration.template.xml 1024
+	%prog [options] --runTest --duration 30 /nfshome0/mommsen/daq/dev/daq/evb/test/cases/daq2val/FEROLs/16s8fx1x4/configuration.template.xml 1024
 	%prog [options] --runTest --useLogNormal ~/andrea_test/cases/eFEROLs/gevb2g/dummyFerol/16x2x2/configuration.template.xml 1024 0.5
 	%prog [options] --runScan --useLogNormal ../cases/FEROLs/gevb2g/16s16fx2x2/configuration.template.xml 2.0
 	%prog [options] --runTest --useRate 100 --useLogNormal config.template.xml 1024 0.5
@@ -819,7 +847,6 @@ def addOptions(parser):
 	parser.add_option("--runTest", default=False, action="store_true",                dest="runTest",        help="Run a test setup, needs two arguments: config and fragment size")
 	parser.add_option("--runScan", default=False, action="store_true",                dest="runScan",        help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
 	parser.add_option("--runRMSScan", default=False, action="store_true",             dest="runRMSScan",     help="Run four scans over fragment sizes with different RMS values")
-	parser.add_option("--useEvB", default=False, action="store_true",                 dest="useEvB",         help="Use EvB instead of gevb2g [default is gevb2g]")
 	parser.add_option("--useLogNormal", default=False, action="store_true",           dest="useLogNormal",   help="Use lognormal generator for e/FEROLs (will use the dummyFerol instead of the Client in case of the eFEROLS). You need to provide the relative rms (i.e. in multiples of the fragment size) as an argument.")
 	parser.add_option("-d", "--duration", default=60, action="store", type="int",     dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
 	parser.add_option("--useRate", default=0, action="store", type="int",             dest="useRate",        help="Event rate in kHz, [default is maximum rate]")
@@ -861,6 +888,7 @@ if __name__ == "__main__":
 		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
 		d2c.verbose = options.verbose
 		d2c.stopXDAQs()
+		print separator
 		exit(0)
 	if options.startLaunchers:
 		with open('launcherLog.txt', 'w') as logfile:
@@ -876,7 +904,7 @@ if __name__ == "__main__":
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
 				d2c.verbose = options.verbose
 
 				## Stop previously running things
@@ -896,7 +924,7 @@ if __name__ == "__main__":
 				if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 				exit(0)
 		else:
-			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
 			d2c.verbose = options.verbose
 
 			## Stop previously running things
@@ -916,10 +944,10 @@ if __name__ == "__main__":
 	if options.changeSize and len(args) > 1:
 		if options.useLogNormal:
 			if len(args) < 3:
-				print "You need give an RMS argument when using --useLogNormal"
+				print "You need to give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
 				d2c.verbose = options.verbose
 				d2c.useLogNormal = True
 				relRMS = float(args[2])
@@ -928,7 +956,7 @@ if __name__ == "__main__":
 				d2c.changeSize(fragSize, relRMS*fragSize, rate=options.useRate)
 				exit(0)
 		else:
-			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap, useEvB=options.useEvB)
+			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
 			d2c.verbose = options.verbose
 			d2c.useLogNormal = False
 			fragSize = int(args[1])
