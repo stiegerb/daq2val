@@ -219,7 +219,6 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	##################################################
 	## Fuckups:
 	if 'Aug25' in dirname and nStreams/nRus==24: UPPERLIMIT = 21000
-	if 'Sep4'  in dirname and nStreams/nRus==12: UPPERLIMIT = 10000
 	##################################################
 
 	if options.verbose > 4: print 'UPPERLIMIT is ', UPPERLIMIT
@@ -342,8 +341,12 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	graphs = []
 	configs = set()
 	for case in caselist:
-		graphs.append(getGraph(f, case, frag=frag))
-		configs.add(getConfig(case.split('/').pop())[:2])
+		try:
+			graphs.append(getGraph(f, case, frag=frag))
+			configs.add(getConfig(case.split('/').pop())[:2])
+		except AttributeError:
+			print "#### Couldn't get graph for ", case, "in file", filename
+			return
 
 	configs = sorted(configs, key=itemgetter(0))
 	leg = TLegend(0.38, 0.13, 0.899, 0.20+len(caselist)*0.05)
@@ -427,7 +430,7 @@ def getGraph(file, subdir, frag=False):
 
 		return g
 	except AttributeError as e:
-		print "Didn't find tree", treeloc, "in file", file
+		print "#### Didn't find tree", treeloc, "in file", file
 		raise e
 
 ##---------------------------------------------------------------------------------
