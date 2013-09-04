@@ -126,8 +126,6 @@ def cleanFile(filename):
 			cleandata = metaCleaning(data)
 			# cleandata = cleanData(data)
 			cleandata = map(int, cleandata)
-			for d in cleandata:
-				o.write
 			newline = reduce(lambda x,y: str(x)+','+str(y), cleandata)
 			o.write(newline)
 			o.write('\n')
@@ -168,6 +166,10 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 			data[int(spline[0])] = rate
 		else:
 			prev_rate = data[int(spline[0])]
+			if len(rate) > len(prev_rate):
+				rate = rate[:len(prev_rate)]
+			if len(rate) < len(prev_rate):
+				prev_rate = prev_rate[:len(rate)]
 			data[int(spline[0])] = map(lambda a,b:a+b, prev_rate, rate)
 
 
@@ -215,7 +217,9 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	if nStreams/nRus==24: UPPERLIMIT = 10000
 
 	##################################################
+	## Fuckups:
 	if 'Aug25' in dirname and nStreams/nRus==24: UPPERLIMIT = 21000
+	if 'Sep4'  in dirname and nStreams/nRus==12: UPPERLIMIT = 10000
 	##################################################
 
 	if options.verbose > 4: print 'UPPERLIMIT is ', UPPERLIMIT
