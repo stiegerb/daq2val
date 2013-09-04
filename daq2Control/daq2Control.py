@@ -5,7 +5,9 @@
 #                                                                    #
 #  ToDo-List:                                                        #
 #   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
-#   - Automatize maximum size and scan limits from table             #
+#   - Automatize scan limits from table                              #
+#   - Add warning if max size is not set correctly in config file    #
+#   - Automatize the number of samples, depending on duration        #
 #   - Add option to use dummyFerol                                   #
 #   - Testing testing testing                                        #
 ######################################################################
@@ -638,17 +640,21 @@ class daq2Control(object):
 		self.sleep(5)
 		# self.sendCmdToRUEVMBU('Enable')
 		self.sendCmdToFEROLs('Enable')
+	def stopXDAQ(self, host):
+		iterations = 0
+		while self.tryWebPing(host.host, host.port) == 0:
+			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+			iterations += 1
+			if iterations > 1:
+				print " repeating %s:%-d" % (host.host, host.port)
 	def stopXDAQs(self):
 		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
 		if self.verbose > 0: print separator
 		if self.verbose > 0: print "Stopping XDAQs"
+		# self.sendCmdToFEROLs('Pause')
+		# self.sendCmdToEVMRUBU('Halt')
 		for host in self._allHosts:
-			iterations = 0
-			while self.tryWebPing(host.host, host.port) == 0:
-				self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
-				iterations += 1
-				if iterations > 1:
-					print " repeating %s:%-d" % (host.host, host.port)
+			self.stopXDAQ(host)
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
