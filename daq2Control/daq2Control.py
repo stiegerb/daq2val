@@ -5,8 +5,6 @@
 #                                                                    #
 #  ToDo-List:                                                        #
 #   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
-#   - Automatize scan limits from table                              #
-#   - Add warning if max size is not set correctly in config file    #
 #   - Automatize the number of samples, depending on duration        #
 #   - Add option to use dummyFerol                                   #
 #   - Testing testing testing                                        #
@@ -16,8 +14,19 @@ import subprocess
 import re, os, shlex
 import time
 from sys import stdout
+import xml.etree.ElementTree as ET
 
 separator = 70*'-'
+
+SIZE_LIMIT_TABLE = {
+     # max size, scan until
+	 4 : (32000, 16000),  # merging by  4
+	 8 : (32000, 16000),  # merging by  8
+	12 : (21000, 10240),  # merging by 12
+	16 : (16000,  8192),  # merging by 16
+	24 : (10500,  5120)   # merging by 24
+}
+
 
 ######################################################################
 class host(object):
@@ -174,9 +183,9 @@ class daq2Control(object):
 			print host
 
 	def sleep(self,naptime=0.5):
-		if self._dryRun:
-			if self.verbose > 1: print 'sleep', naptime
-			return
+		# if self._dryRun:
+		# 	if self.verbose > 1: print 'sleep', naptime
+		# 	return
 
 		barlength = len(separator)-1
 		starttime = time.time()
@@ -199,11 +208,10 @@ class daq2Control(object):
 		# if not self._dryRun: time.sleep(naptime)
 		# if not self._dryRun: subprocess.call(['sleep', str(time)])
 	def readXDAQConfigTemplate(self, configfile):
-		import xml.etree.ElementTree as ET
 		if not os.path.exists(configfile):
 			raise IOError('File '+configfile+' not found')
 		self._testCase      = os.path.dirname(configfile[configfile.find('cases/')+6:])
-		self._testCaseShort = os.path.dirname(configfile).split('/').pop()
+		self._testCaseShort = os.path.dirname(configfile).split('/')[-1]
 		self._runDir += self._testCaseShort
 		config = ET.parse(configfile)
 		partition = config.getroot()
@@ -222,6 +230,8 @@ class daq2Control(object):
 		else:
 			raise RuntimeError("Couldn't determine EvB/gevb2g case!")
 
+
+		maxsizes = []
 		## Scan <xc:Context>'s to extract configuration
 		for context in partition:
 			if not context.tag.endswith('Context'): continue
@@ -244,8 +254,12 @@ class daq2Control(object):
 								prop = app.find(frlns + 'properties')
 								ho.__class__ = FEROL ## Make it a FEROL
 								ho.setStreams(prop.find(frlns + 'enableStream0').text, prop.find(frlns + 'enableStream1').text)
-								if ho.enableStream0: self._nStreams += 1
-								if ho.enableStream1: self._nStreams += 1
+								if ho.enableStream0:
+									self._nStreams += 1
+									maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED0').text))
+								if ho.enableStream1:
+									self._nStreams += 1
+									maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED1').text))
 								break
 
 					if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
@@ -266,6 +280,32 @@ class daq2Control(object):
 				print h+n, 'is not defined in symbol map. Aborting.'
 				print 30*'#'
 				raise e
+
+		if len(maxsizes) > 0:
+			## Check whether they were all filled
+			if len(maxsizes) != self._nStreams:
+				raise RuntimeError("Didn't find all Event_Length_Max_bytes parameter in config file?!")
+
+			## Check they are all the same:
+			size_set = set()
+			for x in maxsizes: size_set.add(x)
+			if len(size_set) > 1:
+				print "##########################################################"
+				print "WARNING: You have FEROLs with different"
+				print "         Event_Length_Max_bytes parameters in your config file!"
+				print "         That probably shouldn't be."
+				print " will wait for you to read this for 10s and then continue..."
+				self.sleep(10)
+				print "WARNING: You have FEROLs with different Event_Length_Max_bytes parameters in your config file!"
+
+			## Check they are correct and alert
+			if maxsizes[0] != SIZE_LIMIT_TABLE[self._nStreams//len(self._RUs)][0]:
+				print "##########################################################"
+				print "WARNING: Event_Length_Max_bytes for FEROLs seems to be set"
+				print "         to the wrong value in your config .xml file!"
+				print " Is set to:", maxsizes[0], "in config. Expected value:", SIZE_LIMIT_TABLE[self._nStreams//len(self._RUs)][0]
+				print " will wait for you to read this for 10s and then continue..."
+				self.sleep(10)
 	def fillTemplate(self, filename):
 		with open(filename, 'r') as ifile:
 			template = ifile.read()
@@ -400,7 +440,7 @@ class daq2Control(object):
 			self.startXDAQLauncher(host.host,host.lport,logfile)
 			self.sleep(0.2)
 
-	##
+	## Multi-commands
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
 		if self.verbose > 0: print separator
 		for n,evm in enumerate(self._EVM):
@@ -443,6 +483,79 @@ class daq2Control(object):
 				self.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delay))
 
 	## Control methods
+	def setup(self, configfile, relRMS=-1):
+		"""Read config file, clean up and re-create run directory, fill config templates, create output directory"""
+		if self.verbose > 0: print separator
+
+		## Read config file, cleanup run dir
+		if self.verbose > 0: print 'Reading config file', configfile
+		self.readXDAQConfigTemplate(configfile)
+		if not self._dryRun:
+			subprocess.check_call(['rm', '-rf', self._runDir])
+			subprocess.check_call(['mkdir', '-p', self._runDir])
+
+		## Clean up and create output dir
+		self.prepareOutputDir(relRMS)
+
+		## Fill configuration template
+		if self.verbose > 0: print 'Filling configuration template in ' + self._runDir + '/configuration.xml'
+		if not self._dryRun:
+			filledconfig = self.fillTemplate(configfile)
+			with open(self._runDir+'/configuration.xml', 'w') as file:
+				file.write(filledconfig)
+
+		## Produce configure command file
+		if self.verbose > 0: print 'Producing configuration command file in ' + self._runDir + '/configure.cmd.xml'
+		if not self._dryRun:
+			with open(self._runDir+'/configure.cmd.xml', 'w') as file:
+				configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
+				configureCmd = self._SOAPEnvelope % configureBody
+				file.write(configureCmd)
+	def start(self, fragSize, fragSizeRMS=0, rate='max'):
+		"""Start all XDAQ processes, set configuration for fragSize and start running"""
+		self.currentFragSize = fragSize
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print "Starting XDAQ processes"
+		for h in self._hosts:
+			self.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port))
+		self.sleep(2)
+
+		if not self.webPingXDAQ():
+			if self.verbose > 0: print separator
+			if self.verbose > 0: print 'Waiting 3 seconds and checking again...'
+			self.sleep(3)
+			if not self.webPingXDAQ():
+				raise RuntimeError('Not all hosts ready!')
+
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print "Configuring XDAQ processes"
+		for h in self._hosts:
+			if self.sendCmdFileToExecutive(h.host, h.port, self._runDir+'/configure.cmd.xml') != 0:
+				raise RuntimeError('Failed to send configure command to %s at %s:%d!' % (h.name, h.host, h.port))
+
+		self.sleep(2)
+		self.setSize(fragSize, fragSizeRMS, rate=rate)
+		self.sleep(5)
+		# self.sendCmdToRUEVMBU('Enable')
+		self.sendCmdToFEROLs('Enable')
+	def stopXDAQ(self, host):
+		if self._dryRun:
+			if self.verbose > 0: print 'Stopping %25s:%-5d' % (host.host, host.lport)
+			return
+		iterations = 0
+		while self.tryWebPing(host.host, host.port) == 0:
+			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
+			iterations += 1
+			if iterations > 1:
+				print " repeating %s:%-d" % (host.host, host.port)
+	def stopXDAQs(self):
+		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
+		if self.verbose > 0: print separator
+		if self.verbose > 0: print "Stopping XDAQs"
+		# self.sendCmdToFEROLs('Pause')
+		# self.sendCmdToEVMRUBU('Halt')
+		for host in self._allHosts:
+			self.stopXDAQ(host)
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
 		if self.verbose > 0: print separator
@@ -584,77 +697,6 @@ class daq2Control(object):
 			outfile.write('## %s\n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
 			outfile.write('\n')
 			outfile.close()
-
-	def setup(self, configfile, relRMS=-1):
-		"""Read config file, clean up and re-create run directory, fill config templates, create output directory"""
-		if self.verbose > 0: print separator
-
-		## Read config file, cleanup run dir
-		if self.verbose > 0: print 'Reading config file', configfile
-		self.readXDAQConfigTemplate(configfile)
-		if not self._dryRun:
-			subprocess.check_call(['rm', '-rf', self._runDir])
-			subprocess.check_call(['mkdir', '-p', self._runDir])
-
-		## Clean up and create output dir
-		self.prepareOutputDir(relRMS)
-
-		## Fill configuration template
-		if self.verbose > 0: print 'Filling configuration template in ' + self._runDir + '/configuration.xml'
-		if not self._dryRun:
-			filledconfig = self.fillTemplate(configfile)
-			with open(self._runDir+'/configuration.xml', 'w') as file:
-				file.write(filledconfig)
-
-		## Produce configure command file
-		if self.verbose > 0: print 'Producing configuration command file in ' + self._runDir + '/configure.cmd.xml'
-		if not self._dryRun:
-			with open(self._runDir+'/configure.cmd.xml', 'w') as file:
-				configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
-				configureCmd = self._SOAPEnvelope % configureBody
-				file.write(configureCmd)
-	def start(self, fragSize, fragSizeRMS=0, rate='max'):
-		"""Start all XDAQ processes, set configuration for fragSize and start running"""
-		self.currentFragSize = fragSize
-		if self.verbose > 0: print separator
-		if self.verbose > 0: print "Starting XDAQ processes"
-		for h in self._hosts:
-			self.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port))
-		self.sleep(2)
-
-		if not self.webPingXDAQ():
-			if self.verbose > 0: print separator
-			if self.verbose > 0: print 'Waiting 3 seconds and checking again...'
-			self.sleep(3)
-			if not self.webPingXDAQ():
-				raise RuntimeError('Not all hosts ready!')
-
-		if self.verbose > 0: print separator
-		if self.verbose > 0: print "Configuring XDAQ processes"
-		for h in self._hosts:
-			if self.sendCmdFileToExecutive(h.host, h.port, self._runDir+'/configure.cmd.xml') != 0:
-				raise RuntimeError('Failed to send configure command to %s at %s:%d!' % (h.name, h.host, h.port))
-
-		self.sleep(2)
-		self.setSize(fragSize, fragSizeRMS, rate=rate)
-		self.sleep(5)
-		# self.sendCmdToRUEVMBU('Enable')
-		self.sendCmdToFEROLs('Enable')
-	def stopXDAQ(self, host):
-		iterations = 0
-		while self.tryWebPing(host.host, host.port) == 0:
-			self.sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ')
-			iterations += 1
-			if iterations > 1:
-				print " repeating %s:%-d" % (host.host, host.port)
-	def stopXDAQs(self):
-		"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
-		if self.verbose > 0: print separator
-		if self.verbose > 0: print "Stopping XDAQs"
-		# self.sendCmdToFEROLs('Pause')
-		# self.sendCmdToEVMRUBU('Halt')
-		for host in self._allHosts:
-			self.stopXDAQ(host)
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
@@ -813,6 +855,19 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 	d2c.useLogNormal = useLogNormal
 	d2c.setup(configfile, relRMS=relRMS)
 
+	steps = getListOfSizes(maxSize, minSize=minSize)
+
+	## Check maxSize from table and merging case:
+	mergingby = d2c._nStreams//len(d2c._RUs)
+	if steps[-1] > SIZE_LIMIT_TABLE[mergingby][1]:
+		print "##########################################################"
+		print "WARNING: Your maximum size for scanning doesn't seem to"
+		print "         make sense. Please consider!"
+		print " Is set to:", steps[-1], ". Expected to scan only until:", SIZE_LIMIT_TABLE[mergingby][1]
+		print " will wait for you to read this for 10s and then continue..."
+		d2c.sleep(10)
+
+
 	d2c.stopXDAQs()
 	d2c.start(minSize, float(relRMS)*minSize, rate=rate)
 
@@ -824,7 +879,6 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 		exit(-1)
 	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 
-	steps = getListOfSizes(maxSize, minSize=minSize)
 	for step in steps:
 		d2c.changeSize(step, float(relRMS)*step, rate=rate)
 		if options.verbose > 0: print separator
