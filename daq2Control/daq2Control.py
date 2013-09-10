@@ -79,6 +79,7 @@ class daq2Control(object):
 
 		self.verbose      = options.verbose
 		self.useLogNormal = options.useLogNormal
+		self.stopRestart  = options.stopRestart
 
 		self._hosts     = [] ## a list of the hosts defined in the xml config
 		self._allHosts  = [] ## a list of all soap hosts defined in the symbol map
@@ -636,7 +637,7 @@ class daq2Control(object):
 			return
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## For FEROLs: pause, change size, resume
-		if len(self._FEROLs) > 0 and not self.useEvB:
+		if len(self._FEROLs) > 0 and not self.useEvB and not self.stopRestart:
 			if self.verbose > 0: print separator
 			if self.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
 
@@ -666,7 +667,7 @@ class daq2Control(object):
 			return
 
 		## For eFEROLs: stop everything, set new size, start again
-		elif len(self._eFEROLs) > 0 or self.useEvB:
+		elif len(self._eFEROLs) > 0 or self.useEvB or self.stopRestart:
 			self.stopXDAQs()
 			self.sleep(5)
 			self.start(fragSize, fragSizeRMS=fragSizeRMS)
@@ -887,11 +888,11 @@ def runScan(configfile, options, relRMS=0.0):
 			## Wait for the full duration and get results at the end
 			d2c.sleep(options.duration)
 			## For eFEROLs, get results after each step
-			if len(d2c._eFEROLs) > 0: d2c.getResults()
+			if len(d2c._eFEROLs) > 0 or d2c.stopRestart: d2c.getResults()
 		if options.verbose > 0: print "Done"
 
 	## For FEROLs, get results at the end
-	if len(d2c._FEROLs) > 0 and not d2c.useEvB: d2c.getResults()
+	if len(d2c._FEROLs) > 0 and not d2c.useEvB and not d2c.stopRestart: d2c.getResults()
 
 	d2c.stopXDAQs()
 	print separator
@@ -944,6 +945,7 @@ def addOptions(parser):
 	parser.add_option("--minSize", default=256, action="store", type="int",           dest="minSize",        help="Minimum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--nSteps", default=100, action="store", type="int",            dest="nSteps",         help="Number of steps between minSize and maxSize, [default: %default]")
 	parser.add_option("--short", default=False, action="store_true",                  dest="short",          help="Run a short scan with only a few points")
+	parser.add_option("--stopRestart", default=False, action="store_true",            dest="stopRestart",    help="Stop XDAQ processes after each size and restart instead of changing the size on the fly (only relevant for scans)")
 
 	## Debugging options:
 	parser.add_option("--dry", default=False, action="store_true",                    dest="dry",            help="Just print the commands without sending anything")
