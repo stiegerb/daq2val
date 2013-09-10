@@ -56,7 +56,7 @@ class FEROL(host):
 ######################################################################
 class daq2Control(object):
 	"""docstring for daq2Control"""
-	def __init__(self, dryrun=False, symbolMap=''):
+	def __init__(self, options):
 		try:
 			self._symbolMapFile = os.environ['TESTS_SYMBOL_MAP']
 			self._testDir       = os.environ['RUB_TESTER_HOME']
@@ -71,14 +71,14 @@ class daq2Control(object):
 			print 30*'#'
 			raise e
 
-		if len(symbolMap)>0:
+		if len(options.symbolMap)>0:
 			self._symbolMapFile = symbolMap
 
-		self._dryRun    = dryrun ## if true, only print commands without doing anything
+		self._dryRun    = options.dryrun ## if true, only print commands without doing anything
 		self._symbolMap = {} ## a dictionary of all symbols in the map
 
-		self.verbose      = 0
-		self.useLogNormal = False
+		self.verbose      = options.verbose
+		self.useLogNormal = options.useLogNormal
 
 		self._hosts     = [] ## a list of the hosts defined in the xml config
 		self._allHosts  = [] ## a list of all soap hosts defined in the symbol map
@@ -812,16 +812,15 @@ def getListOfSizes(maxSize, minSize=256):
 	return steps
 
 ## Run a single test
-def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
+def runTest(configfile, fragSize, relRMS=0.0, options):
 	"""Usage: runTest(configfile, fragSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
-	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
-	d2c.verbose = options.verbose
-	d2c.useLogNormal = useLogNormal
+	d2c = daq2Control(options)
+	d2c.useLogNormal = options.useLogNormal
 	d2c.setup(configfile, relRMS=relRMS)
 
 	d2c.stopXDAQs()
-	d2c.start(fragSize, float(relRMS)*fragSize, rate=rate)
+	d2c.start(fragSize, float(relRMS)*fragSize, rate=options.useRate)
 	d2c.sleep(15)
 
 	if not testBuilding(d2c, 1000):
@@ -833,10 +832,10 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLo
 	if d2c.verbose > 0: print "Building events ..."
 	if d2c.useEvB:
 		## Get results ala testRubuilder script every 5 seconds
-		d2c.getResultsEvB(duration, interval=5)
+		d2c.getResultsEvB(options.duration, interval=5)
 	else:
 		## Wait for the full duration, then get all the results at once
-		d2c.sleep(duration)
+		d2c.sleep(options.duration)
 		d2c.getResults()
 
 	if options.waitBeforeStop: raw_input("Press Enter to stop the XDAQs...")
@@ -847,15 +846,13 @@ def runTest(configfile, fragSize, dryrun=False, symbolMap='', duration=10, useLo
 	print separator
 
 ## Run a scan over fragment sizes
-def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', duration=10, useLogNormal=False, relRMS=0, rate='max'):
+def runScan(configfile, relRMS=0.0, options):
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
 	Run a scan of fragment sizes reading the setup from configfile"""
-	d2c = daq2Control(dryrun=dryrun, symbolMap=symbolMap)
-	d2c.verbose = options.verbose
-	d2c.useLogNormal = useLogNormal
+	d2c = daq2Control(options)
 	d2c.setup(configfile, relRMS=relRMS)
 
-	steps = getListOfSizes(maxSize, minSize=minSize)
+	steps = getListOfSizes(options.maxSize, minSize=options.minSize)
 
 	## Check maxSize from table and merging case:
 	mergingby = d2c._nStreams//len(d2c._RUs)
@@ -869,7 +866,7 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 
 
 	d2c.stopXDAQs()
-	d2c.start(minSize, float(relRMS)*minSize, rate=rate)
+	d2c.start(options.minSize, float(relRMS)*options.minSize, rate=options.useRate)
 
 	d2c.sleep(10)
 
@@ -880,15 +877,15 @@ def runScan(configfile, nSteps, minSize, maxSize, dryrun=False, symbolMap='', du
 	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 
 	for step in steps:
-		d2c.changeSize(step, float(relRMS)*step, rate=rate)
+		d2c.changeSize(step, float(relRMS)*step, rate=options.rate)
 		if options.verbose > 0: print separator
-		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, duration)
+		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, options.duration)
 		if d2c.useEvB:
 			## Get results ala testRubuilder script every 5 seconds
-			d2c.getResultsEvB(duration, interval=5)
+			d2c.getResultsEvB(options.duration, interval=5)
 		else:
 			## Wait for the full duration and get results at the end
-			d2c.sleep(duration)
+			d2c.sleep(options.duration)
 			## For eFEROLs, get results after each step
 			if len(d2c._eFEROLs) > 0: d2c.getResults()
 		if options.verbose > 0: print "Done"
@@ -973,14 +970,12 @@ if __name__ == "__main__":
 	if options.useRate == 0: options.useRate = 'max'
 
 	if options.stopLaunchers:
-		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
-		d2c.verbose = options.verbose
+		d2c = daq2Control(options)
 		d2c.stopXDAQs()
 		d2c.stopXDAQLaunchers()
 		exit(0)
 	if options.stopXDAQs:
-		d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
-		d2c.verbose = options.verbose
+		d2c = daq2Control(options)
 		d2c.stopXDAQs()
 		print separator
 		exit(0)
@@ -994,8 +989,7 @@ if __name__ == "__main__":
 			logfile.write('\n')
 			logfile.write(length*'#' + '\n')
 			logfile.write(length*'#' + '\n')
-			d2c = daq2Control(symbolMap=options.symbolMap, dryrun=options.dry)
-			d2c.verbose = options.verbose
+			d2c = daq2Control(options)
 			d2c.startXDAQLaunchers(logfile)
 			logfile.write(length*'#' + '\n')
 			logfile.write(length*'#' + '\n')
@@ -1009,8 +1003,7 @@ if __name__ == "__main__":
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
-				d2c.verbose = options.verbose
+				d2c = daq2Control(options)
 
 				## Stop previously running things
 				d2c.stopXDAQs()
@@ -1029,8 +1022,7 @@ if __name__ == "__main__":
 				if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 				exit(0)
 		else:
-			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
-			d2c.verbose = options.verbose
+			d2c = daq2Control(options)
 
 			## Stop previously running things
 			d2c.stopXDAQs()
@@ -1052,8 +1044,7 @@ if __name__ == "__main__":
 				print "You need to give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
-				d2c.verbose = options.verbose
+				d2c = daq2Control(options)
 				d2c.useLogNormal = True
 				relRMS = float(args[2])
 				fragSize = int(args[1])
@@ -1061,8 +1052,7 @@ if __name__ == "__main__":
 				d2c.changeSize(fragSize, relRMS*fragSize, rate=options.useRate)
 				exit(0)
 		else:
-			d2c = daq2Control(dryrun=options.dry, symbolMap=options.symbolMap)
-			d2c.verbose = options.verbose
+			d2c = daq2Control(options)
 			d2c.useLogNormal = False
 			fragSize = int(args[1])
 			d2c.readXDAQConfigTemplate(args[0])
@@ -1075,10 +1065,10 @@ if __name__ == "__main__":
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[2], rate=options.useRate)
+				runTest(args[0], fragSize=int(args[1]), relRMS=args[2], options)
 				exit(0)
 		else:
-			runTest(args[0], fragSize=int(args[1]), dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False, rate=options.useRate)
+			runTest(args[0], fragSize=int(args[1]), options)
 			exit(0)
 	if options.runScan and len(args) > 0:
 		if options.useLogNormal:
@@ -1086,10 +1076,10 @@ if __name__ == "__main__":
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=args[1], rate=options.useRate)
+				runScan(args[0], relRMS=args[1], options)
 				exit(0)
 		else:
-			runScan(args[0], nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=False, rate=options.useRate)
+			runScan(args[0], options)
 			exit(0)
 	if options.runRMSScan and len(args) > 0:
 		config = args[0]
@@ -1101,7 +1091,7 @@ if __name__ == "__main__":
 			print '## STARTING SCAN OF RMS =', rms
 			print 80*'#'
 			print 80*'#'
-			runScan(config, nSteps=options.nSteps, minSize=options.minSize, maxSize=options.maxSize, dryrun=options.dry, symbolMap=options.symbolMap, duration=options.duration, useLogNormal=True, relRMS=rms, rate=options.useRate)
+			runScan(config, relRMS=rms, options)
 		print 80*'#'
 		print 80*'#'
 		print '## EVERYTHING DONE'
