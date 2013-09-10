@@ -74,7 +74,7 @@ class daq2Control(object):
 		if len(options.symbolMap)>0:
 			self._symbolMapFile = symbolMap
 
-		self._dryRun    = options.dryrun ## if true, only print commands without doing anything
+		self._dryRun    = options.dry ## if true, only print commands without doing anything
 		self._symbolMap = {} ## a dictionary of all symbols in the map
 
 		self.verbose      = options.verbose
@@ -183,9 +183,9 @@ class daq2Control(object):
 			print host
 
 	def sleep(self,naptime=0.5):
-		# if self._dryRun:
-		# 	if self.verbose > 1: print 'sleep', naptime
-		# 	return
+		if self._dryRun:
+			if self.verbose > 1: print 'sleep', naptime
+			return
 
 		barlength = len(separator)-1
 		starttime = time.time()
@@ -812,7 +812,7 @@ def getListOfSizes(maxSize, minSize=256):
 	return steps
 
 ## Run a single test
-def runTest(configfile, fragSize, relRMS=0.0, options):
+def runTest(configfile, fragSize, options, relRMS=0.0):
 	"""Usage: runTest(configfile, fragSize)
 	Run a test reading the setup from configfile and using fragment size fragSize"""
 	d2c = daq2Control(options)
@@ -846,7 +846,7 @@ def runTest(configfile, fragSize, relRMS=0.0, options):
 	print separator
 
 ## Run a scan over fragment sizes
-def runScan(configfile, relRMS=0.0, options):
+def runScan(configfile, options, relRMS=0.0):
 	"""Usage: runScan(configfile, nSteps, minSize, maxSize)
 	Run a scan of fragment sizes reading the setup from configfile"""
 	d2c = daq2Control(options)
@@ -877,7 +877,7 @@ def runScan(configfile, relRMS=0.0, options):
 	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 
 	for step in steps:
-		d2c.changeSize(step, float(relRMS)*step, rate=options.rate)
+		d2c.changeSize(step, float(relRMS)*step, rate=options.useRate)
 		if options.verbose > 0: print separator
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, options.duration)
 		if d2c.useEvB:
@@ -1065,10 +1065,10 @@ if __name__ == "__main__":
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				runTest(args[0], fragSize=int(args[1]), relRMS=args[2], options)
+				runTest(args[0], options, fragSize=int(args[1]), relRMS=args[2])
 				exit(0)
 		else:
-			runTest(args[0], fragSize=int(args[1]), options)
+			runTest(args[0], options, fragSize=int(args[1]))
 			exit(0)
 	if options.runScan and len(args) > 0:
 		if options.useLogNormal:
@@ -1076,7 +1076,7 @@ if __name__ == "__main__":
 				print "You need give an RMS argument when using --useLogNormal"
 				exit(-1)
 			else:
-				runScan(args[0], relRMS=args[1], options)
+				runScan(args[0], options, relRMS=args[1])
 				exit(0)
 		else:
 			runScan(args[0], options)
@@ -1091,7 +1091,7 @@ if __name__ == "__main__":
 			print '## STARTING SCAN OF RMS =', rms
 			print 80*'#'
 			print 80*'#'
-			runScan(config, relRMS=rms, options)
+			runScan(config, options, relRMS=rms)
 		print 80*'#'
 		print 80*'#'
 		print '## EVERYTHING DONE'
