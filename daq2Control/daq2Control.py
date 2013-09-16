@@ -4,6 +4,7 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
+#   - Fix order of stopping xdaqs to prevent log spamming            #
 #   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
 #   - Automatize the number of samples, depending on duration        #
 #   - Add option to use dummyFerol                                   #
@@ -773,9 +774,10 @@ class daq2Control(object):
 ######################################################################
 ## Interface:
 ######################################################################
-def testBuilding(d2c, minevents=1000):
+def testBuilding(d2c, minevents=1000, waittime=20):
 	if options.verbose > 0: print separator
-	if options.verbose > 0: print 'Testing event building'
+	if options.verbose > 0: print 'Testing event building for', waittime, 'seconds'
+	d2c.sleep(waittime)
 	if d2c._dryRun: return True
 	eventCounter = []
 	for n,bu in enumerate(d2c._BUs):
@@ -822,9 +824,8 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 
 	d2c.stopXDAQs()
 	d2c.start(fragSize, float(relRMS)*fragSize, rate=options.useRate)
-	d2c.sleep(15)
 
-	if not testBuilding(d2c, 1000):
+	if not testBuilding(d2c, 1000, 15):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		d2c.stopXDAQs()
 		exit(-1)
@@ -869,9 +870,7 @@ def runScan(configfile, options, relRMS=0.0):
 	d2c.stopXDAQs()
 	d2c.start(options.minSize, float(relRMS)*options.minSize, rate=options.useRate)
 
-	d2c.sleep(10)
-
-	if not testBuilding(d2c, 1000):
+	if not testBuilding(d2c, 1000, 15):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		d2c.stopXDAQs()
 		exit(-1)
@@ -1016,9 +1015,7 @@ if __name__ == "__main__":
 
 				d2c.setup(args[0], relRMS=relRMS)
 				d2c.start(fragSize, float(relRMS)*fragSize, rate=options.useRate)
-				d2c.sleep(10)
-
-				if not testBuilding(d2c, 1000):
+				if not testBuilding(d2c, 1000, 15):
 					if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 					exit(-1)
 				if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
