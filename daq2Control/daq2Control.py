@@ -73,7 +73,7 @@ class daq2Control(object):
 			raise e
 
 		if len(options.symbolMap)>0:
-			self._symbolMapFile = symbolMap
+			self._symbolMapFile = options.symbolMap
 
 		self._dryRun    = options.dry ## if true, only print commands without doing anything
 		self._symbolMap = {} ## a dictionary of all symbols in the map
