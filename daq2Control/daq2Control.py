@@ -289,7 +289,7 @@ class daq2Control(object):
 		## For eFEROLs: stop everything, set new size, start again
 		elif len(self.config.eFEROLs) > 0 or self.config.useEvB or self.options.stopRestart:
 			utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-			sleep(5, self.options.verbose, self.options.dry)
+			sleep(2, self.options.verbose, self.options.dry)
 			self.start(fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
 			return
 

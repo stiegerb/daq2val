@@ -72,11 +72,15 @@ class daq2Config(object):
 		self.RUs       = []
 		self.BUs       = []
 		self.EVM       = []
+		self.GTPe      = []
+		self.FMM       = []
 		self._hostTypes = {'FEROLCONTROLLER' : self.FEROLs,
 		                   'FEROL'           : self.eFEROLs,
 		                   'RU'              : self.RUs,
 		                   'BU'              : self.BUs,
-		                   'EVM'             : self.EVM}
+		                   'EVM'             : self.EVM,
+		                   'GTPE'            : self.GTPe,
+		                   'FMM'             : self.FMM}
 
 		self.readXDAQConfigTemplate(configFile)
 
@@ -165,7 +169,7 @@ class daq2Config(object):
 				self.hosts.append(ho)
 
 			except KeyError as e:
-				printError('Unknown host type', h, ' Aborting.', self)
+				printError('Unknown host type %s. Aborting.' % h, self)
 				raise e
 
 		if len(maxsizes) > 0:
