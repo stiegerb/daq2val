@@ -133,27 +133,43 @@ class daq2Control(object):
 	def start(self, fragSize, fragSizeRMS=0, rate='max'):
 		"""Start all XDAQ processes, set configuration for fragSize and start running"""
 		self.currentFragSize = fragSize
+		## Start the xdaq processes from the launchers
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Starting XDAQ processes"
 		for h in self.config.hosts:
 			utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
 		sleep(2, self.options.verbose, self.options.dry)
 
+		## Check availability of xdaq processes on relevant hosts
 		if not self.webPingXDAQ():
+			## Check again, maybe it needs more time to start?
 			if self.options.verbose > 0: print separator
-			if self.options.verbose > 0: print 'Waiting 3 seconds and checking again...'
-			sleep(3, self.options.verbose, self.options.dry)
+			if self.options.verbose > 0: print 'Waiting 5 seconds and checking again...'
+			sleep(5, self.options.verbose, self.options.dry)
 			if not self.webPingXDAQ():
-				raise RuntimeError('Not all hosts ready!')
+				## Stop and restart the processes
+				if self.options.verbose > 0: print separator
+				if self.options.verbose > 0: print "Stopping and restarting XDAQ processes"
+				utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+				if self.options.verbose > 0: print separator
+				if self.options.verbose > 0: print "Restarting XDAQ processes"
+				for h in self.config.hosts:
+					utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
+				sleep(2, self.options.verbose, self.options.dry)
 
+				## Check one last time before giving up
+				if not self.webPingXDAQ():
+					raise RuntimeError('Not all hosts ready!')
+
+		## Send the configuration file to each host
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring XDAQ processes"
-		utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutiveMulti, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry))
+		utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry))
 
+		## Set the fragment size, rms, and rate, configure, and enable
 		sleep(2, self.options.verbose, self.options.dry)
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		sleep(5, self.options.verbose, self.options.dry)
-		# self.sendCmdToRUEVMBU('Enable')
 		self.sendCmdToFEROLs('Enable')
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!

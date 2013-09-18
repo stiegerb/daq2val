@@ -62,7 +62,7 @@ def sendSOAPMessage(host, port, message, command):
 		print separator
 		return 1
 
-def sendCmdFileToExecutiveMulti(packedargs):
+def sendCmdFileToExecutivePacked(packedargs):
 	(host, port, cmdfile, verbose, dry) = packedargs
 	return sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False)
 def sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False):
@@ -111,6 +111,9 @@ def tryWebPing(host, port, verbose=0, dry=False):
 	cmd = "wget -o /dev/null -O /dev/null --timeout=30 http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
 	return subprocess.call(shlex.split(cmd))
 
+def stopXDAQPacked(packedargs):
+	(host, verbose, dry) = packedargs
+	stopXDAQ(host, verbose, dry)
 def stopXDAQ(host, verbose=0, dry=False):
 	if dry:
 		if verbose > 0: print 'Stopping %25s:%-5d' % (host.host, host.lport)
@@ -126,16 +129,14 @@ def stopXDAQs(symbolMap, verbose=0, dry=False):
 	"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
 	if verbose > 0: print separator
 	if verbose > 0: print "Stopping XDAQs"
-	# self.sendCmdToFEROLs('Pause')
-	# self.sendCmdToEVMRUBU('Halt')
-	for host in symbolMap.allHosts:
-		stopXDAQ(host, verbose=verbose, dry=dry)
+	from multiprocessing import Pool
+	pool = Pool(len(symbolMap.allHosts))
+	pool.map(stopXDAQPacked	, [(h, verbose, dry) for h in symbolMap.allHosts])
 
 ## Wrappers for existing perl scripts
 def sendSimpleCmdToAppPacked(packedargs):
 	(host, port, classname, instance, cmdName, verbose, dry) = packedargs
 	return sendSimpleCmdToApp(host, port, classname, instance, cmdName, verbose, dry)
-
 def sendSimpleCmdToApp(host, port, classname, instance, cmdName, verbose=0, dry=False):
 	if verbose > 1 and dry: print '%-18s %25s:%-5d %25s %1s\t%-12s' % ('sendSimpleCmdToApp', host, port, classname, instance, cmdName)
 	if not dry: return subprocess.check_call(['sendSimpleCmdToApp', host, str(port), classname, str(instance), cmdName])
