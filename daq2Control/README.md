@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------
-  python (2.6) framework for running tests on the daq2val setups
+python (2.6) framework for running tests on the daq2val setups
 ---------------------------------------------------------------------
 
 ------------------------
@@ -31,16 +31,16 @@ daq2SymbolMap.py:
 ------------------------
 daq2Launchers.py:
 
-> Script to start, stop, and check status of xdaqLaunchers
-> The only noteworthy addition to previously existing scripts is the ability to redirect the output to a logfile
+> - Script to start, stop, and check status of xdaqLaunchers
+> - The only noteworthy addition to previously existing scripts is the ability to redirect the output to a logfile
 
 
 ------------------------
 daq2Utils.py:
 
-> Collection of general utilities for communicating with the xdaq processes
-> Some are just wrappers for the existing perl scripts, others are re-implemented in python
-> stopXDAQs and others are using multiprocessing to speed up the script
+> - Collection of general utilities for communicating with the xdaq processes
+> - Some are just wrappers for the existing perl scripts, others are re-implemented in python
+> - stopXDAQs and others are using multiprocessing to speed up the script
 
 
 ------------------------
@@ -55,8 +55,8 @@ daq2Control.py:
 ------------------------
 runDAQ2Test.py:
 
-> Interface to daq2Control, always takes a template .xml file as first argument
-> Can be used to just start/stop a running system, or change the fragment size of a running system
-> Main functionality is to run a scan of fragment sizes with --runScan
-> Can also run a set of scans with different rms values
+> - Interface to daq2Control, always takes a template .xml file as first argument
+> - Can be used to just start/stop a running system, or change the fragment size of a running system
+> - Main functionality is to run a scan of fragment sizes with --runScan
+> - Can also run a set of scans with different rms values
 
