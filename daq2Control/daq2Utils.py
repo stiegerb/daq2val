@@ -64,7 +64,7 @@ def sendSOAPMessage(host, port, message, command):
 
 def sendCmdFileToExecutivePacked(packedargs):
 	(host, port, cmdfile, verbose, dry) = packedargs
-	return sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False)
+	return sendCmdFileToExecutive(host, port, cmdfile, verbose=verbose, dry=dry)
 def sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False):
 	if dry:
 		if verbose > 1: print '%-18s %25s:%-5d %-35s' % ('sendCmdFileToExecutive', host, port, cmdfile)

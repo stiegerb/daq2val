@@ -53,7 +53,7 @@ class daq2Config(object):
 
  - Reads a template xdaq config.xml file and returns an object that will know the
    setup of the system.
- - Checks the config for EvB vs gevb2g cases, for GTPe (soon), etc.
+ - Checks the config for EvB vs gevb2g cases, for GTPe, etc.
  - Additional checks on the config file, such as enableStream0/1,
    Event_Length_Max_bytes_FED0/1, etc.
 
@@ -83,6 +83,9 @@ class daq2Config(object):
 		                   'FMM'             : self.FMM}
 
 		self.readXDAQConfigTemplate(configFile)
+		self.useGTPe = False
+		if len(self.GTPe) > 0:
+			self.useGTPe = True
 
 	def fillFromSymbolMap(self, symbolMap):
 		"""Adds the hostname and ports from a symbol map for each host"""

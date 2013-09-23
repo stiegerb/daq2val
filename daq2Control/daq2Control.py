@@ -4,7 +4,7 @@
 #  never with both!                                                  #
 #                                                                    #
 #  ToDo-List:                                                        #
-#   - Output naming for --runScan? Why no _RMS_X.X behind name?      #
+#   - Event_Delay_ns in FEROL when running with GTPe?                #
 #   - Automatize the number of samples, depending on duration        #
 #   - Add option to use dummyFerol                                   #
 #   - Testing testing testing                                        #
@@ -54,6 +54,10 @@ class daq2Control(object):
 		self.config.fillFromSymbolMap(self.symbolMap)
 		self.config.printHosts()
 
+		if self.config.useGTPe and self.config.useEvB:
+			printError("Don't know about GTPe with EvB yet. Aborting...", self)
+			raise RuntimeError
+
 		self._runDir    = self._testDir + '/' + self._platform + '/'
 		self._runDir   += self.config.testCaseShort
 		self._outputDir = self._testDir + '/data/'
@@ -86,9 +90,26 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		for frl in self.config.FEROLs:
 			utils.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd)
+	def sendCmdToGTPeFMM(self, cmd, invert=False):
+		if not self.config.useGTPe:
+			printError("You're trying to send a command to a non-existing GTPe...", self)
+			raise RuntimeError('Addressing GTPe in non-GTPe running mode')
+		gtpe = self.symbolMap('GTPE0')
+		fmm  = self.symbolMap('FMM0')
+		if not invert:
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+			return
+		else:
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+			return
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
 		if self.options.verbose > 0: print separator
 		delay = utils.getFerolDelay(fragSize, rate)
+
+		## Max rate when running with GTPe?
+		if self.config.useGTPe: delay = 20
 
 		for frl in self.config.FEROLs:
 			if frl.enableStream0:
@@ -171,6 +192,12 @@ class daq2Control(object):
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		sleep(5, self.options.verbose, self.options.dry)
 		self.sendCmdToFEROLs('Enable')
+
+		## Enable FMM and GTPe:
+		if self.config.useGTPe:
+			self.sendCmdToGTPeFMM('Enable', invert=True)
+			sleep(10, self.options.verbose, self.options.dry)
+
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
 		if self.options.verbose > 0: print separator
@@ -182,6 +209,14 @@ class daq2Control(object):
 			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
 			self.currentFragSize = fragSize
 
+			## Set trigger rate at GTPe
+			if self.config.useGTPe:
+				gtpe = self.symbolMap('GTPE0')
+				if rate == 'max':
+					printError('Failed to specify a rate when running with GTPe.', self)
+					raise RuntimeError('Failed to specify a rate when running with GTPe.')
+				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
+
 			## Set super-fragment size for BUs
 			if not self.config.useEvB:
 				if self.options.verbose > 0: print separator
@@ -191,11 +226,18 @@ class daq2Control(object):
 					for n,bu in enumerate(self.config.BUs):
 						print bu.name, 'dummyFedPayloadSize', int(utils.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
 
+			## Configure FEROLs
 			self.sendCmdToFEROLs('Configure')
 			sleep(5, self.options.verbose, self.options.dry)
 
+			## Configure GTPe and FMM:
+			if self.config.useGTPe:
+				self.sendCmdToGTPeFMM('Configure', invert=False)
+				sleep(10, self.options.verbose, self.options.dry)
+
+			## Configure and Enable EVM/RU/BU
 			self.sendCmdToEVMRUBU('Configure')
-			self.sendCmdToRUEVMBU('Enable') ## Have to enable RUs/EVM/BUs here?
+			self.sendCmdToRUEVMBU('Enable')
 			return
 
 		## In case of eFEROLs:
@@ -268,6 +310,21 @@ class daq2Control(object):
 			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
 			self.currentFragSize = fragSize
 
+			## Halt FMM and GTPe:
+			if self.config.useGTPe:
+				printWarningWithWait("If you got to this point, something won't work very soon.", self)
+				self.sendCmdToGTPeFMM('Halt')
+				sleep(10, self.options.verbose, self.options.dry)
+
+			## Set trigger rate at GTPe
+			if self.config.useGTPe:
+				printWarningWithWait("If you got to this point, something won't work very soon.", self)
+				gtpe = self.symbolMap('GTPE0')
+				if rate == 'max':
+					printError('Failed to specify a rate when running with GTPe.', self)
+					raise RuntimeError('Failed to specify a rate when running with GTPe.')
+				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
+
 			## Halt EVM/RUs/BUs
 			self.sendCmdToEVMRUBU('Halt')
 			sleep(2, self.options.verbose, self.options.dry)
@@ -280,10 +337,20 @@ class daq2Control(object):
 			for n,bu in enumerate(self.config.BUs):
 				if not self.options.dry: print bu.name, 'dummyFedPayloadSize', int(utils.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
 
+			## Configure FMM and GTPe:
+			if self.config.useGTPe:
+				self.sendCmdToGTPeFMM('Configure')
+				sleep(10, self.options.verbose, self.options.dry)
+
 			self.sendCmdToEVMRUBU('Configure')
 			self.sendCmdToRUEVMBU('Enable')
 			self.sendCmdToFEROLs('SetupEVG')
 			self.sendCmdToFEROLs('Resume')
+
+			## Enable FMM and GTPe:
+			if self.config.useGTPe:
+				self.sendCmdToGTPeFMM('Enable', invert=True)
+				sleep(10, self.options.verbose, self.options.dry)
 			return
 
 		## For eFEROLs: stop everything, set new size, start again
