@@ -366,7 +366,8 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	leg.SetTextSize(0.033)
 	leg.SetBorderSize(0)
 
-	colors = [1,2,3,4,51,95]
+	colors  = [1,2,3,4,51,95]
+	markers = [20,21,22,23,34,33]
 
 	if len(legends) > 0 and len(legends) != len(caselist):
 		print "Legends doesn't match with caselist, falling back to default"
@@ -374,6 +375,7 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	for n,graph in enumerate(graphs):
 		graph.SetLineColor(colors[n])
 		graph.SetMarkerColor(colors[n])
+		graph.SetMarkerStyle(markers[n])
 
 		if len(legends) == len(caselist) and len(legends)>0: ## Custom legends
 			leg.AddEntry(graph, legends[n], 'P')
@@ -442,8 +444,8 @@ def getGraph(file, subdir, frag=False):
 			g.SetPointError(     step,           0., t.ThroughPutE)
 			step+=1
 
-		g.SetMarkerStyle(20)
 		g.SetLineWidth(2)
+		g.SetMarkerSize(1.7)
 
 		return g
 	except AttributeError as e:
