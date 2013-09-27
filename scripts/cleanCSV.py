@@ -25,7 +25,7 @@ def stripTrailingZeros(filename, removeAlsoLeading=False, inPlace=False):
 				data.reverse() # reverse back
 
 			data = map(int, data)
-			newline = reduce(lambda x,y: str(x)+','+str(y), data)
+			newline = reduce(lambda x,y: str(x)+','+str(y), data) if len(data) > 0 else ''
 			o.write(newline)
 			o.write('\n')
 		f.close()
@@ -44,8 +44,8 @@ if __name__ == "__main__":
 	"""
 	parser = OptionParser(usage=usage)
 	# parser.add_option("-o", "--outDir", default="plots/", action="store", type="string", dest="outDir", help="Output directory for the plots [default: %default]")
-	parser.add_option("--removeAlsoLeading", default=False, action="store_true", dest="removeAlsoLeading", help="Remove also leading zeros [default: %default]")
-	parser.add_option("--inPlace", default=False, action="store_true", dest="inPlace", help="Move original file to filename_original.csv, and store output in filename.csv [default: %default]")
+	parser.add_option("-l", "--removeAlsoLeading", default=False, action="store_true", dest="removeAlsoLeading", help="Remove also leading zeros [default: %default]")
+	parser.add_option("-i", "--inPlace", default=False, action="store_true", dest="inPlace", help="Move original file to filename_original.csv, and store output in filename.csv [default: %default]")
 	(options, args) = parser.parse_args()
 
 	if len(args) > 0:
