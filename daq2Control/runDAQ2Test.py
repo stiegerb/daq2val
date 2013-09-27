@@ -57,7 +57,7 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	d2c.start(fragSize, relRMS*fragSize, rate=options.useRate)
 
-	if not testBuilding(d2c, 1000, options.testTime):
+	if not options.dropAtRU and not testBuilding(d2c, 1000, options.testTime):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 		exit(-1)
@@ -169,6 +169,7 @@ def addOptions(parser):
 
 	## Debugging options:
 	parser.add_option("--dry",                  default=False, action="store_true",        dest="dry",            help="Just print the commands without sending anything")
+	parser.add_option("--dropAtRU",             default=False, action="store_true",        dest="dropAtRU",       help="Run with dropping the fragments at the RU without building")
 	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true",        dest="waitBeforeStop", help="For for key press before stopping the event building")
 	parser.add_option("-v", "--verbose",        default=1,     action="store", type='int', dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
 
