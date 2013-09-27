@@ -303,18 +303,20 @@ class daq2Control(object):
 			if self.options.verbose > 0: print separator
 			if self.options.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
 
-			## Pause FEROLs
+			## Pause GTPe
+
+			## Pause FEROLs ## don't need for GTPe!
 			self.sendCmdToFEROLs('Pause')
 
 			## Change fragment size and delay for FEROLs:
 			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
 			self.currentFragSize = fragSize
 
-			## Halt FMM and GTPe:
-			if self.config.useGTPe:
-				printWarningWithWait("If you got to this point, something won't work very soon.", self)
-				self.sendCmdToGTPeFMM('Halt')
-				sleep(10, self.options.verbose, self.options.dry)
+			# ## Halt FMM and GTPe:
+			# if self.config.useGTPe:
+			# 	printWarningWithWait("If you got to this point, something won't work very soon.", self)
+			# 	self.sendCmdToGTPeFMM('Halt')
+			# 	sleep(10, self.options.verbose, self.options.dry)
 
 			## Set trigger rate at GTPe
 			if self.config.useGTPe:
@@ -347,10 +349,11 @@ class daq2Control(object):
 			self.sendCmdToFEROLs('SetupEVG')
 			self.sendCmdToFEROLs('Resume')
 
-			## Enable FMM and GTPe:
-			if self.config.useGTPe:
-				self.sendCmdToGTPeFMM('Enable', invert=True)
-				sleep(10, self.options.verbose, self.options.dry)
+			## Resume GTPe
+			# ## Enable FMM and GTPe:
+			# if self.config.useGTPe:
+			# 	self.sendCmdToGTPeFMM('Enable', invert=True)
+			# 	sleep(10, self.options.verbose, self.options.dry)
 			return
 
 		## For eFEROLs: stop everything, set new size, start again
