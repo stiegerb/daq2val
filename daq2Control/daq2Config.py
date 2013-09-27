@@ -10,6 +10,7 @@ separator = 70*'-'
 
 SIZE_LIMIT_TABLE = {
      # max size, scan until
+	 1 : (64000, 16000),  # merging by  1
 	 4 : (32000, 16000),  # merging by  4
 	 8 : (32000, 16000),  # merging by  8
 	12 : (21000, 10240),  # merging by 12
