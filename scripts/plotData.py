@@ -349,15 +349,16 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 			print "#### Couldn't get graph for ", case, "in file", filename
 			return
 
-	if options.daq1:
-		daq1_graph = getDAQ1Graph()
+	# if options.daq1:
+	# 	daq1_graph = getDAQ1Graph()
 
 	configs = sorted(configs, key=itemgetter(0))
-	nlegentries = len(caselist) if not options.daq1 else len(caselist) + 1
+	nlegentries = len(caselist)
+	# nlegentries = len(caselist) if not options.daq1 else len(caselist) + 1
 	legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
-	if options.legendPos == 'TL':
-		legendpos = (0.12, 0.82-nlegentries*0.05, 0.579, 0.898)
-		# legendpos = (0.12, 0.71-nlegentries*0.05, 0.579, 0.78)
+	# if options.legendPos == 'TL':
+	# 	legendpos = (0.12, 0.82-nlegentries*0.05, 0.579, 0.898)
+	# 	# legendpos = (0.12, 0.71-nlegentries*0.05, 0.579, 0.78)
 	leg = TLegend(legendpos[0], legendpos[1], legendpos[2], legendpos[3])
 	leg.SetFillStyle(1001)
 	leg.SetFillColor(0)
@@ -365,7 +366,7 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	leg.SetTextSize(0.033)
 	leg.SetBorderSize(0)
 
-	colors = [1,2,3,4]
+	colors = [1,2,3,4,51,95]
 
 	if len(legends) > 0 and len(legends) != len(caselist):
 		print "Legends doesn't match with caselist, falling back to default"
@@ -378,12 +379,12 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 			leg.AddEntry(graph, legends[n], 'P')
 		else: ## Default
 			leg.AddEntry(graph, caselist[n].split('/').pop(), 'P')
-		if options.daq1:
-			leg.AddEntry(daq1_graph, 'DAQ1 (2011)', 'P')
+		# if options.daq1:
+		# 	leg.AddEntry(daq1_graph, 'DAQ1 (2011)', 'P')
 		graph.Draw("PL")
 
-	if options.daq1:
-		daq1_graph.Draw("PL")
+	# if options.daq1:
+	# 	daq1_graph.Draw("PL")
 
 	if not frag:
 		func = getRateGraph(rate=rate)
@@ -403,8 +404,9 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	for graph in graphs: graph.Draw("PL")
 
 	canv.Print(oname + '.pdf')
-	if options.makePNGs:  canv.Print(oname + '.png')
-	if options.makeCFile: canv.SaveAs(oname + '.C')
+	if makePNGs:  canv.Print(oname + '.png')
+	# if options.makePNGs:  canv.Print(oname + '.png')
+	# if options.makeCFile: canv.SaveAs(oname + '.C')
 
 	f.Close()
 def getRateGraph(nStreams=4, frag=False, xmax=100000, rate=100):
@@ -477,13 +479,11 @@ def getDAQ1Graph():
 	return g
 def makeDAQ1vsDAQ2Plot(filename, case):
 	options.daq1 = True
-	makeMultiPlot(filename, [case], oname='daq1vsdaq2', rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), frag=options.frag, oname=options.outputName, logx=options.logx, logy=options.logy, rate=options.rate, legends=['DAQ2 (2013) (merging 12 streams)'])
-
+	makeMultiPlot(filename, [case], oname='daq1vsdaq2', rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), frag=options.frag, logx=options.logx, logy=options.logy, rate=options.rate, legends=['DAQ2 (2013) (merging 12 streams)'])
 
 ##---------------------------------------------------------------------------------
 ## User interface
-if __name__ == "__main__":
-	from optparse import OptionParser
+def addPlottingOptions(parser):
 	usage = """
 
 	First produce the ROOT file with tree from csv files with:
@@ -500,9 +500,10 @@ if __name__ == "__main__":
 	I tested until up to four cases per plot.
 	"""
 
-	parser = OptionParser(usage=usage)
+	parser.usage = usage
 	parser.add_option("-d", "--dir", default="data/", action="store", type="string", dest="dir", help="Input directory containing subdirectories with server.csv files [default: %default]")
 	parser.add_option("-o", "--outputName", default="plot.pdf", action="store", type="string", dest="outputName", help="File for plot output [default: %default]")
+	parser.add_option("--outdir", default="plots/", action="store", type="string", dest="outdir", help="Output directory for the plots [default: %default]")
 	parser.add_option("-p", "--print", default=False, action="store_true", dest="print_table", help="Print mode, give .root file and case as arguments")
 	parser.add_option("-C", "--doCleaning", default=False, action="store_true", dest="doCleaning", help="Remove outliers in the rates when filling the trees")
 
@@ -524,10 +525,14 @@ if __name__ == "__main__":
 	parser.add_option("--makePNGs", default=True, action="store_true", dest="makePNGs", help="Produce also .png file")
 	parser.add_option("--makeCFile", default=True, action="store_true", dest="makeCFile", help="Produce also .C file")
 
+if __name__ == "__main__":
+	from optparse import OptionParser
+	parser = OptionParser()
+	addPlottingOptions(parser)
 	(options, args) = parser.parse_args()
 
 	## DAQ1 vs DAQ2 plot
-	if len(args == 2) and options.makeDAQ1vsDAQ2Plot:
+	if len(args) == 2 and options.makeDAQ1vsDAQ2Plot:
 		makeDAQ1vsDAQ2Plot(args[0], args[1])
 		exit(0)
 

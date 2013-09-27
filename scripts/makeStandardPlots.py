@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from plotData import makeMultiPlot
+from plotData import makeMultiPlot, addPlottingOptions
 
 def createDir(directory):
 	from os import path
@@ -28,8 +28,11 @@ def makeStandardPlots(rootfile, outdir):
 	rootfile_clean = rootfile.replace('.root', '_clean.root')
 	outputdir = createDir(outdir)
 
-	prefix = 'data/FEROLs/GTPe/gevb2g/%s/'
-	processRMSScan('Sep25', '16s8fx1x2', prefix, outdir, rootfile, tag='FEROLs:GTPe:gevb2g', oname='16s8fx1x2', rmslist=['RMS_0.0'], legends=['16s8fx1x2, RMS 0.0, 100 kHz'])
+	prefix = 'data/FEROLs/EvB/%s/'
+	processRMSScan('Sep26', '12s12fx1x4', prefix, outdir, rootfile, tag='FEROLs:EvB', oname='12s12fx1x4_EvB-161vs180', rmslist=['RMS_0.0_evb161', 'RMS_0.0_evb162', 'RMS_0.0_evb163', 'RMS_0.0_evb170', 'RMS_0.0_evb180', 'RMS_0.0_evb191'], legends=['12s12fx1x4, RMS 0.0, ' + x for x in ['EvB v1.6.1-1', 'EvB v1.6.2-1', 'EvB v1.6.3-1', 'EvB v1.7.0-1', 'EvB v1.8.0-1', 'EvB v1.9.1-1']])
+
+	# prefix = 'data/FEROLs/GTPe/gevb2g/%s/'
+	# processRMSScan('Sep25', '16s8fx1x2', prefix, outdir, rootfile, tag='FEROLs:GTPe:gevb2g', oname='16s8fx1x2', rmslist=['RMS_0.0'], legends=['16s8fx1x2, RMS 0.0, 100 kHz'])
 
 	# prefix = 'data/FEROLs/GTPe/gevb2g/%s/'
 	# processRMSScan('Sep18', '8s8fx1x2', prefix, outdir, rootfile, tag='FEROLs:GTPe:gevb2g', oname='8s8fx1x2', rmslist=['RMS_0.0'], legends=['8s8fx1x2, RMS 0.0, 120 kHz'])
@@ -173,18 +176,16 @@ def makeStandardPlots(rootfile, outdir):
 ## User interface
 if __name__ == "__main__":
 	from optparse import OptionParser
-	usage = """
-	Use to create a batch of standard plots:
-	%prog  --outdir plots/ data.root
-	"""
-
-	parser = OptionParser(usage=usage)
-	parser.add_option("-o", "--outdir", default="plots/", action="store", type="string", dest="outdir", help="Output directory for the plots [default: %default]")
-	parser.add_option("-r", "--rate",   default=100,      action="store", type=float,    dest="rate",   help="Displayed rate in kHz [default: %default kHz]")
+	# usage = """
+	# Use to create a batch of standard plots:
+	# %prog  --outdir plots/ data.root
+	# """
+	parser = OptionParser()
+	addPlottingOptions(parser)
+	# parser.add_option("-o", "--outdir", default="plots/", action="store", type="string", dest="outdir", help="Output directory for the plots [default: %default]")
+	# parser.add_option("-r", "--rate",   default=100,      action="store", type=float,    dest="rate",   help="Displayed rate in kHz [default: %default kHz]")
 	# parser.add_option("--makePNGs",     default=True,     action="store_true", dest="makePNGs",
 	#                   help="Produce also .png files [default: %default]")
-
-
 	(options, args) = parser.parse_args()
 
 	if len(args) > 0:
