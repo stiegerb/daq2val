@@ -162,6 +162,30 @@ def writeItem(host, port, classname, instance, item, data, offset=0, verbose=0, 
 	cmd = cmd.replace('\"','\\\"') ## need to escape the quotes when passing as argument
 	return sendCmdToApp(host, port, classname, str(instance), cmd)
 
+def getIfStatThroughput(host, duration, delay=5, verbose=0, interface='p2p1', dry=False):
+	"""Use Petr's ifstat script to get the throughput every [delay] seconds for a total duration of [duration]"""
+	if verbose > 1 and dry: print '%-18s %25s' % ('getIfStatThroughput', host)
+	if not dry:
+		sshCmd = "ssh -x -n " + host
+		count = int(duration/delay) ## calculate number of counts
+		cmd  = sshCmd + " \'/nfshome0/pzejdl/scripts/ifstat -b -i %s %d %d\'" % (interface, delay, count)
+		if verbose>2: print 'ifstat command:', cmd
+		call = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+		sleep(duration+1, verbose=0) ## wait until call should be finished
+		call.terminate()
+		out,err = call.communicate() ## get output
+
+		samples = []
+		for line in out.split('\n')[2:]:
+			if len(line) == 0: continue
+			samples.append(float(line.split()[0]))
+
+		if verbose>2: print [ '%8.5f'% (x/1e6) for x in samples ]
+
+		total = reduce(lambda x,y:x+y, samples)
+		average = float(total/len(samples))
+		if verbose>1: print 'Average throughput on %s: %6.2f Gbps' % (host, average/1e6)
+
 ## Common utilities
 def sleep(naptime=0.5,verbose=1,dry=False):
 	import time
@@ -232,3 +256,8 @@ def getFerolDelay(fragSize, rate='max'):
 			printWarningWithWait("Delay for %d size and %.0f kHz rate would be below 20 ns (%.0f). Setting it to 20 ns instead." %(fragSize,rate,delay), waittime=0)
 			return 20
 		return delay
+
+
+
+
+
