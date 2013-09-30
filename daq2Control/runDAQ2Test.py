@@ -3,8 +3,7 @@
 import daq2Utils as utils
 from daq2Control import daq2Control
 from daq2SymbolMap import daq2SymbolMap
-from daq2Config import SIZE_LIMIT_TABLE
-from daq2Utils import sleep, printError, printWarningWithWait
+from daq2Utils import sleep, printError, printWarningWithWait, SIZE_LIMIT_TABLE
 
 separator = 70*'-'
 
@@ -90,7 +89,7 @@ def runScan(configfile, options, relRMS=-1):
 
 	## Check maxSize from table and merging case:
 	mergingby = d2c.config.nStreams//len(d2c.config.RUs)
-	if steps[-1] > SIZE_LIMIT_TABLE[mergingby][1]:
+	if not utils.checkScanLimit(steps[-1], mergingby):
 		message = """
 WARNING: Your maximum size for scanning doesn't seem to
          make sense. Please consider!

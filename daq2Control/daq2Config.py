@@ -4,19 +4,9 @@ import time
 from sys import stdout
 import xml.etree.ElementTree as ET
 
-from daq2Utils import printError, printWarningWithWait, sleep
+from daq2Utils import printError, printWarningWithWait, sleep, SIZE_LIMIT_TABLE, checkMaxSize
 
 separator = 70*'-'
-
-SIZE_LIMIT_TABLE = {
-     # max size, scan until
-	 1 : (64000, 16000),  # merging by  1
-	 4 : (32000, 16000),  # merging by  4
-	 8 : (32000, 16000),  # merging by  8
-	12 : (21000, 10240),  # merging by 12
-	16 : (16000,  8192),  # merging by 16
-	24 : (10500,  5120)   # merging by 24
-}
 
 
 ######################################################################
@@ -194,7 +184,8 @@ WARNING: You have FEROLs with different
 				printWarningWithWait(message, instance=self)
 
 			## Check they are correct and alert
-			if maxsizes[0] != SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]:
+			if not checkMaxSize(maxsizes[0], self.nStreams//len(self.RUs)):
+			# if maxsizes[0] != SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]:
 				message = """
 WARNING: Event_Length_Max_bytes for FEROLs seems to be set
          to the wrong value in your config .xml file!

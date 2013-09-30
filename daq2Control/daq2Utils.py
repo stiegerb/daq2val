@@ -21,6 +21,29 @@ SOAPEnvelope = '''<SOAP-ENV:Envelope
       </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>
 '''
+
+SIZE_LIMIT_TABLE = {
+     # max size, scan until
+	 1 : (64000, 16000),  # merging by  1
+	 4 : (32000, 16000),  # merging by  4
+	 8 : (32000, 16000),  # merging by  8
+	12 : (21000, 10240),  # merging by 12
+	16 : (16000,  8192),  # merging by 16
+	24 : (10500,  5120)   # merging by 24
+}
+def checkMaxSize(maxsize, mergingby):
+	try:
+		return maxsize == SIZE_LIMIT_TABLE[mergingby][0]
+	except KeyError:
+		printWarningWithWait("Don't know maximum size for merging by %d. Continuing..." %mergingby, waittime=0)
+		return True
+def checkScanLimit(scanlimit, mergingby):
+	try:
+		return scanlimit <= SIZE_LIMIT_TABLE[mergingby][1] ## don't want to scan further than the limit
+	except KeyError:
+		printWarningWithWait("Don't know scan limit for merging by %d. Continuing..." %mergingby, waittime=0)
+		return True
+
 def sendSOAPMessage(host, port, message, command):
 	"""Sends a SOAP message via curl, where message could be
 		'SOAPAction: urn:xdaq-application:lid=0'

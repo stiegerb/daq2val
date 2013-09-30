@@ -17,7 +17,7 @@ from sys import stdout
 
 separator = 70*'-'
 
-from daq2Config import daq2Config, host, FEROL, SIZE_LIMIT_TABLE
+from daq2Config import daq2Config, host, FEROL
 from daq2SymbolMap import daq2SymbolMap
 from daq2Utils import printError, printWarningWithWait, sleep
 import daq2Utils as utils
