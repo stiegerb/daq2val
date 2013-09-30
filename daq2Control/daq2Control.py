@@ -213,8 +213,8 @@ class daq2Control(object):
 			if self.config.useGTPe:
 				gtpe = self.symbolMap('GTPE0')
 				if rate == 'max':
-					printError('Failed to specify a rate when running with GTPe.', self)
-					raise RuntimeError('Failed to specify a rate when running with GTPe.')
+					printError('Failed to specify a rate when running with GTPe. Use option --useRate', self)
+					raise RuntimeError('Failed to specify a rate when running with GTPe. Use option --useRate')
 				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
 
 			## Set super-fragment size for BUs
