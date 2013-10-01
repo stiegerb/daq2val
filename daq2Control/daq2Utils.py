@@ -289,18 +289,18 @@ def getFerolDelay(fragSize, rate='max'):
 ##########################################
 ## Parse json file with FEROL monitoring variables and returns a dictionary
 def parseMonitoringJsonFile(jsonFile):
-    d = dict()
-    for line in jsonFile.readlines():
-        mo = re.match(r".*\"name\":\"(.*)\",.*\"value\":\"(.*)\".*", line)
-        if mo:
-                d[mo.group(1)] = mo.group(2)
-    return d
+	d = dict()
+	for line in jsonFile.readlines():
+		mo = re.match(r".*\"name\":\"(.*)\",.*\"value\":\"(.*)\".*", line)
+		if mo:
+			d[mo.group(1)] = mo.group(2)
+	return d
 
 ## Returns a dictionary with FEROL monitoring items. It is read from a json url
 def loadMonitoringItemsFromURL(url):
 	import urllib2
-    opener = urllib2.urlopen(url + "/infospaces")
-    items = parseMonitoringJsonFile(opener)
-    opener.close()
-    return items
+	opener = urllib2.urlopen(url + "/infospaces")
+	items = parseMonitoringJsonFile(opener)
+	opener.close()
+	return items
 

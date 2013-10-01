@@ -54,9 +54,9 @@ class daq2Control(object):
 		self.config.fillFromSymbolMap(self.symbolMap)
 		self.config.printHosts()
 
-		if self.config.useGTPe and self.config.useEvB:
-			printError("Don't know about GTPe with EvB yet. Aborting...", self)
-			raise RuntimeError
+		# if self.config.useGTPe and self.config.useEvB:
+		# 	printError("Don't know about GTPe with EvB yet. Aborting...", self)
+		# 	raise RuntimeError
 
 		self._runDir    = self._testDir + '/' + self._platform + '/'
 		self._runDir   += self.config.testCaseShort
@@ -453,7 +453,9 @@ class daq2Control(object):
 			outfile.write('\n')
 
 	def saveFEROLInfoSpace(self):
-		items = utils.loadMonitoringItemsFromURL(self.config.FEROLs[0].host)
+		url = 'http://%s:%d/urn:xdaq-application:lid=109' % (self.config.FEROLs[0].host, self.config.FEROLs[0].port)
+		print url
+		items = utils.loadMonitoringItemsFromURL(url)
 		bifi_fed0 = items["BIFI_FED0"] ##.split("&")[0]
 		print bifi_fed0
 
