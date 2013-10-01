@@ -304,6 +304,9 @@ class daq2Control(object):
 			if self.options.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
 
 			## Pause GTPe
+			if self.config.useGTPe:
+				gtpe = self.symbolMap('GTPE0')
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', "Pause", verbose=self.options.verbose, dry=self.options.dry)
 
 			## Pause FEROLs ## don't need for GTPe!
 			self.sendCmdToFEROLs('Pause')
@@ -318,14 +321,14 @@ class daq2Control(object):
 			# 	self.sendCmdToGTPeFMM('Halt')
 			# 	sleep(10, self.options.verbose, self.options.dry)
 
-			## Set trigger rate at GTPe
-			if self.config.useGTPe:
-				printWarningWithWait("If you got to this point, something won't work very soon.", self)
-				gtpe = self.symbolMap('GTPE0')
-				if rate == 'max':
-					printError('Failed to specify a rate when running with GTPe.', self)
-					raise RuntimeError('Failed to specify a rate when running with GTPe.')
-				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
+			# ## Set trigger rate at GTPe
+			# if self.config.useGTPe:
+			# 	# printWarningWithWait("If you got to this point, something won't work very soon.", self)
+			# 	gtpe = self.symbolMap('GTPE0')
+			# 	if rate == 'max':
+			# 		printError('Failed to specify a rate when running with GTPe.', self)
+			# 		raise RuntimeError('Failed to specify a rate when running with GTPe.')
+			# 	utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
 
 			## Halt EVM/RUs/BUs
 			self.sendCmdToEVMRUBU('Halt')
@@ -339,10 +342,10 @@ class daq2Control(object):
 			for n,bu in enumerate(self.config.BUs):
 				if not self.options.dry: print bu.name, 'dummyFedPayloadSize', int(utils.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
 
-			## Configure FMM and GTPe:
-			if self.config.useGTPe:
-				self.sendCmdToGTPeFMM('Configure')
-				sleep(10, self.options.verbose, self.options.dry)
+			# ## Configure FMM and GTPe:
+			# if self.config.useGTPe:
+			# 	self.sendCmdToGTPeFMM('Configure')
+			# 	sleep(10, self.options.verbose, self.options.dry)
 
 			self.sendCmdToEVMRUBU('Configure')
 			self.sendCmdToRUEVMBU('Enable')
@@ -350,6 +353,10 @@ class daq2Control(object):
 			self.sendCmdToFEROLs('Resume')
 
 			## Resume GTPe
+			if self.config.useGTPe:
+				gtpe = self.symbolMap('GTPE0')
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', "Resume", verbose=self.options.verbose, dry=self.options.dry)
+
 			# ## Enable FMM and GTPe:
 			# if self.config.useGTPe:
 			# 	self.sendCmdToGTPeFMM('Enable', invert=True)
@@ -451,14 +458,12 @@ class daq2Control(object):
 			outfile.write(', ')
 			outfile.write(str(throughput))
 			outfile.write('\n')
-
 	def saveFEROLInfoSpace(self):
 		url = 'http://%s:%d/urn:xdaq-application:lid=109' % (self.config.FEROLs[0].host, self.config.FEROLs[0].port)
 		print url
 		items = utils.loadMonitoringItemsFromURL(url)
 		bifi_fed0 = items["BIFI_FED0"] ##.split("&")[0]
 		print bifi_fed0
-
 
 	def webPingXDAQ(self):
 		print separator
