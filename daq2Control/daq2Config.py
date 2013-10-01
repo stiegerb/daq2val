@@ -47,10 +47,6 @@ class daq2Config(object):
  - Checks the config for EvB vs gevb2g cases, for GTPe, etc.
  - Additional checks on the config file, such as enableStream0/1,
    Event_Length_Max_bytes_FED0/1, etc.
-
-   ToDo-List:
-    - Need to implement something that will fill in the hostnames and ports from
-      a symbol map
 ---------------------------------------------------------------------
 '''
 	def __init__(self, configFile):
