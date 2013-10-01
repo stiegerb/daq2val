@@ -208,6 +208,8 @@ def getIfStatThroughput(host, duration, delay=5, verbose=0, interface='p2p1', dr
 		total = reduce(lambda x,y:x+y, samples)
 		average = float(total/len(samples))
 		if verbose>1: print 'Average throughput on %s: %6.2f Gbps' % (host, average/1e6)
+		return average
+	return None
 
 ## Common utilities
 def sleep(naptime=0.5,verbose=1,dry=False):

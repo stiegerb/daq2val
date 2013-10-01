@@ -440,6 +440,17 @@ class daq2Control(object):
 		else:
 			print "getResults() only works when running with the gevb2g, try getResultsEvB()"
 			return
+
+	def getResultsFromIfstat(self, duration, delay=2):
+		throughput = utils.getIfStatThroughput(self.config.RUs[0].host, duration, delay=delay, verbose=self.options.verbose, interface='p2p1', dry=self.options.dry)
+		sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
+		with open(self._outputDir+'/server.csv', 'a') as outfile:
+			if self.options.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
+			outfile.write(str(sufragsize))
+			outfile.write(', ')
+			outfile.write(str(throughput))
+			outfile.write('\n')
+
 	def webPingXDAQ(self):
 		print separator
 		print "Checking availability of relevant hosts"
