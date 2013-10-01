@@ -117,7 +117,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 		if options.useIfstat:
 			## Get throughput directly from RU using ifstat script
 			d2c.getResultsFromIfstat(options.duration)
-		if d2c.config.useEvB:
+		elif d2c.config.useEvB:
 			## Get results ala testRubuilder script every 5 seconds
 			d2c.getResultsEvB(options.duration, interval=5)
 		else:

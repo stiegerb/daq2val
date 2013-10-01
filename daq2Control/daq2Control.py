@@ -443,6 +443,7 @@ class daq2Control(object):
 
 	def getResultsFromIfstat(self, duration, delay=2):
 		throughput = utils.getIfStatThroughput(self.config.RUs[0].host, duration, delay=delay, verbose=self.options.verbose, interface='p2p1', dry=self.options.dry)
+		self.saveFEROLInfoSpace()
 		sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
 		with open(self._outputDir+'/server.csv', 'a') as outfile:
 			if self.options.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
@@ -450,6 +451,12 @@ class daq2Control(object):
 			outfile.write(', ')
 			outfile.write(str(throughput))
 			outfile.write('\n')
+
+	def saveFEROLInfoSpace(self):
+		items = utils.loadMonitoringItemsFromURL(self.config.FEROLs[0].host)
+		bifi_fed0 = items["BIFI_FED0"] ##.split("&")[0]
+		print bifi_fed0
+
 
 	def webPingXDAQ(self):
 		print separator

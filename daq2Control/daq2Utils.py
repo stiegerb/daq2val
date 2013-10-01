@@ -4,7 +4,7 @@
 #   - Fix order of stopping xdaqs to prevent log spamming            #
 ######################################################################
 
-import os, subprocess, shlex
+import os, subprocess, shlex, re
 from sys import stdout
 
 separator = 70*'-'
@@ -284,5 +284,23 @@ def getFerolDelay(fragSize, rate='max'):
 
 
 
+##########################################
+## From Petr's FEROL.py ##################
+##########################################
+## Parse json file with FEROL monitoring variables and returns a dictionary
+def parseMonitoringJsonFile(jsonFile):
+    d = dict()
+    for line in jsonFile.readlines():
+        mo = re.match(r".*\"name\":\"(.*)\",.*\"value\":\"(.*)\".*", line)
+        if mo:
+                d[mo.group(1)] = mo.group(2)
+    return d
 
+## Returns a dictionary with FEROL monitoring items. It is read from a json url
+def loadMonitoringItemsFromURL(url):
+	import urllib2
+    opener = urllib2.urlopen(url + "/infospaces")
+    items = parseMonitoringJsonFile(opener)
+    opener.close()
+    return items
 
