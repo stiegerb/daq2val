@@ -3,8 +3,7 @@
 import daq2Utils as utils
 from daq2Control import daq2Control
 from daq2SymbolMap import daq2SymbolMap
-from daq2Config import SIZE_LIMIT_TABLE
-from daq2Utils import sleep, printError, printWarningWithWait
+from daq2Utils import sleep, printError, printWarningWithWait, SIZE_LIMIT_TABLE
 
 separator = 70*'-'
 
@@ -57,14 +56,17 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	d2c.start(fragSize, relRMS*fragSize, rate=options.useRate)
 
-	if not testBuilding(d2c, 1000, options.testTime):
+	if not options.dropAtRU and not testBuilding(d2c, 1000, options.testTime):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 		exit(-1)
 	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 
 	if options.verbose > 0: print "Building events for %d seconds..." % options.duration
-	if d2c.config.useEvB:
+	if options.useIfstat:
+		## Get throughput directly from RU using ifstat script
+		d2c.getResultsFromIfstat(options.duration)
+	elif d2c.config.useEvB:
 		## Get results ala testRubuilder script every 5 seconds
 		d2c.getResultsEvB(options.duration, interval=5)
 	else:
@@ -90,7 +92,7 @@ def runScan(configfile, options, relRMS=-1):
 
 	## Check maxSize from table and merging case:
 	mergingby = d2c.config.nStreams//len(d2c.config.RUs)
-	if steps[-1] > SIZE_LIMIT_TABLE[mergingby][1]:
+	if not utils.checkScanLimit(steps[-1], mergingby):
 		message = """
 WARNING: Your maximum size for scanning doesn't seem to
          make sense. Please consider!
@@ -112,7 +114,10 @@ WARNING: Your maximum size for scanning doesn't seem to
 		d2c.changeSize(step, float(relRMS)*step, rate=options.useRate)
 		if options.verbose > 0: print separator
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, options.duration)
-		if d2c.config.useEvB:
+		if options.useIfstat:
+			## Get throughput directly from RU using ifstat script
+			d2c.getResultsFromIfstat(options.duration)
+		elif d2c.config.useEvB:
 			## Get results ala testRubuilder script every 5 seconds
 			d2c.getResultsEvB(options.duration, interval=5)
 		else:
@@ -166,6 +171,8 @@ def addOptions(parser):
 	parser.add_option("--short",          default=False, action="store_true",        dest="short",          help="Run a short scan with only a few points")
 	parser.add_option("--testTime",       default=10,    action="store", type="int", dest="testTime",       help="Time for which event building is tested before starting, [default is %default]")
 	parser.add_option("--stopRestart",    default=False, action="store_true",        dest="stopRestart",    help="Stop XDAQ processes after each size and restart instead of changing the size on the fly (only relevant for scans)")
+	parser.add_option("--dropAtRU",       default=False, action="store_true",        dest="dropAtRU",       help="Run with dropping the fragments at the RU without building. (Use with --useIfstat to get throughput)")
+	parser.add_option("--useIfstat",      default=False, action="store_true",        dest="useIfstat",      help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
 
 	## Debugging options:
 	parser.add_option("--dry",                  default=False, action="store_true",        dest="dry",            help="Just print the commands without sending anything")

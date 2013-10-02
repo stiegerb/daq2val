@@ -4,18 +4,9 @@ import time
 from sys import stdout
 import xml.etree.ElementTree as ET
 
-from daq2Utils import printError, printWarningWithWait, sleep
+from daq2Utils import printError, printWarningWithWait, sleep, SIZE_LIMIT_TABLE, checkMaxSize
 
 separator = 70*'-'
-
-SIZE_LIMIT_TABLE = {
-     # max size, scan until
-	 4 : (32000, 16000),  # merging by  4
-	 8 : (32000, 16000),  # merging by  8
-	12 : (21000, 10240),  # merging by 12
-	16 : (16000,  8192),  # merging by 16
-	24 : (10500,  5120)   # merging by 24
-}
 
 
 ######################################################################
@@ -53,13 +44,9 @@ class daq2Config(object):
 
  - Reads a template xdaq config.xml file and returns an object that will know the
    setup of the system.
- - Checks the config for EvB vs gevb2g cases, for GTPe (soon), etc.
+ - Checks the config for EvB vs gevb2g cases, for GTPe, etc.
  - Additional checks on the config file, such as enableStream0/1,
    Event_Length_Max_bytes_FED0/1, etc.
-
-   ToDo-List:
-    - Need to implement something that will fill in the hostnames and ports from
-      a symbol map
 ---------------------------------------------------------------------
 '''
 	def __init__(self, configFile):
@@ -72,13 +59,20 @@ class daq2Config(object):
 		self.RUs       = []
 		self.BUs       = []
 		self.EVM       = []
+		self.GTPe      = []
+		self.FMM       = []
 		self._hostTypes = {'FEROLCONTROLLER' : self.FEROLs,
 		                   'FEROL'           : self.eFEROLs,
 		                   'RU'              : self.RUs,
 		                   'BU'              : self.BUs,
-		                   'EVM'             : self.EVM}
+		                   'EVM'             : self.EVM,
+		                   'GTPE'            : self.GTPe,
+		                   'FMM'             : self.FMM}
 
 		self.readXDAQConfigTemplate(configFile)
+		self.useGTPe = False
+		if len(self.GTPe) > 0:
+			self.useGTPe = True
 
 	def fillFromSymbolMap(self, symbolMap):
 		"""Adds the hostname and ports from a symbol map for each host"""
@@ -165,7 +159,7 @@ class daq2Config(object):
 				self.hosts.append(ho)
 
 			except KeyError as e:
-				printError('Unknown host type', h, ' Aborting.', self)
+				printError('Unknown host type %s. Aborting.' % h, self)
 				raise e
 
 		if len(maxsizes) > 0:
@@ -186,7 +180,8 @@ WARNING: You have FEROLs with different
 				printWarningWithWait(message, instance=self)
 
 			## Check they are correct and alert
-			if maxsizes[0] != SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]:
+			if not checkMaxSize(maxsizes[0], self.nStreams//len(self.RUs)):
+			# if maxsizes[0] != SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]:
 				message = """
 WARNING: Event_Length_Max_bytes for FEROLs seems to be set
          to the wrong value in your config .xml file!

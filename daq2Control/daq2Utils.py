@@ -4,7 +4,7 @@
 #   - Fix order of stopping xdaqs to prevent log spamming            #
 ######################################################################
 
-import os, subprocess, shlex
+import os, subprocess, shlex, re
 from sys import stdout
 
 separator = 70*'-'
@@ -21,6 +21,29 @@ SOAPEnvelope = '''<SOAP-ENV:Envelope
       </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>
 '''
+
+SIZE_LIMIT_TABLE = {
+     # max size, scan until
+	 1 : (64000, 16000),  # merging by  1
+	 4 : (32000, 16000),  # merging by  4
+	 8 : (32000, 16000),  # merging by  8
+	12 : (21000, 10240),  # merging by 12
+	16 : (16000,  8192),  # merging by 16
+	24 : (10500,  5120)   # merging by 24
+}
+def checkMaxSize(maxsize, mergingby):
+	try:
+		return maxsize == SIZE_LIMIT_TABLE[mergingby][0]
+	except KeyError:
+		printWarningWithWait("Don't know maximum size for merging by %d. Continuing..." %mergingby, waittime=0)
+		return True
+def checkScanLimit(scanlimit, mergingby):
+	try:
+		return scanlimit <= SIZE_LIMIT_TABLE[mergingby][1] ## don't want to scan further than the limit
+	except KeyError:
+		printWarningWithWait("Don't know scan limit for merging by %d. Continuing..." %mergingby, waittime=0)
+		return True
+
 def sendSOAPMessage(host, port, message, command):
 	"""Sends a SOAP message via curl, where message could be
 		'SOAPAction: urn:xdaq-application:lid=0'
@@ -64,7 +87,7 @@ def sendSOAPMessage(host, port, message, command):
 
 def sendCmdFileToExecutivePacked(packedargs):
 	(host, port, cmdfile, verbose, dry) = packedargs
-	return sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False)
+	return sendCmdFileToExecutive(host, port, cmdfile, verbose=verbose, dry=dry)
 def sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False):
 	if dry:
 		if verbose > 1: print '%-18s %25s:%-5d %-35s' % ('sendCmdFileToExecutive', host, port, cmdfile)
@@ -162,6 +185,32 @@ def writeItem(host, port, classname, instance, item, data, offset=0, verbose=0, 
 	cmd = cmd.replace('\"','\\\"') ## need to escape the quotes when passing as argument
 	return sendCmdToApp(host, port, classname, str(instance), cmd)
 
+def getIfStatThroughput(host, duration, delay=5, verbose=0, interface='p2p1', dry=False):
+	"""Use Petr's ifstat script to get the throughput every [delay] seconds for a total duration of [duration]"""
+	if verbose > 1 and dry: print '%-18s %25s' % ('getIfStatThroughput', host)
+	if not dry:
+		sshCmd = "ssh -x -n " + host
+		count = int(duration/delay) ## calculate number of counts
+		cmd  = sshCmd + " \'/nfshome0/pzejdl/scripts/ifstat -b -i %s %d %d\'" % (interface, delay, count)
+		if verbose>2: print 'ifstat command:', cmd
+		call = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+		sleep(duration+1, verbose=0) ## wait until call should be finished
+		call.terminate()
+		out,err = call.communicate() ## get output
+
+		samples = []
+		for line in out.split('\n')[2:]:
+			if len(line) == 0: continue
+			samples.append(float(line.split()[0]))
+
+		if verbose>2: print [ '%8.5f'% (x/1e6) for x in samples ]
+
+		total = reduce(lambda x,y:x+y, samples)
+		average = float(total/len(samples))
+		if verbose>1: print 'Average throughput on %s: %6.2f Gbps' % (host, average/1e6)
+		return average
+	return None
+
 ## Common utilities
 def sleep(naptime=0.5,verbose=1,dry=False):
 	import time
@@ -232,3 +281,26 @@ def getFerolDelay(fragSize, rate='max'):
 			printWarningWithWait("Delay for %d size and %.0f kHz rate would be below 20 ns (%.0f). Setting it to 20 ns instead." %(fragSize,rate,delay), waittime=0)
 			return 20
 		return delay
+
+
+
+##########################################
+## From Petr's FEROL.py ##################
+##########################################
+## Parse json file with FEROL monitoring variables and returns a dictionary
+def parseMonitoringJsonFile(jsonFile):
+	d = dict()
+	for line in jsonFile.readlines():
+		mo = re.match(r".*\"name\":\"(.*)\",.*\"value\":\"(.*)\".*", line)
+		if mo:
+			d[mo.group(1)] = mo.group(2)
+	return d
+
+## Returns a dictionary with FEROL monitoring items. It is read from a json url
+def loadMonitoringItemsFromURL(url):
+	import urllib2
+	opener = urllib2.urlopen(url + "/infospaces")
+	items = parseMonitoringJsonFile(opener)
+	opener.close()
+	return items
+
