@@ -163,7 +163,7 @@ def addOptions(parser):
 	parser.add_option("--runScan",        default=False, action="store_true",        dest="runScan",        help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
 	parser.add_option("--runRMSScan",     default=False, action="store_true",        dest="runRMSScan",     help="Run four scans over fragment sizes with different RMS values")
 
-	parser.add_option("-d", "--duration", default=60,    action="store", type="int", dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
+	parser.add_option("-d", "--duration", default=120,   action="store", type="int", dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
 	# parser.add_option("--useLogNormal",   default=False, action="store_true",        dest="useLogNormal",   help="Use lognormal generator for e/FEROLs (will use the dummyFerol instead of the Client in case of the eFEROLS). You need to provide the relative rms (i.e. in multiples of the fragment size) as an argument.")
 	parser.add_option("--useRate",        default=0,     action="store", type="int", dest="useRate",        help="Event rate in kHz, [default is maximum rate]")
 	parser.add_option("--maxSize",        default=16000, action="store", type="int", dest="maxSize",        help="Maximum fragment size of a scan in bytes, [default: %default]")
