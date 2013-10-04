@@ -161,6 +161,7 @@ def addOptions(parser):
 	## Standard interface:
 	parser.add_option("--runTest",        default=False, action="store_true",        dest="runTest",        help="Run a test setup, needs two arguments: config and fragment size")
 	parser.add_option("--runScan",        default=False, action="store_true",        dest="runScan",        help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
+	parser.add_option("--runMultiScan",   default=False, action="store_true",        dest="runMultiScan",   help="Run scans over a list of configs with common options")
 	parser.add_option("--runRMSScan",     default=False, action="store_true",        dest="runRMSScan",     help="Run four scans over fragment sizes with different RMS values")
 
 	parser.add_option("-d", "--duration", default=120,   action="store", type="int", dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
@@ -275,6 +276,34 @@ if __name__ == "__main__":
 			options.relRMS = None
 
 		runScan(args[0], options, relRMS=relRMS)
+		exit(0)
+
+	######################
+	## --runMultiScan
+	if options.runMultiScan and len(args) > 1:
+		configs = []
+		try:
+			options.relRMS = float(args[-1])
+			options.useLogNormal = True
+			configs = args[:-1]
+		except ValueError:
+			options.relRMS = None
+			options.useLogNormal = False
+			configs = args
+
+		for conf in configs:
+			print 80*'#'
+			print 80*'#'
+			print '## STARTING SCAN OF CONFIG =', conf
+			print 80*'#'
+			print 80*'#'
+
+			runScan(conf, options, relRMS=options.relRMS)
+		print 80*'#'
+		print 80*'#'
+		print '## EVERYTHING DONE'
+		print 80*'#'
+		print 80*'#'
 		exit(0)
 
 	######################
