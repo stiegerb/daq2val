@@ -171,7 +171,7 @@ def addOptions(parser):
 	parser.add_option("--minSize",        default=256,   action="store", type="int", dest="minSize",        help="Minimum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--short",          default=False, action="store_true",        dest="short",          help="Run a short scan with only a few points")
 	parser.add_option("--testTime",       default=10,    action="store", type="int", dest="testTime",       help="Time for which event building is tested before starting, [default is %default]")
-	parser.add_option("--stopRestart",    default=False, action="store_true",        dest="stopRestart",    help="Stop XDAQ processes after each size and restart instead of changing the size on the fly (only relevant for scans)")
+	parser.add_option("--stopRestart",    default=True,  action="store_true",        dest="stopRestart",    help="Stop XDAQ processes after each size and restart instead of changing the size on the fly (only relevant for scans)")
 	parser.add_option("--dropAtRU",       default=False, action="store_true",        dest="dropAtRU",       help="Run with dropping the fragments at the RU without building. (Use with --useIfstat to get throughput)")
 	parser.add_option("--useIfstat",      default=False, action="store_true",        dest="useIfstat",      help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
 
