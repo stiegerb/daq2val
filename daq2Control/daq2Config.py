@@ -125,6 +125,7 @@ class daq2Config(object):
 			raise RuntimeError("Couldn't determine EvB/gevb2g case!")
 
 		maxsizes = []
+		tcp_cwnd = []
 		## Scan <xc:Context>'s to extract configuration
 		for context in partition:
 			if not context.tag.endswith('Context'): continue
@@ -147,9 +148,11 @@ class daq2Config(object):
 							if ho.enableStream0:
 								self.nStreams += 1
 								maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED0').text))
+								tcp_cwnd.append(int(prop.find(frlns + 'TCP_CWND_FED0').text))
 							if ho.enableStream1:
 								self.nStreams += 1
 								maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED1').text))
+								tcp_cwnd.append(int(prop.find(frlns + 'TCP_CWND_FED1').text))
 							break
 
 				if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
@@ -189,4 +192,33 @@ WARNING: Event_Length_Max_bytes for FEROLs seems to be set
  Is set to: %d in config. Expected value: %d
 """ % (int(maxsizes[0]), int(SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]))
 				printWarningWithWait(message, instance=self)
+
+		if len(tcp_cwnd) > 0:
+			## Check whether they were all filled
+			if len(tcp_cwnd) != self.nStreams:
+				raise RuntimeError("Didn't find all TCP_CWND_FEDX parameters in config file?!")
+
+			## Check they are all the same:
+			cwnd_set = set()
+			for x in tcp_cwnd: cwnd_set.add(x)
+			if len(cwnd_set) > 1:
+				message = """
+WARNING: You have FEROLs with different
+         TCP_CWND_FEDX parameters in your config file!
+
+ That probably shouldn't be.
+"""
+				printWarningWithWait(message, instance=self)
+
+			## Check they are correct and alert
+			message = """
+WARNING: TCP_CWND_FEDX for FEROLs seems to be set
+         to the wrong value in your config .xml file!
+
+ Is set to: %d in config. Expected value: %d
+"""
+			if nStreams == len(self.FEROLs) and str(35000) in cwnd_set:
+				printWarningWithWait(message%(35000, 55000), instance=self)
+			if nStreams == 2*len(self.FEROLs) and str(55000) in cwnd_set:
+				printWarningWithWait(message%(55000, 35000), instance=self)
 
