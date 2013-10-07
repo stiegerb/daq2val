@@ -400,6 +400,7 @@ class daq2Control(object):
 			if self.options.useLogNormal: outfile.write('## useLogNormal = True, RMS = %5.2f\n' % float(self.options.relRMS) )
 			outfile.write('## %s\n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
 			outfile.write('\n')
+			self.config.printHosts(out=outfile, prepend='## ')
 			outfile.close()
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
