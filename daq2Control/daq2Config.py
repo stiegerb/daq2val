@@ -85,9 +85,10 @@ class daq2Config(object):
 				printError("Didn't find host %s in symbol map." % host.name, self)
 				raise e
 
-	def printHosts(self):
+	def printHosts(self, out=None, prepend=''):
+		if out==None: out = stdout
 		separator = 70*'-'
-		print separator
+		out.write(prepend+separator+'\n')
 		## Count enabled FEROL streams:
 		streams = 0
 		for host in self.FEROLs:
@@ -96,11 +97,12 @@ class daq2Config(object):
 
 		if len(self.FEROLs) > 0: config = '%ds%dfx%dx%d' % (streams, len(self.FEROLs), len(self.RUs), len(self.BUs))
 		else              : config = '%dx%dx%d'     % (len(self.eFEROLs), len(self.RUs), len(self.BUs))
-		print config, 'configuration with', 'EvB' if self.useEvB else 'gevb2g'
-		print separator
+		builder = 'EvB' if self.useEvB else 'gevb2g'
+		out.write('%s%s configuration with %s\n' % (prepend, config, builder))
+		out.write(prepend+separator+'\n')
 		for host in self.hosts:
-			print '%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER)' % (host.name, host.host, host.port, host.lport)
-		print separator
+			out.write(prepend+'%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER)\n' % (host.name, host.host, host.port, host.lport))
+		out.write(prepend+separator+'\n')
 
 	def readXDAQConfigTemplate(self, configFile):
 		if not os.path.exists(configFile):
