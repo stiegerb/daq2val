@@ -212,15 +212,16 @@ WARNING: You have FEROLs with different
 """
 				printWarningWithWait(message, instance=self)
 
-			## Check they are correct and alert
+
+			## Check they are correct and alert in case:
 			message = """
 WARNING: TCP_CWND_FEDX for FEROLs seems to be set
          to the wrong value in your config .xml file!
 
  Is set to: %d in config. Expected value: %d
 """
-			if nStreams == len(self.FEROLs) and str(35000) in cwnd_set:
+			if self.nStreams == len(self.FEROLs) and 35000 in cwnd_set:
 				printWarningWithWait(message%(35000, 55000), instance=self)
-			if nStreams == 2*len(self.FEROLs) and str(55000) in cwnd_set:
+			if self.nStreams == 2*len(self.FEROLs) and 55000 in cwnd_set:
 				printWarningWithWait(message%(55000, 35000), instance=self)
 
