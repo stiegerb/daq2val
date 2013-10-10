@@ -7,6 +7,8 @@
 import re
 import sys, os
 
+months = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
+
 ##---------------------------------------------------------------------------------
 ## Utilities
 def getConfig(string):
@@ -142,6 +144,17 @@ def cleanFilesInDir(subdir):
 ##---------------------------------------------------------------------------------
 ## Storing information in a ROOT tree for later plotting
 ##  (this is where the meat is)
+def extractDate(filename):
+	with open(filename, 'r') as f:
+		for line in f:
+			if line.startswith('## Testcase:'): continue
+			if line.startswith('## useLogNormal'): continue
+			if len(line.split(' ')) == 0: return (0,0,0)
+			data = line.split(' ')
+			if data[0] != '##': continue
+			mon, day, year = (data[2],data[3][:-1],data[4])
+			return int(day), int(months[mon]), int(year)
+		return (0,0,0)
 def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=256, doCleaning=False):
 	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 	from array import array
