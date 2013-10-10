@@ -7,7 +7,8 @@
 import re
 import sys, os
 
-months = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
+months_toint = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
+months_tostr = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"}
 
 ##---------------------------------------------------------------------------------
 ## Utilities
@@ -153,7 +154,7 @@ def extractDate(filename):
 			data = line.split(' ')
 			if data[0] != '##': continue
 			mon, day, year = (data[2],data[3][:-1],data[4])
-			return int(day), int(months[mon]), int(year)
+			return int(day), int(months_toint[mon]), int(year)
 		return (0,0,0)
 def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=256, doCleaning=False):
 	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
@@ -203,6 +204,10 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	nbus        = array('i', [0])
 	nrus        = array('i', [0])
 
+	day         = array('i', [0])
+	month       = array('i', [0])
+	year        = array('i', [0])
+
 	t.Branch('FragSize',    fragsize,    'FragSize/F')
 	t.Branch('SuFragSize',  sufragsize,  'SuFragSize/F')
 	t.Branch('AvRate',      avrate,      'AvRate/F')
@@ -213,9 +218,15 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	t.Branch('nBUs',        nbus,        'nBUs/I')
 	t.Branch('nRUs',        nrus,        'nRUs/I')
 
+	t.Branch('day',         day  ,       'day/I')
+	t.Branch('month',       month,       'month/I')
+	t.Branch('year',        year ,       'year/I')
+
 	nfes[0] = nStreams
 	nbus[0] = nBus
 	nrus[0] = nRus
+
+	day[0], month[0], year[0] = extractDate(filename)
 
 	output_case = 0 ## 0 (fragsize), 1 (superfragsize), 2 (eventsize)
 	checked = False
@@ -362,6 +373,9 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 			print "#### Couldn't get graph for ", case, "in file", filename
 			return
 
+	datepave = drawDate(f, case)
+	datepave.Draw()
+
 	# if options.daq1:
 	# 	daq1_graph = getDAQ1Graph()
 
@@ -464,6 +478,37 @@ def getGraph(file, subdir, frag=False):
 	except AttributeError as e:
 		print "#### Didn't find tree", treeloc, "in file", file
 		raise e
+
+def drawDate(file, subdir):
+	from ROOT import gDirectory, TPaveText
+	from array import array
+
+	if not file.IsOpen(): raise RuntimeError("File not open")
+	treeloc = subdir+"/t"
+	try:
+		t = gDirectory.Get(treeloc)
+		entries = t.GetEntriesFast()
+
+		## get first entry
+		if t.GetEntry(0) <= 0: return
+		day   = t.day
+		month = t.month
+		year  = t.year
+
+	except AttributeError as e:
+		print "#### Didn't find tree", treeloc, "in file", file
+		raise e
+
+	date_string = "%d %s %d" % (day, months_tostr[month], year)
+	pave = TPaveText(0.005, 0.005, 0.1, 0.02, 'NDC')
+	pave.SetTextFont(42)
+	pave.SetTextSize(0.03)
+	pave.SetFillStyle(1001)
+	pave.SetFillColor(0)
+	pave.SetBorderSize(0)
+	pave.SetTextAlign(12)
+	pave.AddText(date_string)
+	return pave
 
 def getDAQ1Graph():
 	from ROOT import TGraph
