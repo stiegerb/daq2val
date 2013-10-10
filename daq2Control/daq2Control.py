@@ -58,6 +58,10 @@ class daq2Control(object):
 		# 	printError("Don't know about GTPe with EvB yet. Aborting...", self)
 		# 	raise RuntimeError
 
+		if self.config.useGTPe and self.options.useRate == 'max':
+			printWarningWithWait("Failed to specify rate for GTPe. Setting it to 100 kHz.", waittime=0, instance=self)
+			self.options.useRate = 100
+
 		self._runDir    = self._testDir + '/' + self._platform + '/'
 		self._runDir   += self.config.testCaseShort
 		self._outputDir = self._testDir + '/data/'
@@ -395,7 +399,9 @@ class daq2Control(object):
 			outfile.write('## Testcase: %s\n' % self.config.testCase)
 			if self.options.useLogNormal: outfile.write('## useLogNormal = True, RMS = %5.2f\n' % float(self.options.relRMS) )
 			outfile.write('## %s\n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
-			outfile.write('\n')
+			outfile.write('\n##\n')
+			self.config.printHosts(out=outfile, prepend='## ')
+			outfile.write('\n\n')
 			outfile.close()
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script

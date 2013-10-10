@@ -161,16 +161,17 @@ def addOptions(parser):
 	## Standard interface:
 	parser.add_option("--runTest",        default=False, action="store_true",        dest="runTest",        help="Run a test setup, needs two arguments: config and fragment size")
 	parser.add_option("--runScan",        default=False, action="store_true",        dest="runScan",        help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
+	parser.add_option("--runMultiScan",   default=False, action="store_true",        dest="runMultiScan",   help="Run scans over a list of configs with common options")
 	parser.add_option("--runRMSScan",     default=False, action="store_true",        dest="runRMSScan",     help="Run four scans over fragment sizes with different RMS values")
 
-	parser.add_option("-d", "--duration", default=60,    action="store", type="int", dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
+	parser.add_option("-d", "--duration", default=120,   action="store", type="int", dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
 	# parser.add_option("--useLogNormal",   default=False, action="store_true",        dest="useLogNormal",   help="Use lognormal generator for e/FEROLs (will use the dummyFerol instead of the Client in case of the eFEROLS). You need to provide the relative rms (i.e. in multiples of the fragment size) as an argument.")
 	parser.add_option("--useRate",        default=0,     action="store", type="int", dest="useRate",        help="Event rate in kHz, [default is maximum rate]")
 	parser.add_option("--maxSize",        default=16000, action="store", type="int", dest="maxSize",        help="Maximum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--minSize",        default=256,   action="store", type="int", dest="minSize",        help="Minimum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--short",          default=False, action="store_true",        dest="short",          help="Run a short scan with only a few points")
 	parser.add_option("--testTime",       default=10,    action="store", type="int", dest="testTime",       help="Time for which event building is tested before starting, [default is %default]")
-	parser.add_option("--stopRestart",    default=False, action="store_true",        dest="stopRestart",    help="Stop XDAQ processes after each size and restart instead of changing the size on the fly (only relevant for scans)")
+	parser.add_option("--stopRestart",    default=True,  action="store_true",        dest="stopRestart",    help="Stop XDAQ processes after each size and restart instead of changing the size on the fly (only relevant for scans)")
 	parser.add_option("--dropAtRU",       default=False, action="store_true",        dest="dropAtRU",       help="Run with dropping the fragments at the RU without building. (Use with --useIfstat to get throughput)")
 	parser.add_option("--useIfstat",      default=False, action="store_true",        dest="useIfstat",      help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
 
@@ -275,6 +276,34 @@ if __name__ == "__main__":
 			options.relRMS = None
 
 		runScan(args[0], options, relRMS=relRMS)
+		exit(0)
+
+	######################
+	## --runMultiScan
+	if options.runMultiScan and len(args) > 1:
+		configs = []
+		try:
+			options.relRMS = float(args[-1])
+			options.useLogNormal = True
+			configs = args[:-1]
+		except ValueError:
+			options.relRMS = None
+			options.useLogNormal = False
+			configs = args
+
+		for conf in configs:
+			print 80*'#'
+			print 80*'#'
+			print '## STARTING SCAN OF CONFIG =', conf
+			print 80*'#'
+			print 80*'#'
+
+			runScan(conf, options, relRMS=options.relRMS)
+		print 80*'#'
+		print 80*'#'
+		print '## EVERYTHING DONE'
+		print 80*'#'
+		print 80*'#'
 		exit(0)
 
 	######################
