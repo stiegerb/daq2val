@@ -29,7 +29,9 @@ SIZE_LIMIT_TABLE = {
 	 8 : (32000, 16000),  # merging by  8
 	12 : (21000, 10240),  # merging by 12
 	16 : (16000,  8192),  # merging by 16
-	24 : (10500,  5120)   # merging by 24
+	20 : (12800,  6400),  # merging by 20
+	24 : (10500,  5120),  # merging by 24
+	32 : ( 8000,  4096)   # merging by 32
 }
 def checkMaxSize(maxsize, mergingby):
 	try:
