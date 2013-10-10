@@ -189,7 +189,22 @@ class daq2Control(object):
 		## Send the configuration file to each host
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring XDAQ processes"
-		utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry))
+		if not utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry)):
+			## Stop and restart the processes
+			if self.options.verbose > 0: print separator
+			if self.options.verbose > 0: print "Stopping and restarting XDAQ processes"
+			utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+			if self.options.verbose > 0: print separator
+			if self.options.verbose > 0: print "Restarting XDAQ processes"
+			for h in self.config.hosts:
+				utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
+			if self.options.verbose > 0: print separator
+			sleep(2, self.options.verbose, self.options.dry)
+
+			## Try again to send the command file
+			if not utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry)):
+				raise RuntimeError('Failed to send command file to all hosts')
+
 
 		## Set the fragment size, rms, and rate, configure, and enable
 		sleep(2, self.options.verbose, self.options.dry)

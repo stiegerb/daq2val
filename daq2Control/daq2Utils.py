@@ -99,8 +99,15 @@ def sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False):
 		raise IOError('File '+cmdfile+' not found')
 	print 'Sending command file to executive %s:%d ...' % (host, port)
 	message = 'SOAPAction: urn:xdaq-application:lid=0'
-	if sendSOAPMessage(host, port, message, cmdfile) != 0:
-		raise RuntimeError('Failed to send configure command to %s:%d!' % (host, port))
+	# if sendSOAPMessage(host, port, message, cmdfile) != 0:
+	# 	raise RuntimeError('Failed to send configure command to %s:%d!' % (host, port))
+	n_retries = 0
+	while sendSOAPMessage(host, port, message, cmdfile) != 0 and n_retries < 3:
+		print '  retrying %s:%d ...' % (host, port)
+		n_retries += 1
+
+	if n_retries == 3: raise RuntimeError('Failed to send configure command to %s:%d!' % (host, port))
+	return 0
 
 def sendCmdFileToApp(host, port, classname, instance, cmdFile, verbose=0, dry=False): ## UNTESTED
 	"""Sends a SOAP message contained in cmdfile to the application with classname and instance on host:port"""
@@ -266,7 +273,12 @@ def sendToHostListInParallel(hostlist, func, commonargs):
 
 	from multiprocessing import Pool
 	pool = Pool(len(hostlist))
-	pool.map(func, tasklist)
+	try:
+		pool.map(func, tasklist)
+		return True
+	except RuntimeError:
+		return False
+
 
 def getFerolDelay(fragSize, rate='max'):
 	"""Calculates the Event_Delay_ns parameter for the FEROLs, for a given size and rate
