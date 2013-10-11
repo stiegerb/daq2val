@@ -129,20 +129,38 @@ class daq2Control(object):
 					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(fragSizeRMS), verbose=self.options.verbose, dry=self.options.dry)
 					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delay),       verbose=self.options.verbose, dry=self.options.dry)
 		else:
-			sizeProfile = utils.getSizeProfile(fragSize, len(self.config.FEROLs), self.options.sizeProfile) ## same size for both streams of each FEROL!
-			delayProfile = [utils.getFerolDelay(size, rate) for size in sizeProfile]
-			relRMS = fragSizeRMS/fragSize
+			if not self.options.profilePerFRL: ## same size for both streams of each FEROL!
+				sizeProfile = utils.getSizeProfile(fragSize, len(self.config.FEROLs), self.options.sizeProfile)
+				delayProfile = [utils.getFerolDelay(size, rate) for size in sizeProfile]
+				relRMS = fragSizeRMS/fragSize
 
-			## Max rate when running with GTPe?
-			if self.config.useGTPe: delayProfile = len(self.config.FEROLs)*[20]
+				## Max rate when running with GTPe?
+				if self.config.useGTPe: delayProfile = len(self.config.FEROLs)*[20]
 
-			for fragSize,delay,frl in itertools.izip(sizeProfile, delayProfile, self.config.FEROLs):
-				utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED0',       'unsignedInt', int(fragSize),        verbose=self.options.verbose, dry=self.options.dry)
-				utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
-				utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED0',           'unsignedInt', int(delay),           verbose=self.options.verbose, dry=self.options.dry)
-				utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', int(fragSize),        verbose=self.options.verbose, dry=self.options.dry)
-				utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
-				utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delay),           verbose=self.options.verbose, dry=self.options.dry)
+				for fragSize,delay,frl in itertools.izip(sizeProfile, delayProfile, self.config.FEROLs):
+					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED0',       'unsignedInt', int(fragSize),        verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED0',           'unsignedInt', int(delay),           verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', int(fragSize),        verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delay),           verbose=self.options.verbose, dry=self.options.dry)
+			else: ## profile applied to the two FEROL streams
+				sizeProfile = utils.getSizeProfile(fragSize/2, 2, self.options.sizeProfile)
+				delayProfile = [utils.getFerolDelay(size, rate) for size in sizeProfile]
+				relRMS = fragSizeRMS/fragSize
+
+				## Max rate when running with GTPe?
+				if self.config.useGTPe: delayProfile = 2*[20]
+
+				for frl in self.config.FEROLs:
+					if frl.enableStream0:
+						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED0',       'unsignedInt', int(sizeProfile[0]),        verbose=self.options.verbose, dry=self.options.dry)
+						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', int(relRMS*sizeProfile[0]), verbose=self.options.verbose, dry=self.options.dry)
+						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED0',           'unsignedInt', int(delayProfile[0]),       verbose=self.options.verbose, dry=self.options.dry)
+					if frl.enableStream1:
+						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', int(sizeProfile[1]),        verbose=self.options.verbose, dry=self.options.dry)
+						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(relRMS*sizeProfile[1]), verbose=self.options.verbose, dry=self.options.dry)
+						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delayProfile[0]),       verbose=self.options.verbose, dry=self.options.dry)
 
 	## Control methods
 	def setup(self):

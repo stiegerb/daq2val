@@ -176,6 +176,7 @@ def addOptions(parser):
 	parser.add_option("--useIfstat",      default=False, action="store_true",           dest="useIfstat",      help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
 
 	parser.add_option("--sizeProfile",    default='flat',action="store", type='string', dest="sizeProfile",    help="Use different sizes for different streams, can be either 'flat', 'spike', 'sawtooth', or 'doublespike'")
+	parser.add_option("--profilePerFRL",  default=False, action="store_true",           dest="profilePerFRL",  help="Apply the chosen size profile per FEROL instead of over all FEROLs")
 
 	## Debugging options:
 	parser.add_option("--dry",                  default=False, action="store_true",        dest="dry",            help="Just print the commands without sending anything")

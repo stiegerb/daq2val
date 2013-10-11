@@ -51,9 +51,29 @@ def getSizeProfile(meansize, nstreams, profile):
 		return nstreams*[meansize]
 	if nstreams < 2:
 		raise RuntimeError('Need at least two streams to make meaningful profile')
-	if profile == 'spike':
+	if profile == 'spike' or profile == 'spike05':
+		sizeprofile = [0.5*meansize * nstreams]
+		for i in xrange(nstreams-1): sizeprofile.append(0.5*meansize * nstreams/(nstreams-1))
+		return sizeprofile
+	if profile == 'spike025':
+		sizeprofile = [0.25*meansize * nstreams]
+		for i in xrange(nstreams-1): sizeprofile.append(0.75*meansize * nstreams/(nstreams-1))
+		return sizeprofile
+	if profile == 'spike075':
+		sizeprofile = [0.75*meansize * nstreams]
+		for i in xrange(nstreams-1): sizeprofile.append(0.25*meansize * nstreams/(nstreams-1))
+		return sizeprofile
+	if profile == 'spike08':
 		sizeprofile = [0.8*meansize * nstreams]
 		for i in xrange(nstreams-1): sizeprofile.append(0.2*meansize * nstreams/(nstreams-1))
+		return sizeprofile
+	if profile == 'spike09':
+		sizeprofile = [0.9*meansize * nstreams]
+		for i in xrange(nstreams-1): sizeprofile.append(0.1*meansize * nstreams/(nstreams-1))
+		return sizeprofile
+	if profile == 'spike095':
+		sizeprofile = [0.95*meansize * nstreams]
+		for i in xrange(nstreams-1): sizeprofile.append(0.05*meansize * nstreams/(nstreams-1))
 		return sizeprofile
 
 	if profile == 'sawtooth':
@@ -72,8 +92,8 @@ def getSizeProfile(meansize, nstreams, profile):
 		return sizeprofile
 
 	if profile == 'doublespike':
-		spikesize    = 0.4*meansize * nstreams
-		pedestalsize = 0.2*meansize * nstreams/(nstreams-2)
+		spikesize    = 0.25*meansize * nstreams
+		pedestalsize = 0.5*meansize * nstreams/(nstreams-2)
 		return [spikesize]+(nstreams-1)/2*[pedestalsize] + [spikesize]+(nstreams-1)/2*[pedestalsize]
 	else:
 		raise RuntimeError("Unknown size profile!")
