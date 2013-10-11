@@ -46,6 +46,38 @@ def checkScanLimit(scanlimit, mergingby):
 		printWarningWithWait("Don't know scan limit for merging by %d. Continuing..." %mergingby, waittime=0)
 		return True
 
+def getSizeProfile(meansize, nstreams, profile):
+	if profile == 'flat':
+		return nstreams*[meansize]
+	if nstreams < 2:
+		raise RuntimeError('Need at least two streams to make meaningful profile')
+	if profile == 'spike':
+		sizeprofile = [0.8*meansize * nstreams]
+		for i in xrange(nstreams-1): sizeprofile.append(0.2*meansize * nstreams/(nstreams-1))
+		return sizeprofile
+
+	if profile == 'sawtooth':
+		sizes = [1.75, 1.25, 0.75, 0.25]
+		sizeprofile = [sizes[i%4]*meansize for i in xrange(nstreams)]
+		## need to correct so the sum is still equal to nstreams * meansize
+		if nstreams%4 == 1: ## make last one = 1
+			sizeprofile[-1] = meansize
+		if nstreams%4 == 2: ## make last two 1.5 and 0.5
+			sizeprofile[-2] = 1.5*meansize
+			sizeprofile[-1] = 0.5*meansize
+		if nstreams%4 == 3: ## make last three 1.5, 1.0, and 0.5
+			sizeprofile[-3] = 1.5*meansize
+			sizeprofile[-2] = 1.0*meansize
+			sizeprofile[-1] = 0.5*meansize
+		return sizeprofile
+
+	if profile == 'doublespike':
+		spikesize    = 0.4*meansize * nstreams
+		pedestalsize = 0.2*meansize * nstreams/(nstreams-2)
+		return [spikesize]+(nstreams-1)/2*[pedestalsize] + [spikesize]+(nstreams-1)/2*[pedestalsize]
+	else:
+		raise RuntimeError("Unknown size profile!")
+
 def sendSOAPMessage(host, port, message, command):
 	"""Sends a SOAP message via curl, where message could be
 		'SOAPAction: urn:xdaq-application:lid=0'
@@ -284,7 +316,6 @@ def getFerolDelay(fragSize, rate='max'):
 	"""Calculates the Event_Delay_ns parameter for the FEROLs, for a given size and rate
   - rate='max' will return 20
   - the minimum return value is 20
-
 """
 	if rate == 'max': return 20
 	else:
