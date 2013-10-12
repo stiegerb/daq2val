@@ -65,7 +65,14 @@ class daq2Control(object):
 
 		self._runDir    = self._testDir + '/' + self._platform + '/'
 		self._runDir   += self.config.testCaseShort
-		self._outputDir = self._testDir + '/data/'
+		if self.options.outputDir:
+			if self.options.outputDir.endswith('/'): self.options.outputDir = self.options.outputDir[:-1]
+			if self.options.outputTag:
+				self._outputDir = self.options.outputDir+'_'+self.options.outputTag
+			else:
+				self._outputDir = self.options.outputDir
+		else:
+			self._outputDir = self._testDir + '/data/'
 
 		self._testEnv   = ""
 		if len(self._testType) > 0: self._testEnv = "-"+self._testType
@@ -430,12 +437,14 @@ class daq2Control(object):
 
 	def prepareOutputDir(self):
 		import glob
-		self._outputDir += self.config.testCase
-		if self.options.useLogNormal: self._outputDir += '_RMS_%3.1f/' % float(self.options.relRMS)
+		if not self.options.outputDir:
+			self._outputDir += self.config.testCase
+			if self.options.useLogNormal: self._outputDir += '_RMS_%3.1f' % float(self.options.relRMS)
+			if self.options.outputTag:    self._outputDir += '_'+self.options.outputTag
 		if not self._outputDir.endswith('/'): self._outputDir += '/'
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print 'Storing output in:', self._outputDir
-		if self.options.dry: return
+		# if self.options.dry: return
 
 		## Save previous measurements:
 		if os.path.exists(self._outputDir):
