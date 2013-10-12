@@ -185,7 +185,9 @@ def addOptions(parser):
 	parser.add_option("--changeSize",          default=False, action="store_true", dest="changeSize", help="Halt, change size and resume. Needs config and new size as arguments.")
 	parser.add_option("--stop", "--stopXDAQs", default=False, action="store_true", dest="stop",       help="Stop all the XDAQ processes and exit")
 
-	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap",      help="Use a symbolmap different from the one set in the environment")
+	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap", help="Use a symbolmap different from the one set in the environment")
+	parser.add_option("-o", "--outputDir", default='', action="store", type="string", dest="outputDir", help="Where to store the output. Default is in test/cases/[e]FEROLs/EvB[gevb2g]/casename")
+	parser.add_option("-t", "--outputTag", default='', action="store", type="string", dest="outputTag", help="Attach a tag after the standard output dir")
 
 if __name__ == "__main__":
 	from optparse import OptionParser
