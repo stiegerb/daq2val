@@ -152,7 +152,7 @@ class daq2Control(object):
 					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
 					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delay),           verbose=self.options.verbose, dry=self.options.dry)
 			else: ## profile applied to the two FEROL streams
-				sizeProfile = utils.getSizeProfile(fragSize/2, 2, self.options.sizeProfile)
+				sizeProfile = utils.getSizeProfile(fragSize, 2, self.options.sizeProfile)
 				delayProfile = [utils.getFerolDelay(size, rate) for size in sizeProfile]
 				relRMS = fragSizeRMS/fragSize
 
