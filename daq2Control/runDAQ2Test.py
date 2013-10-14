@@ -7,21 +7,21 @@ from daq2Utils import sleep, printError, printWarningWithWait, SIZE_LIMIT_TABLE
 
 separator = 70*'-'
 
-def testBuilding(d2c, minevents=1000, waittime=15):
-	if options.verbose > 0: print separator
-	if options.verbose > 0: print 'Testing event building for', waittime, 'seconds...'
-	sleep(waittime, options.verbose, options.dry)
-	if options.dry: return True
+def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
+	if verbose > 0: print separator
+	if verbose > 0: print 'Testing event building for', waittime, 'seconds...'
+	sleep(waittime, verbose, dry)
+	if dry: return True
 	eventCounter = []
 	for n,bu in enumerate(d2c.config.BUs):
-		if d2c.config.useEvB: nEvts = utils.getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt',  verbose=options.verbose, dry=options.dry)
-		else:                 nEvts = utils.getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong', verbose=options.verbose, dry=options.dry)
+		if d2c.config.useEvB: nEvts = utils.getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt',  verbose=verbose, dry=dry)
+		else:                 nEvts = utils.getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong', verbose=verbose, dry=dry)
 		try:
 			eventCounter.append(int(nEvts))
 		except ValueError:
 			printError('Error getting number of events built. Message was:\n%s'%nEvts)
 			return False
-		if options.verbose > 1: print bu.name, 'number of events built: ', int(nEvts)
+		if verbose > 1: print bu.name, 'number of events built: ', int(nEvts)
 	print separator
 
 	totEvents = 0
@@ -56,7 +56,7 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	d2c.start(fragSize, relRMS*fragSize, rate=options.useRate)
 
-	if not options.dropAtRU and not testBuilding(d2c, 1000, options.testTime):
+	if not options.dropAtRU and not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 		exit(-1)
@@ -104,7 +104,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	d2c.start(options.minSize, float(relRMS)*options.minSize, rate=options.useRate)
 
-	if not testBuilding(d2c, 1000, options.testTime):
+	if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 		exit(-1)
@@ -159,10 +159,10 @@ def addOptions(parser):
 	parser.usage = usage
 
 	## Standard interface:
-	parser.add_option("--runTest",        default=False, action="store_true",        dest="runTest",        help="Run a test setup, needs two arguments: config and fragment size")
-	parser.add_option("--runScan",        default=False, action="store_true",        dest="runScan",        help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
-	parser.add_option("--runMultiScan",   default=False, action="store_true",        dest="runMultiScan",   help="Run scans over a list of configs with common options")
-	parser.add_option("--runRMSScan",     default=False, action="store_true",        dest="runRMSScan",     help="Run four scans over fragment sizes with different RMS values")
+	parser.add_option("--runTest",            default=False, action="store_true", dest="runTest",            help="Run a test setup, needs two arguments: config and fragment size")
+	parser.add_option("--runScan",            default=False, action="store_true", dest="runScan",            help="Run a scan over fragment sizes, set the range using the options --maxSize and --minSize")
+	parser.add_option("--runMultiScan",       default=False, action="store_true", dest="runMultiScan",       help="Run scans over a list of configs with common options")
+	parser.add_option("--runRMSScan",         default=False, action="store_true", dest="runRMSScan",         help="Run four scans over fragment sizes with different RMS values")
 
 	parser.add_option("-d", "--duration", default=120,   action="store", type="int", dest="duration",       help="Duration of a single step in seconds, [default: %default s]")
 	# parser.add_option("--useLogNormal",   default=False, action="store_true",        dest="useLogNormal",   help="Use lognormal generator for e/FEROLs (will use the dummyFerol instead of the Client in case of the eFEROLS). You need to provide the relative rms (i.e. in multiples of the fragment size) as an argument.")
@@ -229,7 +229,7 @@ if __name__ == "__main__":
 		d2c.setup()
 		d2c.start(fragSize, relRMS*fragSize, rate=options.useRate)
 
-		if not testBuilding(d2c, 1000, options.testTime):
+		if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
 			if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 			exit(-1)
 		if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
@@ -310,6 +310,7 @@ if __name__ == "__main__":
 		print 80*'#'
 		print 80*'#'
 		exit(0)
+
 
 	######################
 	## --runRMSScan
