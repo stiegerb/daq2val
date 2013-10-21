@@ -105,7 +105,8 @@ class daq2Control(object):
 	def sendCmdToEFEDs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for efed in self.config.eFEDs:
-			utils.sendSimpleCmdToApp(efed.host, efed.port, 'ferol::FerolController', 0, cmd)
+			for instance,_ in efed.streams:
+				utils.sendSimpleCmdToApp(efed.host, efed.port, 'd2s::FEDEmulator', instance, cmd)
 	def sendCmdToGTPeFMM(self, cmd, invert=False):
 		try:
 			gtpe = self.symbolMap('GTPE0')
@@ -181,14 +182,16 @@ class daq2Control(object):
 
 		## Flat profile (i.e. each stream has the same size)
 		if self.options.sizeProfile == 'flat': ## UNTESTED
-			for n,efed in enumerate(self.config.eFEDs):
-				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSize',       'unsignedInt', int(fragSize),    verbose=self.options.verbose, dry=self.options.dry)
-				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSizeStdDev', 'unsignedInt', int(fragSizeRMS), verbose=self.options.verbose, dry=self.options.dry)
+			for efed in self.config.eFEDs: ## loop on eFED machines
+				for instance,fedid in efed.streams: ## loop on applications for each eFED
+					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', instance, 'eventSize',       'unsignedInt', int(fragSize),    verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', instance, 'eventSizeStdDev', 'unsignedInt', int(fragSizeRMS), verbose=self.options.verbose, dry=self.options.dry)
 		else: ## UNTESTED
+			raise RuntimeError('not implemented yet!')
 			sizeProfile = utils.getSizeProfile(fragSize, len(self.config.nStreams), self.options.sizeProfile)
 			relRMS = fragSizeRMS/fragSize
 
-			for n,(fragSize,efed) in enumerate(zip(sizeProfile, self.config.eFEDs)):
+			for fragSize,efed in zip(sizeProfile, self.config.eFEDs):
 				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSize',       'unsignedInt', int(fragSize),        verbose=self.options.verbose, dry=self.options.dry)
 				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSizeStdDev', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
 
@@ -277,12 +280,20 @@ class daq2Control(object):
 		sleep(2, self.options.verbose, self.options.dry)
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		sleep(5, self.options.verbose, self.options.dry)
+
+		## Enable FMM and eFEDs:
+		if len(self.config.eFEDs)>0:
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+			self.sendCmdToEFEDs('Enable')
+			## Don't need to enable GTPe when running with eFEDs?
+
+		## Enable FEROLs
 		self.sendCmdToFEROLs('Enable')
 
 		## Enable FMM and GTPe:
-		if self.config.useGTPe:
+		if self.config.useGTPe and not len(self.config.eFEDs)>0:
 			self.sendCmdToGTPeFMM('Enable', invert=True)
-			sleep(10, self.options.verbose, self.options.dry)
+		sleep(10, self.options.verbose, self.options.dry)
 
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
@@ -308,8 +319,18 @@ class daq2Control(object):
 				if rate == 'max': printError('Failed to specify a rate when running with GTPe. Use option --useRate', self)
 				raise e
 
+			self.sendCmdToEFEDs('Configure')
 
+			try:
+				fmm = self.symbolMap('FMM0')
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port, 'tts::FMMController', '0', 'Configure', verbose=self.options.verbose, dry=self.options.dry)
+			except KeyError as e:
+				printError('Need to configure an FMM when running with eFEDs!', self)
+				raise e
 
+			sleep(10, self.options.verbose, self.options.dry)
+			self.sendCmdToEVMRUBU('Configure')
+			self.sendCmdToRUEVMBU('Enable')
 			return
 
 		## In case of FEROLs:
