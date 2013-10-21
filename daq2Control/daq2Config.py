@@ -36,6 +36,24 @@ class FEROL(host):
 		self.enableStream1 = self.cfgStringToBool(enableStream1)
 
 ######################################################################
+class eFED(host):
+	"""Holds additional information on eFED configuration"""
+	def __init__(self,name,index,soaphost='undefined',soapport=-99):
+		super(FEROL, self).__init__()
+		streams = []
+	def addStream(self, instance, fedid=900):
+		if not hasattr(self, 'streams'): ## want to morph hosts into eFEDs, i.e. constructor might not have been called
+			self.streams = []
+		self.streams.append((instance, fedid))
+	def __len__(self):
+		return len(streams)
+	def __str__(self):
+		text  = '%-20s%3d at %25s:%-5d with launcher at %-5d\n' % (self.type, self.index, self.host, self.port, self.lport)
+		for n,(instance,fedid) in enumerate(self.streams):
+			text += '  stream %d at instance %2d, fedid %d\n' % (n, instance, fedid)
+		return text
+
+######################################################################
 from daq2SymbolMap import daq2SymbolMap
 class daq2Config(object):
 	'''
@@ -104,6 +122,9 @@ class daq2Config(object):
 		out.write(prepend+separator+'\n')
 		for host in self.hosts:
 			out.write(prepend+'%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER)\n' % (host.name, host.host, host.port, host.lport))
+			if host.__class__ == eFED:
+				for n,(instance,fedid) in enumerate(host.streams):
+					out.write(prepend+'  stream %d at instance %2d, fedid %d\n' % (n, instance, fedid))
 		out.write(prepend+separator+'\n')
 
 	def readXDAQConfigTemplate(self, configFile):
@@ -158,6 +179,16 @@ class daq2Config(object):
 								maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED1').text))
 								tcp_cwnd.append(int(prop.find(frlns + 'TCP_CWND_FED1').text))
 							break
+				## For eFEDs, count the number of enabled streams and their instances
+				if h == 'EFED':
+					ho.__class__ = eFED ## Make it an eFED
+					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+						if app.attrib['class'] == 'd2s::FEDEmulator':
+							efedns = '{urn:xdaq-application:d2s::FEDEmulator}'
+							prop = app.find(efedns + 'properties')
+							fedid    = int(prop.find(efedns + 'FedSourceId').text)
+							instance = int(app.attrib['instance'])
+							ho.addStream(instance, fedid)
 
 				if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
 					self.nStreams += 1
