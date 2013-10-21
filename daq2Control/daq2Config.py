@@ -49,8 +49,8 @@ class daq2Config(object):
    Event_Length_Max_bytes_FED0/1, etc.
 ---------------------------------------------------------------------
 '''
-	def __init__(self, configFile):
-		self.verbose = 1
+	def __init__(self, configFile, verbose=1):
+		self.verbose = verbose
 		self.file = configFile
 		self.hosts     = [] ## a list of the hosts defined in the xml config
 		self.FEROLs    = []
