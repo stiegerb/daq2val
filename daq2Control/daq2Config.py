@@ -59,6 +59,7 @@ class daq2Config(object):
 		self.RUs       = []
 		self.BUs       = []
 		self.EVM       = []
+		self.eFEDs     = []
 		self.GTPe      = []
 		self.FMM       = []
 		self._hostTypes = {'FEROLCONTROLLER' : self.FEROLs,
@@ -66,6 +67,7 @@ class daq2Config(object):
 		                   'RU'              : self.RUs,
 		                   'BU'              : self.BUs,
 		                   'EVM'             : self.EVM,
+		                   'EFED'            : self.eFEDs,
 		                   'GTPE'            : self.GTPe,
 		                   'FMM'             : self.FMM}
 
