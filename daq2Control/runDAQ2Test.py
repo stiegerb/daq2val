@@ -87,6 +87,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 			## For eFEROLs, get results after each step
 			if len(d2c.config.eFEROLs) > 0 or options.stopRestart: d2c.getResults()
 		if options.verbose > 0: print "Done"
+		d2c.saveFEROLInfoSpaces()
 
 	## For FEROLs, get results at the end
 	if len(d2c.config.FEROLs) > 0 and not d2c.config.useEvB and not options.stopRestart: d2c.getResults()

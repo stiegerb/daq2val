@@ -444,16 +444,19 @@ class daq2Control(object):
 		if not self._outputDir.endswith('/'): self._outputDir += '/'
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print 'Storing output in:', self._outputDir
-		# if self.options.dry: return
+		if self.options.dry: return
 
-		## Save previous measurements:
-		if os.path.exists(self._outputDir):
+		## Create output directory
+		try:
+			os.makedirs(self._outputDir)
+			os.makedirs(self._outputDir + "infospaces")
+		except OSError: ## dir exists, save previous measurements:
 			newdir = self._outputDir + 'previous/' + time.strftime('%b%d-%H%M%S')
 			os.makedirs(newdir)
 			if len(glob.glob(self._outputDir+'*.csv')) > 0:
 				subprocess.check_call(['mv'] + glob.glob(self._outputDir+'*.csv') + [newdir])
-		else:
-			os.makedirs(self._outputDir)
+			if os.path.exists(self._outputDir+'infospaces': ## UNTESTED
+				subprocess.check_call(['mv', self._outputDir+'infospaces', newdir])
 
 		## Prepare output file:
 		with open(self._outputDir+'/server.csv', 'a') as outfile:
@@ -464,6 +467,7 @@ class daq2Control(object):
 			self.config.printHosts(out=outfile, prepend='## ')
 			outfile.write('\n\n')
 			outfile.close()
+
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
@@ -517,7 +521,6 @@ class daq2Control(object):
 
 	def getResultsFromIfstat(self, duration, delay=2):
 		throughput = utils.getIfStatThroughput(self.config.RUs[0].host, duration, delay=delay, verbose=self.options.verbose, interface='p2p1', dry=self.options.dry)
-		self.saveFEROLInfoSpace()
 		sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
 		with open(self._outputDir+'/server.csv', 'a') as outfile:
 			if self.options.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
@@ -525,12 +528,23 @@ class daq2Control(object):
 			outfile.write(', ')
 			outfile.write(str(throughput))
 			outfile.write('\n')
-	def saveFEROLInfoSpace(self):
-		url = 'http://%s:%d/urn:xdaq-application:lid=109' % (self.config.FEROLs[0].host, self.config.FEROLs[0].port)
-		print url
-		items = utils.loadMonitoringItemsFromURL(url)
-		bifi_fed0 = items["BIFI_FED0"] ##.split("&")[0]
-		print bifi_fed0
+	def saveFEROLInfoSpaces(self):
+		for frl in self.config.FEROLs:
+			outputfile = '%s/infospaces/%s_%d.json' % (self._outputDir, frl.name, self.currentFragSize)
+			self.saveFEROLInfoSpace(frl, outputfile)
+	def saveFEROLInfoSpace(self, host, outputfile):
+		url = 'http://%s:%d/urn:xdaq-application:lid=109' % (host.host, host.port)
+		if dry:
+			print 'curl -o', outputfile, url
+			return
+		else:
+			subprocess.check_call(['curl', '-o', outputfile, url])
+
+		# print url
+		# items = utils.loadMonitoringItemsFromURL(url)
+		# bifi_fed0 = items["BIFI_FED0"] ##.split("&")[0]
+		# print bifi_fed0
+
 
 	def webPingXDAQ(self):
 		print separator
