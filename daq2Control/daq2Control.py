@@ -290,6 +290,7 @@ class daq2Control(object):
 
 		## Enable FEROLs
 		self.sendCmdToFEROLs('Enable')
+		sleep(2, self.options.verbose, self.options.dry)
 
 		## Enable FMM:
 		if self.config.useGTPe and not len(self.config.eFEDs)>0:
@@ -298,11 +299,10 @@ class daq2Control(object):
 
 		## Enable GTPe:
 		if self.config.useGTPe:
-			gtpe = self.symbolMap('GTPe')
+			gtpe = self.symbolMap('GTPE0')
 			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
 
 		sleep(10, self.options.verbose, self.options.dry)
-
 
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
