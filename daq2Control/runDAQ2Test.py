@@ -34,7 +34,7 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 		## Wait for the full duration, then get all the results at once
 		sleep(options.duration,options.verbose,options.dry)
 		d2c.getResults()
-
+	d2c.saveFEROLInfoSpaces()
 	if options.waitBeforeStop: raw_input("Press Enter to stop the XDAQs...")
 
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)

@@ -260,6 +260,42 @@ class daq2Control(object):
 		if self.config.useGTPe:
 			self.sendCmdToGTPeFMM('Enable', invert=True)
 			sleep(10, self.options.verbose, self.options.dry)
+	def prepareOutputDir(self):
+		import glob
+		if not self.options.outputDir:
+			self._outputDir += self.config.testCase
+			if self.options.useLogNormal: self._outputDir += '_RMS_%3.1f' % float(self.options.relRMS)
+			if self.options.outputTag:    self._outputDir += '_'+self.options.outputTag
+		if not self._outputDir.endswith('/'): self._outputDir += '/'
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print 'Storing output in:', self._outputDir
+		if self.options.dry: return
+
+		## Create output directory
+		try:
+			os.makedirs(self._outputDir)
+		except OSError: ## dir exists, save previous measurements:
+			newdir = self._outputDir + 'previous/' + time.strftime('%b%d-%H%M%S')
+			os.makedirs(newdir)
+			if len(glob.glob(self._outputDir+'*.csv')) > 0:
+				subprocess.check_call(['mv'] + glob.glob(self._outputDir+'*.csv') + [newdir])
+			if os.path.exists(self._outputDir+'infospaces'): ## UNTESTED
+				subprocess.check_call(['mv', self._outputDir+'infospaces', newdir])
+
+		try:
+			os.makedirs(self._outputDir + "infospaces")
+		except OSError: pass ## dir exists already
+
+
+		## Prepare output file:
+		with open(self._outputDir+'/server.csv', 'a') as outfile:
+			outfile.write('## Testcase: %s\n' % self.config.testCase)
+			if self.options.useLogNormal: outfile.write('## useLogNormal = True, RMS = %5.2f\n' % float(self.options.relRMS) )
+			outfile.write('## %s\n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
+			outfile.write('\n##\n')
+			self.config.printHosts(out=outfile, prepend='## ')
+			outfile.write('\n\n')
+			outfile.close()
 
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
@@ -435,39 +471,6 @@ class daq2Control(object):
 
 		else: return
 
-	def prepareOutputDir(self):
-		import glob
-		if not self.options.outputDir:
-			self._outputDir += self.config.testCase
-			if self.options.useLogNormal: self._outputDir += '_RMS_%3.1f' % float(self.options.relRMS)
-			if self.options.outputTag:    self._outputDir += '_'+self.options.outputTag
-		if not self._outputDir.endswith('/'): self._outputDir += '/'
-		if self.options.verbose > 0: print separator
-		if self.options.verbose > 0: print 'Storing output in:', self._outputDir
-		if self.options.dry: return
-
-		## Create output directory
-		try:
-			os.makedirs(self._outputDir)
-			os.makedirs(self._outputDir + "infospaces")
-		except OSError: ## dir exists, save previous measurements:
-			newdir = self._outputDir + 'previous/' + time.strftime('%b%d-%H%M%S')
-			os.makedirs(newdir)
-			if len(glob.glob(self._outputDir+'*.csv')) > 0:
-				subprocess.check_call(['mv'] + glob.glob(self._outputDir+'*.csv') + [newdir])
-			if os.path.exists(self._outputDir+'infospaces': ## UNTESTED
-				subprocess.check_call(['mv', self._outputDir+'infospaces', newdir])
-
-		## Prepare output file:
-		with open(self._outputDir+'/server.csv', 'a') as outfile:
-			outfile.write('## Testcase: %s\n' % self.config.testCase)
-			if self.options.useLogNormal: outfile.write('## useLogNormal = True, RMS = %5.2f\n' % float(self.options.relRMS) )
-			outfile.write('## %s\n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
-			outfile.write('\n##\n')
-			self.config.printHosts(out=outfile, prepend='## ')
-			outfile.write('\n\n')
-			outfile.close()
-
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
@@ -518,7 +521,6 @@ class daq2Control(object):
 		else:
 			print "getResults() only works when running with the gevb2g, try getResultsEvB()"
 			return
-
 	def getResultsFromIfstat(self, duration, delay=2):
 		throughput = utils.getIfStatThroughput(self.config.RUs[0].host, duration, delay=delay, verbose=self.options.verbose, interface='p2p1', dry=self.options.dry)
 		sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
@@ -528,13 +530,14 @@ class daq2Control(object):
 			outfile.write(', ')
 			outfile.write(str(throughput))
 			outfile.write('\n')
+
 	def saveFEROLInfoSpaces(self):
 		for frl in self.config.FEROLs:
 			outputfile = '%s/infospaces/%s_%d.json' % (self._outputDir, frl.name, self.currentFragSize)
 			self.saveFEROLInfoSpace(frl, outputfile)
 	def saveFEROLInfoSpace(self, host, outputfile):
-		url = 'http://%s:%d/urn:xdaq-application:lid=109' % (host.host, host.port)
-		if dry:
+		url = 'http://%s:%d/urn:xdaq-application:lid=109/infospaces' % (host.host, host.port)
+		if self.options.dry:
 			print 'curl -o', outputfile, url
 			return
 		else:
@@ -544,7 +547,6 @@ class daq2Control(object):
 		# items = utils.loadMonitoringItemsFromURL(url)
 		# bifi_fed0 = items["BIFI_FED0"] ##.split("&")[0]
 		# print bifi_fed0
-
 
 	def webPingXDAQ(self):
 		print separator
