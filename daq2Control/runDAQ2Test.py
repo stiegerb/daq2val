@@ -3,48 +3,9 @@
 import daq2Utils as utils
 from daq2Control import daq2Control
 from daq2SymbolMap import daq2SymbolMap
-from daq2Utils import sleep, printError, printWarningWithWait, SIZE_LIMIT_TABLE
+from daq2Utils import sleep, printError, printWarningWithWait, getListOfSizes, testBuilding, SIZE_LIMIT_TABLE
 
 separator = 70*'-'
-
-def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
-	if verbose > 0: print separator
-	if verbose > 0: print 'Testing event building for', waittime, 'seconds...'
-	sleep(waittime, verbose, dry)
-	if dry: return True
-	eventCounter = []
-	for n,bu in enumerate(d2c.config.BUs):
-		if d2c.config.useEvB: nEvts = utils.getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt',  verbose=verbose, dry=dry)
-		else:                 nEvts = utils.getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong', verbose=verbose, dry=dry)
-		try:
-			eventCounter.append(int(nEvts))
-		except ValueError:
-			printError('Error getting number of events built. Message was:\n%s'%nEvts)
-			return False
-		if verbose > 1: print bu.name, 'number of events built: ', int(nEvts)
-	print separator
-
-	totEvents = 0
-	for evtCount in eventCounter:
-		if evtCount < minevents:
-			return False
-		else:
-			totEvents += evtCount
-	return True
-
-def getListOfSizes(maxSize, minSize=256, short=False):
-	stepsize = 256
-	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
-	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
-	# if short: allsteps = [1024, 16000]
-	if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16000]
-
-	steps = []
-	for step in allsteps:
-		if step >= minSize and step <= maxSize: steps.append(step)
-
-	print ' Will scan over the following sizes:', steps
-	return steps
 
 ## Run a single test
 def runTest(configfile, fragSize, options, relRMS=0.0):

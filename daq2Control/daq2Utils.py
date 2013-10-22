@@ -45,7 +45,19 @@ def checkScanLimit(scanlimit, mergingby):
 	except KeyError:
 		printWarningWithWait("Don't know scan limit for merging by %d. Continuing..." %mergingby, waittime=0)
 		return True
+def getListOfSizes(maxSize, minSize=256, short=False):
+	stepsize = 256
+	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
+	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
+	# if short: allsteps = [1024, 16000]
+	if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16000]
 
+	steps = []
+	for step in allsteps:
+		if step >= minSize and step <= maxSize: steps.append(step)
+
+	print ' Will scan over the following sizes:', steps
+	return steps
 def getSizeProfile(meansize, nstreams, profile):
 	if profile == 'flat':
 		return nstreams*[meansize]
@@ -97,6 +109,31 @@ def getSizeProfile(meansize, nstreams, profile):
 		return [spikesize]+(nstreams-1)/2*[pedestalsize] + [spikesize]+(nstreams-1)/2*[pedestalsize]
 	else:
 		raise RuntimeError("Unknown size profile!")
+
+def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
+	if verbose > 0: print separator
+	if verbose > 0: print 'Testing event building for', waittime, 'seconds...'
+	sleep(waittime, verbose, dry)
+	if dry: return True
+	eventCounter = []
+	for n,bu in enumerate(d2c.config.BUs):
+		if d2c.config.useEvB: nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt',  verbose=verbose, dry=dry)
+		else:                 nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong', verbose=verbose, dry=dry)
+		try:
+			eventCounter.append(int(nEvts))
+		except ValueError:
+			printError('Error getting number of events built. Message was:\n%s'%nEvts)
+			return False
+		if verbose > 1: print bu.name, 'number of events built: ', int(nEvts)
+	print separator
+
+	totEvents = 0
+	for evtCount in eventCounter:
+		if evtCount < minevents:
+			return False
+		else:
+			totEvents += evtCount
+	return True
 
 def sendSOAPMessage(host, port, message, command):
 	"""Sends a SOAP message via curl, where message could be
