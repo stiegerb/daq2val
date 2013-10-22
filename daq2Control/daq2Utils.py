@@ -45,19 +45,6 @@ def checkScanLimit(scanlimit, mergingby):
 	except KeyError:
 		printWarningWithWait("Don't know scan limit for merging by %d. Continuing..." %mergingby, waittime=0)
 		return True
-def getListOfSizes(maxSize, minSize=256, short=False):
-	stepsize = 256
-	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
-	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
-	# if short: allsteps = [1024, 16000]
-	if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16000]
-
-	steps = []
-	for step in allsteps:
-		if step >= minSize and step <= maxSize: steps.append(step)
-
-	print ' Will scan over the following sizes:', steps
-	return steps
 def getSizeProfile(meansize, nstreams, profile):
 	if profile == 'flat':
 		return nstreams*[meansize]
