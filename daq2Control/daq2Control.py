@@ -283,6 +283,7 @@ class daq2Control(object):
 
 		## Enable FMM and eFEDs:
 		if len(self.config.eFEDs)>0:
+			fmm = self.symbolMap('FMM0')
 			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
 			self.sendCmdToEFEDs('Enable')
 			## Don't need to enable GTPe when running with eFEDs?
@@ -290,10 +291,18 @@ class daq2Control(object):
 		## Enable FEROLs
 		self.sendCmdToFEROLs('Enable')
 
-		## Enable FMM and GTPe:
+		## Enable FMM:
 		if self.config.useGTPe and not len(self.config.eFEDs)>0:
-			self.sendCmdToGTPeFMM('Enable', invert=True)
+			fmm = self.symbolMap('FMM0')
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+
+		## Enable GTPe:
+		if self.config.useGTPe:
+			gtpe = self.symbolMap('GTPe')
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+
 		sleep(10, self.options.verbose, self.options.dry)
+
 
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## This is supposed to work both for eFEROLs and FEROLS!
@@ -320,6 +329,8 @@ class daq2Control(object):
 				raise e
 
 			self.sendCmdToEFEDs('Configure')
+			self.sendCmdToFEROLs('Configure')
+			sleep(5, self.options.verbose, self.options.dry)
 
 			try:
 				fmm = self.symbolMap('FMM0')
