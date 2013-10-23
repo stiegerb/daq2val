@@ -37,11 +37,6 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 	d2c.saveFEROLInfoSpaces()
 	if options.waitBeforeStop: raw_input("Press Enter to stop the XDAQs...")
 
-	if d2c.config.useGTPe:
-		print "Pausing GTPe first..."
-		gtpe = d2c.symbolMap('GTPE0')
-		sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
-
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	print separator
 	print ' DONE '
@@ -51,6 +46,28 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 ######################################################################
 ## main
 def addOptions(parser):
+	## Common options:
+	parser.add_option("-d", "--duration", default=120,   action="store", type="int", dest="duration",    help="Duration of a single step in seconds, [default: %default s]")
+	parser.add_option("--useRate",        default=0,     action="store", type="int", dest="useRate",     help="Event rate in kHz, [default is maximum rate]")
+	parser.add_option("--testTime",       default=10,    action="store", type="int", dest="testTime",    help="Time for which event building is tested before starting, [default is %default]")
+	parser.add_option("--dropAtRU",       default=False, action="store_true",        dest="dropAtRU",    help="Run with dropping the fragments at the RU without building. (Use with --useIfstat to get throughput)")
+	parser.add_option("--useIfstat",      default=False, action="store_true",        dest="useIfstat",   help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
+
+	parser.add_option("--sizeProfile",    default='flat',action="store", type='string', dest="sizeProfile",    help="Use different sizes for different streams, can be either 'flat', 'spike', 'sawtooth', or 'doublespike'")
+	parser.add_option("--profilePerFRL",  default=False, action="store_true",           dest="profilePerFRL",  help="Apply the chosen size profile per FEROL instead of over all FEROLs")
+
+	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap", help="Use a symbolmap different from the one set in the environment")
+	parser.add_option("-o", "--outputDir", default='', action="store", type="string", dest="outputDir", help="Where to store the output. Default is in test/cases/[e]FEROLs/EvB[gevb2g]/casename")
+	parser.add_option("-t", "--outputTag", default='', action="store", type="string", dest="outputTag", help="Attach a tag after the standard output dir")
+
+	## Debugging options:
+	parser.add_option("--dry",                  default=False, action="store_true",        dest="dry",            help="Just print the commands without sending anything")
+	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true",        dest="waitBeforeStop", help="For for key press before stopping the event building")
+	parser.add_option("-v", "--verbose",        default=1,     action="store", type='int', dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
+
+
+if __name__ == "__main__":
+	from optparse import OptionParser
 	usage = """
 	%prog [options] --start config.xml fragsize
 	%prog [options] --changeSize config.xml newfragsize
@@ -64,39 +81,13 @@ def addOptions(parser):
 	%prog [options] --runTest ~/andrea_test/cases/eFEROLs/gevb2g/dummyFerol/16x2x2/configuration.template.xml 1024 0.5
 	%prog [options] --runTest --useRate 100 config.template.xml 1024 0.5
 	"""
+	parser = OptionParser()
 	parser.usage = usage
-
-	## Standard interface:
-	parser.add_option("--runTest",        default=False, action="store_true", dest="runTest",            help="Run a test setup, needs two arguments: config and fragment size")
-
-	parser.add_option("-d", "--duration", default=120,   action="store", type="int", dest="duration",    help="Duration of a single step in seconds, [default: %default s]")
-	parser.add_option("--useRate",        default=0,     action="store", type="int", dest="useRate",     help="Event rate in kHz, [default is maximum rate]")
-	parser.add_option("--testTime",       default=10,    action="store", type="int", dest="testTime",    help="Time for which event building is tested before starting, [default is %default]")
-	parser.add_option("--stopRestart",    default=True,  action="store_true",        dest="stopRestart", help="Stop XDAQ processes after each size and restart instead of changing the size on the fly (only relevant for scans)")
-	parser.add_option("--dropAtRU",       default=False, action="store_true",        dest="dropAtRU",    help="Run with dropping the fragments at the RU without building. (Use with --useIfstat to get throughput)")
-	parser.add_option("--useIfstat",      default=False, action="store_true",        dest="useIfstat",   help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
-
-	parser.add_option("--sizeProfile",    default='flat',action="store", type='string', dest="sizeProfile",    help="Use different sizes for different streams, can be either 'flat', 'spike', 'sawtooth', or 'doublespike'")
-	parser.add_option("--profilePerFRL",  default=False, action="store_true",           dest="profilePerFRL",  help="Apply the chosen size profile per FEROL instead of over all FEROLs")
-
-	## Debugging options:
-	parser.add_option("--dry",                  default=False, action="store_true",        dest="dry",            help="Just print the commands without sending anything")
-	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true",        dest="waitBeforeStop", help="For for key press before stopping the event building")
-	parser.add_option("-v", "--verbose",        default=1,     action="store", type='int', dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
-
-	## Control:
+	addOptions(parser)
+	parser.add_option("--runTest",    default=False, action="store_true", dest="runTest",    help="Run a test setup, needs two arguments: config and fragment size")
 	parser.add_option("--start",      default=False, action="store_true", dest="start",      help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
 	parser.add_option("--changeSize", default=False, action="store_true", dest="changeSize", help="Halt, change size and resume. Needs config and new size as arguments.")
 	parser.add_option("--stop",       default=False, action="store_true", dest="stop",       help="Stop all the XDAQ processes and exit")
-
-	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap", help="Use a symbolmap different from the one set in the environment")
-	parser.add_option("-o", "--outputDir", default='', action="store", type="string", dest="outputDir", help="Where to store the output. Default is in test/cases/[e]FEROLs/EvB[gevb2g]/casename")
-	parser.add_option("-t", "--outputTag", default='', action="store", type="string", dest="outputTag", help="Attach a tag after the standard output dir")
-
-if __name__ == "__main__":
-	from optparse import OptionParser
-	parser = OptionParser()
-	addOptions(parser)
 	(options, args) = parser.parse_args()
 
 	if options.useRate == 0: options.useRate = 'max'
