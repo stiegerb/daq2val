@@ -229,11 +229,6 @@ def stopXDAQ(host, verbose=0, dry=False):
 
 	iterations = 0
 	while tryWebPing(host.host, host.port) == 0:
-		if 'GTPE' in host.type:
-			print "Pausing GTPe first..."
-			sendSimpleCmdToApp(host.host, host.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
-			sleep(2, verbose=0, dry=dry)
-
 		sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ', verbose=verbose, dry=dry)
 		iterations += 1
 		if iterations > 1:
@@ -243,9 +238,22 @@ def stopXDAQs(symbolMap, verbose=0, dry=False):
 	"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
 	if verbose > 0: print separator
 	if verbose > 0: print "Stopping XDAQs"
+	pauseGTPe(symbolMap, verbose=verbose, dry=dry)
 	from multiprocessing import Pool
 	pool = Pool(len(symbolMap.allHosts))
 	pool.map(stopXDAQPacked	, [(h, verbose, dry) for h in symbolMap.allHosts])
+def pauseGTPe(symbolMap, verbose=0, dry=False):
+	if dry: return
+	try:
+		gtpe = symbolMap("GTPE0")
+		if tryWebPing(gtpe.host, gtpe.port) == 0:
+			if verbose>1: print 'Trying to pause GTPe.'
+			sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
+			sleep(2, verbose=0, dry=dry)
+		else:
+			if verbose>1: print 'GTPe not running.'
+	except KeyError: ## no GTPe defined in symbolmap
+		pass
 
 ## Wrappers for existing perl scripts
 def sendSimpleCmdToAppPacked(packedargs):
