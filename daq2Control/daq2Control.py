@@ -101,12 +101,12 @@ class daq2Control(object):
 	def sendCmdToFEROLs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for frl in self.config.FEROLs:
-			utils.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd)
+			utils.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd, verbose=self.options.verbose, dry=self.options.dry)
 	def sendCmdToEFEDs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for efed in self.config.eFEDs:
 			for instance,_ in efed.streams:
-				utils.sendSimpleCmdToApp(efed.host, efed.port, 'd2s::FEDEmulator', instance, cmd)
+				utils.sendSimpleCmdToApp(efed.host, efed.port, 'd2s::FEDEmulator', instance, cmd, verbose=self.options.verbose, dry=self.options.dry)
 	def sendCmdToGTPeFMM(self, cmd, invert=False):
 		try:
 			gtpe = self.symbolMap('GTPE0')
