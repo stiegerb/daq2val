@@ -38,33 +38,36 @@ def getConfig(string):
 				rms = None
 
 	return nstreams, nrus, nbus, rms, strperfrl
-def fillTreeForDir(treefile, subdir, files):
-	if options.verbose > 0: print "  ... processing", subdir
-	if not 'server.csv' in files: return
+def processFile(filename, config):
+	from numpy import mean, std
+	f = open(filename,'r')
+	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
 
-	nstreams, nrus, nbus, rms, strperfrl = getConfig(subdir.split('/').pop())
-	if options.verbose > 1:
-		feedback = "    with %2s streams, %1d readout units, and %1d builder units." % (nstreams, nrus, nbus)
-		if rms is not None: feedback += " RMS is %4.2f" % rms
-		print feedback
+	data = []
+	nstreams, nrus, nbus, rms, strperfrl = config
+	for line in f:
+		if len(line.strip()) == 0 or line.strip()[0] == '#': continue
+		spline = line.replace("\n","").split(",")
 
-	fillTree(subdir+'/server.csv', treefile, subdir, nstreams, nbus, nrus, rms, doCleaning=options.doCleaning)
-	if options.doCleaning:
-		cleanFile(subdir+'/server.csv')
+		rate = map(lambda x: int(float(x)), spline[1:])
+		eventsize = int(spline[0]) ## convert already to fragment size and throughput per RU
+		fragsize = eventsize/nstreams
+		sufragsize = eventsize/nrus
+		data.append((fragsize, sufragsize*mean(rate)/1e6, sufragsize*std(rate)/1e6))
 
-	return None
-def processDirs(directory):
-	if not os.path.isdir(directory):
-		print directory, "is not a directory."
-		return
-
-	treefile = directory.strip('/')+'.root'
-	if options.outputName != 'plot.pdf':
-		treefile = options.outputName
-
-	os.path.walk(directory, fillTreeForDir, treefile)
-
-	return None
+	f.close()
+	return data
+def extractDate(filename):
+	with open(filename, 'r') as f:
+		for line in f:
+			if line.startswith('## Testcase:'): continue
+			if line.startswith('## useLogNormal'): continue
+			if len(line.split(' ')) == 0: return (0,0,0)
+			data = line.split(' ')
+			if data[0] != '##': continue
+			mon, day, year = (data[2],data[3][:-1],data[4])
+			return int(day), int(months_toint[mon]), int(year)
+		return (0,0,0)
 
 ##---------------------------------------------------------------------------------
 ## Cleaning of outliers in a data set
@@ -143,180 +146,25 @@ def cleanFilesInDir(subdir):
 	cleanFile(subdir+'/server.csv')
 
 ##---------------------------------------------------------------------------------
-## Storing information in a ROOT tree for later plotting
-##  (this is where the meat is)
-def extractDate(filename):
-	with open(filename, 'r') as f:
-		for line in f:
-			if line.startswith('## Testcase:'): continue
-			if line.startswith('## useLogNormal'): continue
-			if len(line.split(' ')) == 0: return (0,0,0)
-			data = line.split(' ')
-			if data[0] != '##': continue
-			mon, day, year = (data[2],data[3][:-1],data[4])
-			return int(day), int(months_toint[mon]), int(year)
-		return (0,0,0)
-def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfragsize=256, doCleaning=False):
-	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
-	from array import array
-	from numpy import mean,std
-	from math import sqrt
-	from logNormalTest import averageFractionSize
-
-	f = open(filename,'r')
-	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
-
-
-	## Process .csv file first
-	data = {} ## store everything in this dictionary of size -> rate
-	for line in f:
-		if len(line.strip()) == 0 or line.strip()[0] == '#': continue
-		spline = line.replace("\n","").split(",")
-
-		rate = map(lambda x: int(float(x)), spline[1:])
-		if doCleaning: rate = metaCleaning(rate)
-
-		if int(spline[0]) not in data.keys():
-			data[int(spline[0])] = rate
-		else:
-			prev_rate = data[int(spline[0])]
-			if len(rate) > len(prev_rate):
-				rate = rate[:len(prev_rate)]
-			if len(rate) < len(prev_rate):
-				prev_rate = prev_rate[:len(rate)]
-			data[int(spline[0])] = map(lambda a,b:a+b, prev_rate, rate)
-
-
-	of = TFile(treefile, 'update')
-	if not of.GetDirectory(dirname):
-		of.mkdir(dirname)
-	of.cd(dirname)
-
-	t = TTree('t', 'daq2val tree')
-
-	fragsize    = array('f', [0])
-	sufragsize  = array('f', [0])
-	throughput  = array('f', [0])
-	throughputE = array('f', [0])
-	avrate      = array('f', [0])
-	stdrate     = array('f', [0])
-	nfes        = array('i', [0])
-	nbus        = array('i', [0])
-	nrus        = array('i', [0])
-
-	day         = array('i', [0])
-	month       = array('i', [0])
-	year        = array('i', [0])
-
-	t.Branch('FragSize',    fragsize,    'FragSize/F')
-	t.Branch('SuFragSize',  sufragsize,  'SuFragSize/F')
-	t.Branch('AvRate',      avrate,      'AvRate/F')
-	t.Branch('SigmaRate',   stdrate,     'SigmaRate/F')
-	t.Branch('ThroughPut',  throughput,  'ThroughPut/F')
-	t.Branch('ThroughPutE', throughputE, 'ThroughPutE/F')
-	t.Branch('nFEROLs',     nfes,        'nFEROLs/I')
-	t.Branch('nBUs',        nbus,        'nBUs/I')
-	t.Branch('nRUs',        nrus,        'nRUs/I')
-
-	t.Branch('day',         day  ,       'day/I')
-	t.Branch('month',       month,       'month/I')
-	t.Branch('year',        year ,       'year/I')
-
-	nfes[0] = nStreams
-	nbus[0] = nBus
-	nrus[0] = nRus
-
-	day[0], month[0], year[0] = extractDate(filename)
-
-	output_case = 0 ## 0 (fragsize), 1 (superfragsize), 2 (eventsize)
-	checked = False
-
-	# LOWERLIMIT=32
-	LOWERLIMIT=24
-	UPPERLIMIT=16000
-	if nStreams/nRus==4:  UPPERLIMIT = 64000 ## This is only true for eFEROLs!
-	if nStreams/nRus==8:  UPPERLIMIT = 32000
-	if nStreams/nRus==12: UPPERLIMIT = 21000
-	if nStreams/nRus==16: UPPERLIMIT = 16000
-	if nStreams/nRus==24: UPPERLIMIT = 10000
-
-	##################################################
-	## Fuckups:
-	if 'Aug25' in dirname and nStreams/nRus==24: UPPERLIMIT = 21000
-	##################################################
-
-	if options.verbose > 4: print 'UPPERLIMIT is ', UPPERLIMIT
-
-	for size in sorted(data.keys()):
-		if abs(mean(data[size])) < 0.01 and abs(std(data[size])) < 0.01: continue ## skip empty lines
-
-		## Determine what the first item in the server.csv file stands for
-		if not checked: ## only do this for the first time
-			checked = True
-			if   int(size)//startfragsize == 1:             output_case = 0
-			elif int(size)//startfragsize == nStreams/nRus: output_case = 1
-			elif int(size)//startfragsize == nStreams:      output_case = 2
-			else:                                           output_case = 1 ## default
-
-		## Extract event size
-		if output_case == 0: ## fragment size
-			eventsize = float(size)*nStreams
-		if output_case == 1: ## superfragment size
-			eventsize = float(size)*nRus
-		if output_case == 2: ## event size
-			eventsize = float(size)
-
-		## Calculate fragment and super fragment sizes
-		fragsize[0]    = eventsize/nStreams
-		sufragsize[0]  = eventsize/nRus
-		if rms is not None and rms != 0.0:
-			fragsize[0] = averageFractionSize(eventsize/nStreams, rms*eventsize/nStreams, LOWERLIMIT, UPPERLIMIT)
-			sufragsize[0] = fragsize[0]*nStreams/nRus
-
-		## Calculate rate
-		avrate[0]      = mean(data[size])
-		stdrate[0]     = std(data[size])
-		throughput[0]  = sufragsize[0]*avrate[0]/1e6 ## in MB/s
-		throughputE[0] = sufragsize[0]*stdrate[0]/1e6
-
-		t.Fill()
-
-	of.Write()
-	of.Close()
-	f.close()
-
-##---------------------------------------------------------------------------------
 ## Plotting and printing
-def printTable(filename, case):
-	from ROOT import TFile, TTree, gDirectory
+def printTable(filename):
+	## Loop on the tree
+	casestring = os.path.dirname(filename).split('/')[-1]
+	config = getConfig(casestring)
+	nstreams, nrus, nbus, rms, strperfrl = config
+	data = processFile(filename, config)
+	print "--------------------------------------------------------------------------------------"
+	print "Case: " + casestring
+	print "--------------------------------------------------------------------------------------"
+	print "Superfrag. Size (B) : Fragment Size (B) : Av. Throughput (MB/s) :       Av. Rate     :"
+	print "--------------------------------------------------------------------------------------"
+	for	fragsize,tp,tpE in data:
+		sufragsize = fragsize*nstreams/nrus
+		print "             %6d :            %6d :      %6.1f +- %6.1f :  %8.1f +- %6.1f" % \
+		(sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize)
 
-	f = TFile(filename)
-	if not f.IsOpen(): raise RuntimeError, "Cannot open "+filename+"\n"
-	treeloc = case+"/t"
-	try:
-		t = gDirectory.Get(treeloc)
+	print "--------------------------------------------------------------------------------------"
 
-		entries = t.GetEntriesFast()
-
-		## Loop on the tree
-		print "--------------------------------------------------------------------------------------"
-		print "Case: " + case
-		print "--------------------------------------------------------------------------------------"
-		print "Superfrag. Size (B) : Fragment Size (B) : Av. Throughput (MB/s) :       Av. Rate     :"
-		print "--------------------------------------------------------------------------------------"
-		for	jentry in xrange(entries):
-			if t.GetEntry(jentry) <= 0: continue
-			# if t.BU+1==t.nBUs: ## Only check the sums
-				# deltaTP =
-			print "             %6d :            %6d :      %6.1f +- %6.1f :  %8.1f +- %6.1f" % \
-			(t.SuFragSize, t.FragSize, t.ThroughPut, t.ThroughPutE, t.AvRate, t.SigmaRate)
-
-		print "--------------------------------------------------------------------------------------"
-	except AttributeError as e:
-		print "Didn't find tree", treeloc, "in file", filename
-		raise e
-
-	f.Close()
 def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, logx=True, logy=False, tag='', legends=[], makePNGs=True, rate=100):
 	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TPaveText
 	from operator import itemgetter
@@ -596,28 +444,17 @@ if __name__ == "__main__":
 		makeDAQ1vsDAQ2Plot(args[0], args[1])
 		exit(0)
 
-	## Argument is a directory
-	if len(args) > 0 and os.path.isdir(args[0]):
-		processDirs(args[0])
-		exit(0)
-
-	## Argument is a root file
-	if len(args) > 1 and os.path.isfile(args[0]) and os.path.splitext(args[0])[1] == '.root':
-		if options.print_table:
-			printTable(args[0], args[1])
-			exit(0)
-		else:
-			makeMultiPlot(args[0], args[1:], rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), frag=options.frag, oname=options.outputName, logx=options.logx, logy=options.logy, rate=options.rate)
-			exit(0)
+	# if len(args) > 1 and os.path.isfile(args[0]) and os.path.splitext(args[0])[1] == '.root':
+	# 	if options.print_table:
+	# 		printTable(args[0], args[1])
+	# 		exit(0)
+	# 	else:
+	# 		makeMultiPlot(args[0], args[1:], rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), frag=options.frag, oname=options.outputName, logx=options.logx, logy=options.logy, rate=options.rate)
+	# 		exit(0)
 
 	## Argument is a csv file
 	if len(args) > 0 and os.path.isfile(args[0]) and os.path.splitext(args[0])[1] == '.csv':
-		if options.doCleaning:
-			cleanFile(args[0])
-			exit(0)
-		else:
-			parser.print_help()
-			exit(-1)
+		printTable(args[0])
 
 	else:
 		parser.print_help()
