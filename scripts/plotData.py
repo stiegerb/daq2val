@@ -80,8 +80,8 @@ def cleanData(data, step=1, length=4, cutoff=3, quality=0.05):
 	try:
 		# while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality and pos+length < len(data):
 		while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality and pos+length < len(data):
-			if options.verbose > 4: print stretch
-			if options.verbose > 4: print pos, pos+length, std(stretch)/mean(stretch)
+			if args.verbose > 4: print stretch
+			if args.verbose > 4: print pos, pos+length, std(stretch)/mean(stretch)
 			pos += step
 			stretch = data[pos:length+pos]
 	except FloatingPointError, KeyError:
@@ -216,14 +216,14 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	datepave = drawDate(filelist[0])
 	datepave.Draw()
 
-	# if options.daq1:
+	# if args.daq1:
 	# 	daq1_graph = getDAQ1Graph()
 
 	configs = sorted(configs, key=itemgetter(0))
 	nlegentries = len(filelist)
-	# nlegentries = len(caselist) if not options.daq1 else len(caselist) + 1
+	# nlegentries = len(caselist) if not args.daq1 else len(caselist) + 1
 	legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
-	# if options.legendPos == 'TL':
+	# if args.legendPos == 'TL':
 	# 	legendpos = (0.12, 0.82-nlegentries*0.05, 0.579, 0.898)
 	# 	# legendpos = (0.12, 0.71-nlegentries*0.05, 0.579, 0.78)
 	leg = TLegend(legendpos[0], legendpos[1], legendpos[2], legendpos[3])
@@ -248,11 +248,11 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 			leg.AddEntry(graph, legends[n], 'P')
 		else: ## Default
 			leg.AddEntry(graph, caselist[n], 'P')
-		# if options.daq1:
+		# if args.daq1:
 		# 	leg.AddEntry(daq1_graph, 'DAQ1 (2011)', 'P')
 		graph.Draw("PL")
 
-	# if options.daq1:
+	# if args.daq1:
 	# 	daq1_graph.Draw("PL")
 
 	for n,c in enumerate(configs):
@@ -268,8 +268,8 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 
 	canv.Print(oname + '.pdf')
 	if makePNGs:  canv.Print(oname + '.png')
-	# if options.makePNGs:  canv.Print(oname + '.png')
-	# if options.makeCFile: canv.SaveAs(oname + '.C')
+	# if args.makePNGs:  canv.Print(oname + '.png')
+	# if args.makeCFile: canv.SaveAs(oname + '.C')
 def getRateGraph(nStreams=4, frag=False, xmax=100000, rate=100):
 	'''Returns a TF1 object corresponding to the average throughput at the RU
 	necessary for a 100kHz rate of events of a given (super)fragment size '''
@@ -320,42 +320,25 @@ def drawDate(filename):
 ##---------------------------------------------------------------------------------
 ## User interface
 def addPlottingOptions(parser):
-	usage = """
+	# parser.usage = usage
+	parser.add_argument("-o", "--outputName", default="plot.pdf", action="store",  type=str, dest="outputName",        help="File for plot output [default: %(default)s]")
+	parser.add_argument("-t", "--tag",        default="",         action="store",  type=str, dest="tag",               help="Title tag in plot canvas")
+	parser.add_argument("--outdir",           default="",         action="store",  type=str, dest="outdir",            help="Output directory for the plots [default: %(default)s]")
+	parser.add_argument('--legend',           default=[],         action="append", type=str, dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
 
-	First produce the ROOT file with tree from csv files with:
-		%prog [options] path/to/directory/
-	where directory contains subdirectories of cases.
-	If --doCleaning is given, the data is cleaned, and a cleaned .csv file is produced.
-	Afterwards, produce plots with:
-		%prog [options] path/to/file.root case1 case2 case3
-	or print a table to stdout with:
-		%prog [options] --print path/to/file.root case
+	parser.add_argument("-v", "--verbose", default="1",   action="store", type=int,   dest="verbose", help="Verbose level [default: %(default)s (semi-quiet)]")
+	parser.add_argument("-r", "--rate",    default="100", action="store", type=float, dest="rate",    help="Verbose level [Rate in kHz to be displayed on the plot: %(default)s kHz]")
 
-	Cases can be referred to by the path to the directory which contains the ROOT file,
-	e.g. data/Aug7/eFEROLs/EvB/32x2x4_RMS_0.5_useLogNormal_true
-	I tested until up to four cases per plot.
-	"""
+	parser.add_argument("--miny",   default="0",     action="store", type=float, dest="miny",   help="Y axis range, minimum")
+	parser.add_argument("--maxy",   default="5500",  action="store", type=float, dest="maxy",   help="Y axis range, maximum")
+	parser.add_argument("--minx",   default="250",   action="store", type=float, dest="minx",   help="X axis range, minimum")
+	parser.add_argument("--maxx",   default="17000", action="store", type=float, dest="maxx",   help="X axis range, maximum")
+	parser.add_argument("--nologx", default=False,   action="store_true",          dest="nologx", help="Do not use logarithmic scale on x axis")
+	parser.add_argument("--logy",   default=False,   action="store_true",          dest="logy",   help="Use logarithmic scale on y axis")
 
-	parser.usage = usage
-	parser.add_option("-d", "--dir",        default="data/",    action="store",  type="string", dest="dir",             help="Input directory containing subdirectories with server.csv files [default: %default]")
-	parser.add_option("-o", "--outputName", default="plot.pdf", action="store",  type="string", dest="outputName",      help="File for plot output [default: %default]")
-	parser.add_option("-t", "--tag",        default="",         action="store",  type="string", dest="tag",             help="Title tag in plot canvas")
-	parser.add_option("--outdir",           default="",         action="store",  type="string", dest="outdir",          help="Output directory for the plots [default: %default]")
-	# parser.add_option('--legend',           default=[],         action="append", type="string", dest="legend", nargs=*, help='Give a list of custom legend entries to be used')
-
-	parser.add_option("-v", "--verbose", default="1", action="store", type="int", dest="verbose", help="Verbose level [default: %default (semi-quiet)]")
-	parser.add_option("-r", "--rate", default="100", action="store", type="float", dest="rate", help="Verbose level [Rate in kHz to be displayed on the plot: %default kHz]")
-
-	parser.add_option("--miny",   default="0",     action="store", type="float", dest="miny",   help="Y axis range, minimum")
-	parser.add_option("--maxy",   default="5500",  action="store", type="float", dest="maxy",   help="Y axis range, maximum")
-	parser.add_option("--minx",   default="250",   action="store", type="float", dest="minx",   help="X axis range, minimum")
-	parser.add_option("--maxx",   default="17000", action="store", type="float", dest="maxx",   help="X axis range, maximum")
-	parser.add_option("--nologx", default=False,   action="store_true",          dest="nologx", help="Do not use logarithmic scale on x axis")
-	parser.add_option("--logy",   default=False,   action="store_true",          dest="logy",   help="Use logarithmic scale on y axis")
-
-	# parser.add_option("--legendPos", default="BR", action="store", type="string", dest="legendPos", help="Position for legend, either 'TL' (top left), 'TR' (top right), 'BL' (bottom left), 'BR'  (bottom right) [default: %default]")
-	# parser.add_option("--makePNGs", default=True, action="store_true", dest="makePNGs", help="Produce also .png file")
-	# parser.add_option("--makeCFile", default=True, action="store_true", dest="makeCFile", help="Produce also .C file")
+	# parser.add_argument("--legendPos", default="BR", action="store", type=str, dest="legendPos", help="Position for legend, either 'TL' (top left), 'TR' (top right), 'BL' (bottom left), 'BR'  (bottom right) [default: %(default)s]")
+	# parser.add_argument("--makePNGs", default=True, action="store_true", dest="makePNGs", help="Produce also .png file")
+	# parser.add_argument("--makeCFile", default=True, action="store_true", dest="makeCFile", help="Produce also .C file")
 
 def buildFileList(inputlist):
 	filelist = []
@@ -371,17 +354,32 @@ def buildFileList(inputlist):
 	else: return filelist
 
 if __name__ == "__main__":
-	from optparse import OptionParser
-	parser = OptionParser()
+	usage = """
+	First produce the ROOT file with tree from csv files with:
+		%(prog)s [options] path/to/directory/
+	where directory contains subdirectories of cases.
+	If --doCleaning is given, the data is cleaned, and a cleaned .csv file is produced.
+	Afterwards, produce plots with:
+		%(prog)s [options] path/to/file.root case1 case2 case3
+	or print a table to stdout with:
+		%(prog)s [options] --print path/to/file.root case
+
+	Cases can be referred to by the path to the directory which contains the ROOT file,
+	e.g. data/Aug7/eFEROLs/EvB/32x2x4_RMS_0.5_useLogNormal_true
+	I tested until up to four cases per plot.
+	"""
+	from argparse import ArgumentParser
+	parser = ArgumentParser(usage)
 	addPlottingOptions(parser)
-	(options, args) = parser.parse_args()
+	parser.add_argument("inputlist", metavar='file_or_dir', type=str, nargs='+', help='The .csv files or directories (containing .csv files) to be plotted.')
+	args = parser.parse_args()
 
 	## Argument is a csv file
-	if len(args) > 0:
-		filelist = buildFileList(args)
+	if len(args.inputlist) > 0:
+		filelist = buildFileList(args.inputlist)
 		for filename in filelist: printTable(filename)
-		if options.outdir: options.outputName = options.outdir + '/' + options.outputName
-		makeMultiPlot(filelist, rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), tag=options.tag, frag=True, oname=options.outputName, nologx=options.nologx, logy=options.logy, rate=options.rate)
+		if args.outdir: args.outputName = args.outdir + '/' + args.outputName
+		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, legends=args.legend[0], frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
 		exit(0)
 
 	parser.print_help()
