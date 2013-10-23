@@ -66,82 +66,6 @@ def extractDate(filename):
 		return (0,0,0)
 
 ##---------------------------------------------------------------------------------
-## Cleaning of outliers in a data set
-def cleanData(data, step=1, length=4, cutoff=3, quality=0.05):
-	from numpy import mean,std,seterr
-	# 1. find a stretch of data where the std is less than X% of the mean, store that mean/std
-	# 2. loop on the data and replace values more than 10% off with the mean of the clean stretch
-	seterr(invalid='raise')
-	found_clean_stretch = False
-
-	if mean(data) < 0.01 or std(data)/mean(data) < quality: return data
-
-	pos, stretch = 0, data[:length]
-	try:
-		# while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality and pos+length < len(data):
-		while mean(stretch) == 0 or mean(stretch) > 0 and std(stretch)/mean(stretch) > quality and pos+length < len(data):
-			if args.verbose > 4: print stretch
-			if args.verbose > 4: print pos, pos+length, std(stretch)/mean(stretch)
-			pos += step
-			stretch = data[pos:length+pos]
-	except FloatingPointError, KeyError:
-		# print "Didn't find a clean stretch in:"
-		# print data
-		return data
-
-	if not std(stretch)/mean(stretch) <= quality: return data
-
-	clean_data = []
-	for r in data:
-		if abs(r-mean(stretch)) > cutoff*std(stretch):
-			clean_data.append(mean(stretch))
-		else: clean_data.append(r)
-
-	return clean_data
-def metaCleaning(data, maxlength=15, minlength=4, cutoff=3, quality=0.05):
-	from numpy import mean,std,seterr
-
-	## Skip empty data:
-	if abs(mean(data)) < 0.01 and abs(std(data)) < 0.01: return data
-
-	seterr(invalid='raise')
-	length = maxlength
-
-	try:
-		while std(data)/mean(data) > quality and length >= minlength:
-			data = cleanData(data, step=1, length=length, cutoff=cutoff, quality=quality)
-			length -= 1
-
-	except FloatingPointError, KeyError:
-		print "Didn't find a clean stretch in:", data
-		return data
-	return data
-def cleanFile(filename):
-	with open(filename, 'r') as f, open(filename.replace('.csv','')+'_clean.csv', 'w') as o:
-		for line in f:
-			if len(line.strip()) == 0 or line.strip()[0] == '#':
-				o.write(line)
-				continue
-			spline = line.strip('\n').split(',')
-			data = map(lambda x: int(float(x)), spline[1:])
-			o.write(spline[0])
-			o.write(',')
-			cleandata = metaCleaning(data)
-			# cleandata = cleanData(data)
-			cleandata = map(int, cleandata)
-			newline = reduce(lambda x,y: str(x)+','+str(y), cleandata)
-			o.write(newline)
-			o.write('\n')
-		f.close()
-		o.close()
-def cleanFilesInDir(subdir):
-	if not os.path.isdir(subdir): return
-	if not os.path.exists(subdir+'/server.csv'):
-		print "  could not locate", directory+subdir+'/server.csv', "... skipping"
-		return
-	cleanFile(subdir+'/server.csv')
-
-##---------------------------------------------------------------------------------
 ## Plotting and printing
 def printTable(filename):
 	casestring = os.path.dirname(filename).split('/')[-1]
@@ -321,13 +245,12 @@ def drawDate(filename):
 ## User interface
 def addPlottingOptions(parser):
 	# parser.usage = usage
-	parser.add_argument("-o", "--outputName", default="plot.pdf", action="store",  type=str, dest="outputName",        help="File for plot output [default: %(default)s]")
-	parser.add_argument("-t", "--tag",        default="",         action="store",  type=str, dest="tag",               help="Title tag in plot canvas")
-	parser.add_argument("--outdir",           default="",         action="store",  type=str, dest="outdir",            help="Output directory for the plots [default: %(default)s]")
-	parser.add_argument('--legend',           default=[],         action="append", type=str, dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
-
-	parser.add_argument("-v", "--verbose", default="1",   action="store", type=int,   dest="verbose", help="Verbose level [default: %(default)s (semi-quiet)]")
-	parser.add_argument("-r", "--rate",    default="100", action="store", type=float, dest="rate",    help="Verbose level [Rate in kHz to be displayed on the plot: %(default)s kHz]")
+	parser.add_argument("-o", "--outputName", default="plot.pdf", action="store",  type=str,   dest="outputName",        help="File for plot output [default: %(default)s]")
+	parser.add_argument("-t", "--tag",        default="",         action="store",  type=str,   dest="tag",               help="Title tag in plot canvas")
+	parser.add_argument("--outdir",           default="",         action="store",  type=str,   dest="outdir",            help="Output directory for the plots")
+	parser.add_argument('--legend',           default=[],         action="append", type=str,   dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
+	parser.add_argument("-r", "--rate",       default="100",      action="store",  type=float, dest="rate",              help="Rate in kHz to be displayed on the plot: [default: %(default)s kHz]")
+	parser.add_argument("-q", "--quiet",      default=False,      action="store_true",         dest="quiet",             help="Do not print the tables")
 
 	parser.add_argument("--miny",   default="0",     action="store", type=float, dest="miny",   help="Y axis range, minimum")
 	parser.add_argument("--maxy",   default="5500",  action="store", type=float, dest="maxy",   help="Y axis range, maximum")
@@ -355,18 +278,12 @@ def buildFileList(inputlist):
 
 if __name__ == "__main__":
 	usage = """
-	First produce the ROOT file with tree from csv files with:
-		%(prog)s [options] path/to/directory/
-	where directory contains subdirectories of cases.
-	If --doCleaning is given, the data is cleaned, and a cleaned .csv file is produced.
-	Afterwards, produce plots with:
-		%(prog)s [options] path/to/file.root case1 case2 case3
-	or print a table to stdout with:
-		%(prog)s [options] --print path/to/file.root case
+	Plots event rates in .csv files as throughput per RU vs fragment size.
+	Give .csv files or directories containing a 'server.csv' files as input.
 
-	Cases can be referred to by the path to the directory which contains the ROOT file,
-	e.g. data/Aug7/eFEROLs/EvB/32x2x4_RMS_0.5_useLogNormal_true
-	I tested until up to four cases per plot.
+	Examples:
+	%(prog)s server.csv
+	%(prog)s 20s10fx1x4_RMS_0.0/ 20s10fx1x4_FRL_AutoTrigger_RMS_0.0/ temp/custom.csv --tag 'FEROLs/EvB 20s10fx1x4' --legend 'FEROL AutoTrigger' 'FRL AutoTrigger' 'Custom'
 	"""
 	from argparse import ArgumentParser
 	parser = ArgumentParser(usage)
@@ -377,9 +294,12 @@ if __name__ == "__main__":
 	## Argument is a csv file
 	if len(args.inputlist) > 0:
 		filelist = buildFileList(args.inputlist)
-		for filename in filelist: printTable(filename)
+		if not args.quiet:
+			for filename in filelist: printTable(filename)
 		if args.outdir: args.outputName = args.outdir + '/' + args.outputName
-		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, legends=args.legend[0], frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
+		legends=[]
+		if len(args.legend)>0: legends=args.legend[0]
+		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, legends=legends, frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
 		exit(0)
 
 	parser.print_help()
