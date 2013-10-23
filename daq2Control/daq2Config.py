@@ -36,6 +36,24 @@ class FEROL(host):
 		self.enableStream1 = self.cfgStringToBool(enableStream1)
 
 ######################################################################
+class eFED(host):
+	"""Holds additional information on eFED configuration"""
+	def __init__(self,name,index,soaphost='undefined',soapport=-99):
+		super(FEROL, self).__init__()
+		streams = []
+	def addStream(self, instance, fedid=900):
+		if not hasattr(self, 'streams'): ## want to morph hosts into eFEDs, i.e. constructor might not have been called
+			self.streams = []
+		self.streams.append((instance, fedid))
+	def __len__(self):
+		return len(streams)
+	def __str__(self):
+		text  = '%-20s%3d at %25s:%-5d with launcher at %-5d\n' % (self.type, self.index, self.host, self.port, self.lport)
+		for n,(instance,fedid) in enumerate(self.streams):
+			text += '  stream %d at instance %2d, fedid %d\n' % (n, instance, fedid)
+		return text
+
+######################################################################
 from daq2SymbolMap import daq2SymbolMap
 class daq2Config(object):
 	'''
@@ -49,8 +67,8 @@ class daq2Config(object):
    Event_Length_Max_bytes_FED0/1, etc.
 ---------------------------------------------------------------------
 '''
-	def __init__(self, configFile):
-		self.verbose = 1
+	def __init__(self, configFile, verbose=1):
+		self.verbose = verbose
 		self.file = configFile
 		self.hosts     = [] ## a list of the hosts defined in the xml config
 		self.FEROLs    = []
@@ -59,6 +77,7 @@ class daq2Config(object):
 		self.RUs       = []
 		self.BUs       = []
 		self.EVM       = []
+		self.eFEDs     = []
 		self.GTPe      = []
 		self.FMM       = []
 		self._hostTypes = {'FEROLCONTROLLER' : self.FEROLs,
@@ -66,6 +85,7 @@ class daq2Config(object):
 		                   'RU'              : self.RUs,
 		                   'BU'              : self.BUs,
 		                   'EVM'             : self.EVM,
+		                   'EFED'            : self.eFEDs,
 		                   'GTPE'            : self.GTPe,
 		                   'FMM'             : self.FMM}
 
@@ -102,6 +122,9 @@ class daq2Config(object):
 		out.write(prepend+separator+'\n')
 		for host in self.hosts:
 			out.write(prepend+'%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER)\n' % (host.name, host.host, host.port, host.lport))
+			if host.__class__ == eFED:
+				for n,(instance,fedid) in enumerate(host.streams):
+					out.write(prepend+'  stream %d at instance %2d, fedid %d\n' % (n, instance, fedid))
 		out.write(prepend+separator+'\n')
 
 	def readXDAQConfigTemplate(self, configFile):
@@ -156,6 +179,16 @@ class daq2Config(object):
 								maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED1').text))
 								tcp_cwnd.append(int(prop.find(frlns + 'TCP_CWND_FED1').text))
 							break
+				## For eFEDs, count the number of enabled streams and their instances
+				if h == 'EFED':
+					ho.__class__ = eFED ## Make it an eFED
+					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+						if app.attrib['class'] == 'd2s::FEDEmulator':
+							efedns = '{urn:xdaq-application:d2s::FEDEmulator}'
+							prop = app.find(efedns + 'properties')
+							fedid    = int(prop.find(efedns + 'FedSourceId').text)
+							instance = int(app.attrib['instance'])
+							ho.addStream(instance, fedid)
 
 				if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
 					self.nStreams += 1
@@ -220,8 +253,9 @@ WARNING: TCP_CWND_FEDX for FEROLs seems to be set
 
  Is set to: %d in config. Expected value: %d
 """
-			if self.nStreams == len(self.FEROLs) and 35000 in cwnd_set:
-				printWarningWithWait(message%(35000, 55000), instance=self)
-			if self.nStreams == 2*len(self.FEROLs) and 55000 in cwnd_set:
-				printWarningWithWait(message%(55000, 35000), instance=self)
+			cwnd = cwnd_set.pop()
+			if self.nStreams == len(self.FEROLs) and cwnd not in [80000, 55000]:
+				printWarningWithWait(message%(cwnd, 80000), instance=self)
+			if self.nStreams == 2*len(self.FEROLs) and cwnd not in [40000, 35000]:
+				printWarningWithWait(message%(cwnd, 40000), instance=self)
 
