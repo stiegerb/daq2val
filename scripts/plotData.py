@@ -167,7 +167,7 @@ def fillTree(filename, treefile, dirname, nStreams, nBus, nRus, rms=0, startfrag
 	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
 
 
-	## Process .cvs file first
+	## Process .csv file first
 	data = {} ## store everything in this dictionary of size -> rate
 	for line in f:
 		if len(line.strip()) == 0 or line.strip()[0] == '#': continue
