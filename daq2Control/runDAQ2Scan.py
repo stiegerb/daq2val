@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import daq2Utils as utils
 from daq2Control import daq2Control, separator
+from daq2Utils import sleep, printError, printWarningWithWait, testBuilding, SIZE_LIMIT_TABLE
 
 def getListOfSizes(maxSize, minSize=256, short=False):
 	stepsize = 256
@@ -35,9 +36,8 @@ if __name__ == "__main__":
 		exit(-1)
 
 	configfile = args[0]
-	fragSize = int(args[1])
 	try:
-		options.relRMS = float(args[2])
+		options.relRMS = float(args[1])
 		options.useLogNormal = True
 	except KeyError:
 		options.relRMS = None
@@ -56,7 +56,8 @@ if __name__ == "__main__":
 WARNING: Your maximum size for scanning doesn't seem to
          make sense. Please consider!
  Is set to: %d. Expected to scan only until: %d
-		""" % (steps[-1], SIZE_LIMIT_TABLE[mergingby][1])
+ 		(i.e. use option --maxSize %d)
+		""" % (steps[-1], SIZE_LIMIT_TABLE[mergingby][1], SIZE_LIMIT_TABLE[mergingby][1])
 		printWarningWithWait(message, waitfunc=sleep, waittime=10)
 		sleep(10,options.verbose,options.dry)
 
@@ -92,16 +93,17 @@ WARNING: Your maximum size for scanning doesn't seem to
 			if len(d2c.config.eFEROLs) > 0 or options.stopRestart: d2c.getResults()
 		if options.verbose > 0: print "Done"
 
+		## Dump FEROL infospace
+		d2c.saveFEROLInfoSpaces()
+
 	## For FEROLs, get results at the end
 	if len(d2c.config.FEROLs) > 0 and not d2c.config.useEvB and not options.stopRestart: d2c.getResults()
 
-	## Dump FEROL infospace
-	d2c.saveFEROLInfoSpaces()
 
 	if d2c.config.useGTPe:
 		print "Pausing GTPe first..."
 		gtpe = d2c.symbolMap('GTPE0')
-		sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
+		utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	print separator
 	print ' DONE '
