@@ -217,6 +217,7 @@ def tryWebPing(host, port, verbose=0, dry=False):
 		print '%-18s %25s:%-5d' % ('webPing', host, port)
 		return 0
 	cmd = "wget -o /dev/null -O /dev/null --timeout=30 http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
+	if verbose>0: print 'Checking %25s:%-5d' % (host,int(port))
 	return subprocess.call(shlex.split(cmd))
 
 def stopXDAQPacked(packedargs):
