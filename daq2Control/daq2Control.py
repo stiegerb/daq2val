@@ -612,6 +612,7 @@ class daq2Control(object):
 			outfile.write('\n')
 
 	def saveFEROLInfoSpaces(self):
+		if self.options.verbose > 0: print 'Dumping FEROL infospaces into %sinfospaces/' % self._outputDir
 		for frl in self.config.FEROLs:
 			outputfile = '%s/infospaces/%s_%d.json' % (self._outputDir, frl.name, self.currentFragSize)
 			self.saveFEROLInfoSpace(frl, outputfile)
