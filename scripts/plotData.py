@@ -1,10 +1,4 @@
 #! /usr/bin/env python
-
-## TODO:
-#  - handling of 'previous' directories?
-#  - implement this as a class
-#  - fix --makePNGs option
-import re
 import sys, os
 
 months_toint = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
@@ -16,6 +10,7 @@ def getConfig(string):
 	"""Extract number of streams, readout units, builder units, and RMS from strings such as
 	8x1x2 or 16s8fx2x4_RMS_0.5 (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
 	"""
+	import re
 	string = string.split('_')
 	case = string[0].split('x')
 	rms = None
@@ -66,7 +61,8 @@ def extractDate(filename):
 			data = line.split(' ')
 			if data[0] != '##': continue
 			mon, day, year = (data[2],data[3][:-1],data[4])
-			return int(day), int(months_toint[mon]), int(year)
+			return day, mon, year
+			# return int(day), int(months_toint[mon]), int(year)
 		return (0,0,0)
 
 ##---------------------------------------------------------------------------------
@@ -148,7 +144,6 @@ def cleanFilesInDir(subdir):
 ##---------------------------------------------------------------------------------
 ## Plotting and printing
 def printTable(filename):
-	## Loop on the tree
 	casestring = os.path.dirname(filename).split('/')[-1]
 	config = getConfig(casestring)
 	nstreams, nrus, nbus, rms, strperfrl = config
@@ -164,15 +159,16 @@ def printTable(filename):
 		(sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize)
 
 	print "--------------------------------------------------------------------------------------"
-
-def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, logx=True, logy=False, tag='', legends=[], makePNGs=True, rate=100):
+def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, nologx=False, logy=False, tag='', legends=[], makePNGs=True, rate=100):
 	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TPaveText
 	from operator import itemgetter
 
+	## Build caselist
+	caselist = []
+	for filename in filelist: caselist.append(os.path.dirname(filename).split('/')[-1])
+
 	gROOT.SetBatch()
 	gStyle.SetOptStat(0)
-	f = TFile(filename)
-	if not f.IsOpen(): raise RuntimeError, "Cannot open "+filename+"\n"
 
 	if oname.endswith('.pdf') or oname.endswith('.png'): oname = oname[:-4]
 	if len(oname)==0: ## default
@@ -180,7 +176,7 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 
 	canv = TCanvas(oname, "Plot", 0, 0, 1024, 768)
 	canv.cd()
-	if logx: canv.SetLogx()
+	if not nologx: canv.SetLogx()
 	if logy: canv.SetLogy()
 	canv.SetGridx()
 	canv.SetGridy()
@@ -190,12 +186,8 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	axes.GetYaxis().SetTitle("Av. Throughput per RU (MB/s)")
 	axes.GetYaxis().SetTitleOffset(1.4)
 	axes.GetXaxis().SetTitleOffset(1.2)
-	if(frag):
-		axes.SetTitle("Throughput vs. Fragment Size")
-		axes.GetXaxis().SetTitle("Fragment Size (bytes)")
-	else:
-		axes.SetTitle("Throughput vs. Superfragment Size")
-		axes.GetXaxis().SetTitle("Superfragment Size (bytes)")
+	axes.SetTitle("Throughput vs. Fragment Size")
+	axes.GetXaxis().SetTitle("Fragment Size (bytes)")
 	axes.GetXaxis().SetMoreLogLabels()
 	axes.GetXaxis().SetNoExponent()
 	axes.Draw()
@@ -213,22 +205,22 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 
 	graphs = []
 	configs = set()
-	for case in caselist:
+	for filename,case in zip(filelist,caselist):
 		try:
-			graphs.append(getGraph(f, case, frag=frag))
-			configs.add(getConfig(case.split('/').pop())[:2])
+			graphs.append(getGraph(filename))
+			configs.add(getConfig(case))
 		except AttributeError:
 			print "#### Couldn't get graph for ", case, "in file", filename
 			return
 
-	datepave = drawDate(f, case)
+	datepave = drawDate(filelist[0])
 	datepave.Draw()
 
 	# if options.daq1:
 	# 	daq1_graph = getDAQ1Graph()
 
 	configs = sorted(configs, key=itemgetter(0))
-	nlegentries = len(caselist)
+	nlegentries = len(filelist)
 	# nlegentries = len(caselist) if not options.daq1 else len(caselist) + 1
 	legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
 	# if options.legendPos == 'TL':
@@ -244,18 +236,18 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	colors  = [1,2,3,4,51,95]
 	markers = [20,21,22,23,34,33]
 
-	if len(legends) > 0 and len(legends) != len(caselist):
-		print "Legends doesn't match with caselist, falling back to default"
+	if len(legends) > 0 and len(legends) != len(filelist):
+		print "Legends doesn't match with filelist, falling back to default"
 
 	for n,graph in enumerate(graphs):
 		graph.SetLineColor(colors[n])
 		graph.SetMarkerColor(colors[n])
 		graph.SetMarkerStyle(markers[n])
 
-		if len(legends) == len(caselist) and len(legends)>0: ## Custom legends
+		if len(legends) == len(filelist) and len(legends)>0: ## Custom legends
 			leg.AddEntry(graph, legends[n], 'P')
 		else: ## Default
-			leg.AddEntry(graph, caselist[n].split('/').pop(), 'P')
+			leg.AddEntry(graph, caselist[n], 'P')
 		# if options.daq1:
 		# 	leg.AddEntry(daq1_graph, 'DAQ1 (2011)', 'P')
 		graph.Draw("PL")
@@ -263,18 +255,12 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	# if options.daq1:
 	# 	daq1_graph.Draw("PL")
 
-	if not frag:
-		func = getRateGraph(rate=rate)
-		func.Draw("same")
-		leg.AddEntry(func, '100 kHz', 'l')
-
-	else:
-		for n,c in enumerate(configs):
-			func = getRateGraph(c[0]/c[1], frag=frag, rate=rate)
-			func.SetLineColor(colors[n])
-			func.SetLineWidth(1)
-			leg.AddEntry(func, '%.0f kHz (%d streams)'% (rate, c[0]/c[1]), 'l')
-			func.DrawCopy("same")
+	for n,c in enumerate(configs):
+		func = getRateGraph(c[0]/c[1], frag=frag, rate=rate)
+		func.SetLineColor(colors[n])
+		func.SetLineWidth(1)
+		leg.AddEntry(func, '%.0f kHz (%d streams)'% (rate, c[0]/c[1]), 'l')
+		func.DrawCopy("same")
 
 	leg.Draw()
 
@@ -284,8 +270,6 @@ def makeMultiPlot(filename, caselist, rangey=(0,5500), rangex=(250,17000), oname
 	if makePNGs:  canv.Print(oname + '.png')
 	# if options.makePNGs:  canv.Print(oname + '.png')
 	# if options.makeCFile: canv.SaveAs(oname + '.C')
-
-	f.Close()
 def getRateGraph(nStreams=4, frag=False, xmax=100000, rate=100):
 	'''Returns a TF1 object corresponding to the average throughput at the RU
 	necessary for a 100kHz rate of events of a given (super)fragment size '''
@@ -297,57 +281,32 @@ def getRateGraph(nStreams=4, frag=False, xmax=100000, rate=100):
 	f.SetLineColor(1)
 	f.SetLineStyle(2)
 	return f
-def getGraph(file, subdir, frag=False):
+def getGraph(filename):
+	casestring = os.path.dirname(filename).split('/')[-1]
+	config = getConfig(casestring)
+	nstreams, nrus, nbus, rms, strperfrl = config
+	data = processFile(filename, config)
+
 	from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 	from array import array
 
-	if not file.IsOpen(): raise RuntimeError("File not open")
-	treeloc = subdir+"/t"
-	try:
-		t = gDirectory.Get(treeloc)
-		entries = t.GetEntriesFast()
-		nsteps  = t.GetEntries()
-		step    = 0
+	nsteps = len(data)
+	g = TGraphErrors(nsteps)
 
-		g = TGraphErrors(nsteps)
+	## Loop on the data
+	for	n,(fragsize,tp,tpE) in enumerate(data):
+		g.SetPoint(      n, fragsize, tp)
+		g.SetPointError( n,       0., tpE)
 
-		## Loop on the tree
-		for	jentry in xrange(entries):
-			if t.GetEntry(jentry) <= 0: continue
-			if(frag): g.SetPoint(step, t.FragSize,   t.ThroughPut)
-			else:     g.SetPoint(step, t.SuFragSize, t.ThroughPut)
-			g.SetPointError(     step,           0., t.ThroughPutE)
-			step+=1
+	g.SetLineWidth(2)
+	g.SetMarkerSize(1.7)
 
-		g.SetLineWidth(2)
-		g.SetMarkerSize(1.7)
+	return g
+def drawDate(filename):
+	from ROOT import TPaveText
+	day,month,year = extractDate(filename)
 
-		return g
-	except AttributeError as e:
-		print "#### Didn't find tree", treeloc, "in file", file
-		raise e
-
-def drawDate(file, subdir):
-	from ROOT import gDirectory, TPaveText
-	from array import array
-
-	if not file.IsOpen(): raise RuntimeError("File not open")
-	treeloc = subdir+"/t"
-	try:
-		t = gDirectory.Get(treeloc)
-		entries = t.GetEntriesFast()
-
-		## get first entry
-		if t.GetEntry(0) <= 0: return
-		day   = t.day
-		month = t.month
-		year  = t.year
-
-	except AttributeError as e:
-		print "#### Didn't find tree", treeloc, "in file", file
-		raise e
-
-	date_string = "%d %s %d" % (day, months_tostr[month], year)
+	date_string = "%s %s %s" % (day, month, year)
 	pave = TPaveText(0.005, 0.005, 0.1, 0.02, 'NDC')
 	pave.SetTextFont(42)
 	pave.SetTextSize(0.03)
@@ -358,50 +317,19 @@ def drawDate(file, subdir):
 	pave.AddText(date_string)
 	return pave
 
-def getDAQ1Graph():
-	from ROOT import TGraph
-	data = [
-	(   256, 33.92),
-	(   512, 67.74),
-	(  1024, 133.12),
-	(  1536, 206.90),
-	(  2048, 241.66),
-	(  2560, 259.07),
-	(  3008, 271.92),
-	(  3840, 276.48),
-	(  4096, 278.12),
-	(  5120, 275.97),
-	(  6400, 276.48),
-	(  7840, 298.70),
-	(  8192, 299.01)]
-	# ( 65536, 347.34),
-	# (102400, 357.38)]
-
-	g = TGraph(len(data))
-	for n,(size,tp) in enumerate(data):
-		g.SetPoint(n, size, tp)
-	g.SetMarkerStyle(21)
-	g.SetMarkerColor(52)
-	g.SetLineWidth(2)
-	g.SetLineColor(52)
-	return g
-def makeDAQ1vsDAQ2Plot(filename, case):
-	options.daq1 = True
-	makeMultiPlot(filename, [case], oname='daq1vsdaq2', rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), frag=options.frag, logx=options.logx, logy=options.logy, rate=options.rate, legends=['DAQ2 (2013) (merging 12 streams)'])
-
 ##---------------------------------------------------------------------------------
 ## User interface
 def addPlottingOptions(parser):
 	usage = """
 
 	First produce the ROOT file with tree from csv files with:
-	 	%prog [options] path/to/directory/
+		%prog [options] path/to/directory/
 	where directory contains subdirectories of cases.
 	If --doCleaning is given, the data is cleaned, and a cleaned .csv file is produced.
 	Afterwards, produce plots with:
-	 	%prog [options] path/to/file.root case1 case2 case3
+		%prog [options] path/to/file.root case1 case2 case3
 	or print a table to stdout with:
-	 	%prog [options] --print path/to/file.root case
+		%prog [options] --print path/to/file.root case
 
 	Cases can be referred to by the path to the directory which contains the ROOT file,
 	e.g. data/Aug7/eFEROLs/EvB/32x2x4_RMS_0.5_useLogNormal_true
@@ -409,29 +337,38 @@ def addPlottingOptions(parser):
 	"""
 
 	parser.usage = usage
-	parser.add_option("-d", "--dir", default="data/", action="store", type="string", dest="dir", help="Input directory containing subdirectories with server.csv files [default: %default]")
-	parser.add_option("-o", "--outputName", default="plot.pdf", action="store", type="string", dest="outputName", help="File for plot output [default: %default]")
-	parser.add_option("--outdir", default="plots/", action="store", type="string", dest="outdir", help="Output directory for the plots [default: %default]")
-	parser.add_option("-p", "--print", default=False, action="store_true", dest="print_table", help="Print mode, give .root file and case as arguments")
-	parser.add_option("-C", "--doCleaning", default=False, action="store_true", dest="doCleaning", help="Remove outliers in the rates when filling the trees")
+	parser.add_option("-d", "--dir",        default="data/",    action="store",  type="string", dest="dir",             help="Input directory containing subdirectories with server.csv files [default: %default]")
+	parser.add_option("-o", "--outputName", default="plot.pdf", action="store",  type="string", dest="outputName",      help="File for plot output [default: %default]")
+	parser.add_option("-t", "--tag",        default="",         action="store",  type="string", dest="tag",             help="Title tag in plot canvas")
+	parser.add_option("--outdir",           default="",         action="store",  type="string", dest="outdir",          help="Output directory for the plots [default: %default]")
+	# parser.add_option('--legend',           default=[],         action="append", type="string", dest="legend", nargs=*, help='Give a list of custom legend entries to be used')
 
 	parser.add_option("-v", "--verbose", default="1", action="store", type="int", dest="verbose", help="Verbose level [default: %default (semi-quiet)]")
-
 	parser.add_option("-r", "--rate", default="100", action="store", type="float", dest="rate", help="Verbose level [Rate in kHz to be displayed on the plot: %default kHz]")
 
-	parser.add_option("--makeDAQ1vsDAQ2Plot", default=False, action="store_true", dest="makeDAQ1vsDAQ2Plot", help="Make daq1 vs daq2 overlay plot")
-	parser.add_option("--daq1", default=False, action="store_true", dest="daq1", help="Overlay daq1 performance?")
+	parser.add_option("--miny",   default="0",     action="store", type="float", dest="miny",   help="Y axis range, minimum")
+	parser.add_option("--maxy",   default="5500",  action="store", type="float", dest="maxy",   help="Y axis range, maximum")
+	parser.add_option("--minx",   default="250",   action="store", type="float", dest="minx",   help="X axis range, minimum")
+	parser.add_option("--maxx",   default="17000", action="store", type="float", dest="maxx",   help="X axis range, maximum")
+	parser.add_option("--nologx", default=False,   action="store_true",          dest="nologx", help="Do not use logarithmic scale on x axis")
+	parser.add_option("--logy",   default=False,   action="store_true",          dest="logy",   help="Use logarithmic scale on y axis")
 
-	parser.add_option("--miny", default="0", action="store", type="float", dest="miny", help="Y axis range, minimum")
-	parser.add_option("--maxy", default="5500", action="store", type="float", dest="maxy", help="Y axis range, maximum")
-	parser.add_option("--minx", default="250", action="store", type="float", dest="minx", help="X axis range, minimum")
-	parser.add_option("--maxx", default="17000", action="store", type="float", dest="maxx", help="X axis range, maximum")
-	parser.add_option("--frag", default=True, action="store_true", dest="frag", help="Set to false to plot vs super fragment size instead of fragment size")
-	parser.add_option("--logx", default=True, action="store_true", dest="logx", help="Use logarithmic scale on x axis")
-	parser.add_option("--logy", default=False, action="store_true", dest="logy", help="Use logarithmic scale on y axis")
-	parser.add_option("--legendPos", default="BR", action="store", type="string", dest="legendPos", help="Position for legend, either 'TL' (top left), 'TR' (top right), 'BL' (bottom left), 'BR'  (bottom right) [default: %default]")
-	parser.add_option("--makePNGs", default=True, action="store_true", dest="makePNGs", help="Produce also .png file")
-	parser.add_option("--makeCFile", default=True, action="store_true", dest="makeCFile", help="Produce also .C file")
+	# parser.add_option("--legendPos", default="BR", action="store", type="string", dest="legendPos", help="Position for legend, either 'TL' (top left), 'TR' (top right), 'BL' (bottom left), 'BR'  (bottom right) [default: %default]")
+	# parser.add_option("--makePNGs", default=True, action="store_true", dest="makePNGs", help="Produce also .png file")
+	# parser.add_option("--makeCFile", default=True, action="store_true", dest="makeCFile", help="Produce also .C file")
+
+def buildFileList(inputlist):
+	filelist = []
+	for location in inputlist:
+		if os.path.isfile(location) and os.path.splitext(location)[1] == '.csv':
+			filelist.append(location)
+		elif os.path.isdir(location) and 'server.csv' in os.listdir(location):
+			filelist.append(location+'/server.csv')
+		else: pass
+	if len(filelist) < 1:
+		print "No server.csv files found!"
+		exit(-1)
+	else: return filelist
 
 if __name__ == "__main__":
 	from optparse import OptionParser
@@ -439,23 +376,13 @@ if __name__ == "__main__":
 	addPlottingOptions(parser)
 	(options, args) = parser.parse_args()
 
-	## DAQ1 vs DAQ2 plot
-	if len(args) == 2 and options.makeDAQ1vsDAQ2Plot:
-		makeDAQ1vsDAQ2Plot(args[0], args[1])
+	## Argument is a csv file
+	if len(args) > 0:
+		filelist = buildFileList(args)
+		for filename in filelist: printTable(filename)
+		if options.outdir: options.outputName = options.outdir + '/' + options.outputName
+		makeMultiPlot(filelist, rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), tag=options.tag, frag=True, oname=options.outputName, nologx=options.nologx, logy=options.logy, rate=options.rate)
 		exit(0)
 
-	# if len(args) > 1 and os.path.isfile(args[0]) and os.path.splitext(args[0])[1] == '.root':
-	# 	if options.print_table:
-	# 		printTable(args[0], args[1])
-	# 		exit(0)
-	# 	else:
-	# 		makeMultiPlot(args[0], args[1:], rangey=(options.miny, options.maxy), rangex=(options.minx, options.maxx), frag=options.frag, oname=options.outputName, logx=options.logx, logy=options.logy, rate=options.rate)
-	# 		exit(0)
-
-	## Argument is a csv file
-	if len(args) > 0 and os.path.isfile(args[0]) and os.path.splitext(args[0])[1] == '.csv':
-		printTable(args[0])
-
-	else:
-		parser.print_help()
-		exit(-1)
+	parser.print_help()
+	exit(-1)
