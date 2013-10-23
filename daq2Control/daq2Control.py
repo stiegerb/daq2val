@@ -102,20 +102,29 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		for frl in self.config.FEROLs:
 			utils.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd)
+	def sendCmdToEFEDs(self, cmd):
+		if self.options.verbose > 0: print separator
+		for efed in self.config.eFEDs:
+			for instance,_ in efed.streams:
+				utils.sendSimpleCmdToApp(efed.host, efed.port, 'd2s::FEDEmulator', instance, cmd)
 	def sendCmdToGTPeFMM(self, cmd, invert=False):
-		if not self.config.useGTPe:
-			printError("You're trying to send a command to a non-existing GTPe...", self)
-			raise RuntimeError('Addressing GTPe in non-GTPe running mode')
-		gtpe = self.symbolMap('GTPE0')
-		fmm  = self.symbolMap('FMM0')
-		if not invert:
-			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
-			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
-			return
-		else:
-			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
-			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
-			return
+		try:
+			gtpe = self.symbolMap('GTPE0')
+			fmm  = self.symbolMap('FMM0')
+			if not invert:
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+				return
+			else:
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+				return
+		except KeyError as e:
+			if not self.config.useGTPe:
+				printError("You're trying to send a command to a non-existing GTPe...", self)
+				raise RuntimeError('Addressing GTPe in non-GTPe running mode')
+			raise e
+
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
 		if self.options.verbose > 0: print separator
 
@@ -168,6 +177,23 @@ class daq2Control(object):
 						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', int(sizeProfile[1]),        verbose=self.options.verbose, dry=self.options.dry)
 						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(relRMS*sizeProfile[1]), verbose=self.options.verbose, dry=self.options.dry)
 						utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delayProfile[0]),       verbose=self.options.verbose, dry=self.options.dry)
+	def setSizeEFEDs(self, fragSize, fragSizeRMS):
+		if self.options.verbose > 0: print separator
+
+		## Flat profile (i.e. each stream has the same size)
+		if self.options.sizeProfile == 'flat': ## UNTESTED
+			for efed in self.config.eFEDs: ## loop on eFED machines
+				for instance,fedid in efed.streams: ## loop on applications for each eFED
+					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', instance, 'eventSize',       'unsignedInt', int(fragSize),    verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', instance, 'eventSizeStdDev', 'unsignedInt', int(fragSizeRMS), verbose=self.options.verbose, dry=self.options.dry)
+		else: ## UNTESTED
+			raise RuntimeError('not implemented yet!')
+			sizeProfile = utils.getSizeProfile(fragSize, len(self.config.nStreams), self.options.sizeProfile)
+			relRMS = fragSizeRMS/fragSize
+
+			for fragSize,efed in zip(sizeProfile, self.config.eFEDs):
+				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSize',       'unsignedInt', int(fragSize),        verbose=self.options.verbose, dry=self.options.dry)
+				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSizeStdDev', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
 
 	## Control methods
 	def setup(self):
@@ -254,12 +280,29 @@ class daq2Control(object):
 		sleep(2, self.options.verbose, self.options.dry)
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		sleep(5, self.options.verbose, self.options.dry)
-		self.sendCmdToFEROLs('Enable')
 
-		## Enable FMM and GTPe:
+		## Enable FMM and eFEDs:
+		if len(self.config.eFEDs)>0:
+			fmm = self.symbolMap('FMM0')
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+			self.sendCmdToEFEDs('Enable')
+			## Don't need to enable GTPe when running with eFEDs?
+
+		## Enable FEROLs
+		self.sendCmdToFEROLs('Enable')
+		sleep(2, self.options.verbose, self.options.dry)
+
+		## Enable FMM:
+		if self.config.useGTPe and not len(self.config.eFEDs)>0:
+			fmm = self.symbolMap('FMM0')
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+
+		## Enable GTPe:
 		if self.config.useGTPe:
-			self.sendCmdToGTPeFMM('Enable', invert=True)
-			sleep(10, self.options.verbose, self.options.dry)
+			gtpe = self.symbolMap('GTPE0')
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+
+		sleep(10, self.options.verbose, self.options.dry)
 	def prepareOutputDir(self):
 		import glob
 		if not self.options.outputDir:
@@ -302,6 +345,41 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s kHz rate" % (fragSize, fragSizeRMS, str(rate))
 
+		## In case of eFED:
+		if len(self.config.eFEDs) > 0:
+			## Set fragment size and delay for eFEDs:
+			self.setSizeEFEDs(fragSize, fragSizeRMS)
+			self.currentFragSize = fragSize
+
+			## Set trigger rate at GTPe
+			try:
+				gtpe = self.symbolMap('GTPE0')
+				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Configure', verbose=self.options.verbose, dry=self.options.dry)
+			except KeyError as e:
+				message = "Need to use GTPe with eFEDs!"
+				printError(message, self)
+				raise e
+			except ValueError as e:
+				if rate == 'max': printError('Failed to specify a rate when running with GTPe. Use option --useRate', self)
+				raise e
+
+			self.sendCmdToEFEDs('Configure')
+			self.sendCmdToFEROLs('Configure')
+			sleep(5, self.options.verbose, self.options.dry)
+
+			try:
+				fmm = self.symbolMap('FMM0')
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port, 'tts::FMMController', '0', 'Configure', verbose=self.options.verbose, dry=self.options.dry)
+			except KeyError as e:
+				printError('Need to configure an FMM when running with eFEDs!', self)
+				raise e
+
+			sleep(10, self.options.verbose, self.options.dry)
+			self.sendCmdToEVMRUBU('Configure')
+			self.sendCmdToRUEVMBU('Enable')
+			return
+
 		## In case of FEROLs:
 		if len(self.config.FEROLs) > 0:
 			## Set fragment size and delay for FEROLs:
@@ -311,10 +389,12 @@ class daq2Control(object):
 			## Set trigger rate at GTPe
 			if self.config.useGTPe:
 				gtpe = self.symbolMap('GTPE0')
-				if rate == 'max':
-					printError('Failed to specify a rate when running with GTPe. Use option --useRate', self)
-					raise RuntimeError('Failed to specify a rate when running with GTPe. Use option --useRate')
-				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
+				try:
+					utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
+				except ValueError as e:
+					if rate == 'max':
+						printError('Failed to specify a rate when running with GTPe. Use option --useRate', self)
+					raise e
 
 			## Set super-fragment size for BUs
 			if not self.config.useEvB:
