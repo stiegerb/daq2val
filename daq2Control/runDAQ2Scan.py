@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import daq2Utils as utils
-from daq2Control import daq2Control
+from daq2Control import daq2Control, separator
 
 def getListOfSizes(maxSize, minSize=256, short=False):
 	stepsize = 256
@@ -66,6 +66,10 @@ WARNING: Your maximum size for scanning doesn't seem to
 	## Test event building first
 	if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
+		if d2c.config.useGTPe:
+			print "Pausing GTPe first..."
+			gtpe = d2c.symbolMap('GTPE0')
+			sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 		exit(-1)
 	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
@@ -91,6 +95,13 @@ WARNING: Your maximum size for scanning doesn't seem to
 	## For FEROLs, get results at the end
 	if len(d2c.config.FEROLs) > 0 and not d2c.config.useEvB and not options.stopRestart: d2c.getResults()
 
+	## Dump FEROL infospace
+	d2c.saveFEROLInfoSpaces()
+
+	if d2c.config.useGTPe:
+		print "Pausing GTPe first..."
+		gtpe = d2c.symbolMap('GTPE0')
+		sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	print separator
 	print ' DONE '

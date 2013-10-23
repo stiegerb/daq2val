@@ -3,7 +3,7 @@
 import daq2Utils as utils
 from daq2Control import daq2Control
 from daq2SymbolMap import daq2SymbolMap
-from daq2Utils import sleep, printError, printWarningWithWait, getListOfSizes, testBuilding, SIZE_LIMIT_TABLE
+from daq2Utils import sleep, printError, printWarningWithWait, testBuilding, SIZE_LIMIT_TABLE
 
 separator = 70*'-'
 
@@ -36,6 +36,11 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 		d2c.getResults()
 	d2c.saveFEROLInfoSpaces()
 	if options.waitBeforeStop: raw_input("Press Enter to stop the XDAQs...")
+
+	if d2c.config.useGTPe:
+		print "Pausing GTPe first..."
+		gtpe = d2c.symbolMap('GTPE0')
+		sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
 
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	print separator
