@@ -477,37 +477,53 @@ class daq2Control(object):
 				else:                                               utils.sendSimpleCmdToApp(efrl.host, efrl.port, 'Client',                n, 'start')
 			return
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
-		## For FEROLs: pause, change size, resume
-		if len(self.config.FEROLs) > 0 and not self.config.useEvB and not self.options.stopRestart:
-			if self.options.verbose > 0: print separator
-			if self.options.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
+		## --stopRestart option or eFEROLs: stop everything, set new size, start again
+		if (hasattr(self.options, 'stopRestart') and self.options.stopRestart) or len(self.config.eFEROLs) > 0:
+			utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+			sleep(2, self.options.verbose, self.options.dry)
+			self.start(fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
+			return
 
-			## Pause GTPe
-			if self.config.useGTPe:
-				gtpe = self.symbolMap('GTPE0')
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', "Pause", verbose=self.options.verbose, dry=self.options.dry)
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
 
-			## Pause FEROLs ## don't need for GTPe!
-			self.sendCmdToFEROLs('Pause')
+		## Pause GTPe
+		if self.config.useGTPe:
+			gtpe = self.symbolMap('GTPE0')
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', "Pause", verbose=self.options.verbose, dry=self.options.dry)
 
-			## Change fragment size and delay for FEROLs:
-			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
-			self.currentFragSize = fragSize
+		## For eFEDs:
+		if len(self.config.eFEDs) > 0:
+			## Stop and Halt FEDEmulator
+			self.sendCmdToEFEDs('Stop')
+			self.sendCmdToEFEDs('Halt')
+			# sleep(2, self.options.verbose, self.options.dry)
 
-			# ## Halt FMM and GTPe:
-			# if self.config.useGTPe:
-			# 	printWarningWithWait("If you got to this point, something won't work very soon.", self)
-			# 	self.sendCmdToGTPeFMM('Halt')
-			# 	sleep(10, self.options.verbose, self.options.dry)
+			## Set fragment size on eFEDs
+			self.setSizeEFEDs(fragSize, fragSizeRMS)
 
 			# ## Set trigger rate at GTPe
+			# ## This doesn't work yet?
 			# if self.config.useGTPe:
-			# 	# printWarningWithWait("If you got to this point, something won't work very soon.", self)
 			# 	gtpe = self.symbolMap('GTPE0')
 			# 	if rate == 'max':
 			# 		printError('Failed to specify a rate when running with GTPe.', self)
 			# 		raise RuntimeError('Failed to specify a rate when running with GTPe.')
 			# 	utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
+
+			## Configure and Enable FEDEmulator
+			self.sendCmdToEFEDs('Configure')
+			# sleep(2, self.options.verbose, self.options.dry)
+			self.sendCmdToEFEDs('Enable')
+
+		## For FEROLs and without eFEDs: pause, change size, resume
+		elif len(self.config.FEROLs) > 0 and len(self.config.eFEDs) == 0:
+			## Pause FEROLs
+			self.sendCmdToFEROLs('Pause')
+
+			## Change fragment size and delay for FEROLs:
+			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
+			self.currentFragSize = fragSize
 
 			## Halt EVM/RUs/BUs
 			self.sendCmdToEVMRUBU('Halt')
@@ -521,35 +537,17 @@ class daq2Control(object):
 			for n,bu in enumerate(self.config.BUs):
 				if not self.options.dry: print bu.name, 'dummyFedPayloadSize', int(utils.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
 
-			# ## Configure FMM and GTPe:
-			# if self.config.useGTPe:
-			# 	self.sendCmdToGTPeFMM('Configure')
-			# 	sleep(10, self.options.verbose, self.options.dry)
-
 			self.sendCmdToEVMRUBU('Configure')
 			self.sendCmdToRUEVMBU('Enable')
 			self.sendCmdToFEROLs('SetupEVG')
 			self.sendCmdToFEROLs('Resume')
 
-			## Resume GTPe
-			if self.config.useGTPe:
-				gtpe = self.symbolMap('GTPE0')
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', "Resume", verbose=self.options.verbose, dry=self.options.dry)
+		## Resume GTPe
+		if self.config.useGTPe:
+			gtpe = self.symbolMap('GTPE0')
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', "Resume", verbose=self.options.verbose, dry=self.options.dry)
 
-			# ## Enable FMM and GTPe:
-			# if self.config.useGTPe:
-			# 	self.sendCmdToGTPeFMM('Enable', invert=True)
-			# 	sleep(10, self.options.verbose, self.options.dry)
-			return
-
-		## For eFEROLs: stop everything, set new size, start again
-		elif len(self.config.eFEROLs) > 0 or self.config.useEvB or self.options.stopRestart:
-			utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-			sleep(2, self.options.verbose, self.options.dry)
-			self.start(fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
-			return
-
-		else: return
+		return
 
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script

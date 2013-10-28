@@ -33,7 +33,7 @@ if __name__ == "__main__":
 	parser.add_option("--maxSize",     default=16000, action="store", type="int", dest="maxSize",     help="Maximum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--minSize",     default=256,   action="store", type="int", dest="minSize",     help="Minimum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--short",       default=False, action="store_true",        dest="short",       help="Run a short scan with only a few points")
-	parser.add_option("--stopRestart", default=True,  action="store_true",        dest="stopRestart", help="Stop XDAQ processes after each step and restart instead of changing the size on the fly. [default: %default]")
+	parser.add_option("--stopRestart", default=False, action="store_true",        dest="stopRestart", help="Stop XDAQ processes after each step and restart instead of changing the size on the fly. [default: %default]")
 
 	(options, args) = parser.parse_args()
 
