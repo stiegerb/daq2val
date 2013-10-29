@@ -94,6 +94,16 @@ WARNING: Your maximum size for scanning doesn't seem to
 	## Start the scanning
 	for step in steps:
 		d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
+
+		## Test whether the GTPe did start up properly:
+		if d2c.config.useGTPe:
+			if not testBuilding(d2c, minevents=10, waittime=5, verbose=0, dry=options.dry):
+				if options.verbose > 0: print 'GTPe does not seem to be running, will stop and restart.'
+				d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
+				if not testBuilding(d2c, minevents=10, waittime=5, verbose=0, dry=options.dry):
+					if options.verbose > 0: printError('Failed to start event building.', self)
+					raise RuntimeError
+
 		if options.verbose > 0: print separator
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, options.duration)
 		if options.useIfstat:
