@@ -501,6 +501,7 @@ class daq2Control(object):
 
 			## Set fragment size on eFEDs
 			self.setSizeEFEDs(fragSize, fragSizeRMS)
+			self.currentFragSize = fragSize
 
 			# ## Set trigger rate at GTPe
 			# ## This doesn't work yet?
