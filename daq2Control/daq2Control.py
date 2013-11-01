@@ -55,6 +55,8 @@ class daq2Control(object):
 		self.config.fillFromSymbolMap(self.symbolMap)
 		self.config.printHosts()
 
+		self.__RETRY_COUNTER = 0
+
 		# if self.config.useGTPe and self.config.useEvB:
 		# 	printError("Don't know about GTPe with EvB yet. Aborting...", self)
 		# 	raise RuntimeError
@@ -279,7 +281,7 @@ class daq2Control(object):
 		## Set the fragment size, rms, and rate, configure, and enable
 		sleep(2, self.options.verbose, self.options.dry)
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
-		sleep(5, self.options.verbose, self.options.dry)
+		sleep(2, self.options.verbose, self.options.dry)
 
 		## Enable FMM and eFEDs:
 		if len(self.config.eFEDs)>0:
@@ -291,6 +293,20 @@ class daq2Control(object):
 		## Enable FEROLs
 		self.sendCmdToFEROLs('Enable')
 		sleep(2, self.options.verbose, self.options.dry)
+
+		## Check Status of FEROLs and EVM/RUs:
+		if self.options.verbose > 0: print separator
+		if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose):
+			## Not everything enabled, retry
+			if self.__RETRY_COUNTER < 1:
+				self.__RETRY_COUNTER += 1
+				printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
+				utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+				self.start(fragSize=fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
+			else:
+				printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
+				raise RuntimeError
+		if self.options.verbose > 0: print separator
 
 		## Enable FMM:
 		if self.config.useGTPe and not len(self.config.eFEDs)>0:
