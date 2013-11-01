@@ -162,7 +162,6 @@ def sendSOAPMessage(host, port, message, command):
 		print out
 		print separator
 		return 1
-
 def sendCmdFileToExecutivePacked(packedargs):
 	(host, port, cmdfile, verbose, dry) = packedargs
 	return sendCmdFileToExecutive(host, port, cmdfile, verbose=verbose, dry=dry)
@@ -184,7 +183,6 @@ def sendCmdFileToExecutive(host, port, cmdfile, verbose=0, dry=False):
 
 	if n_retries == 3: raise RuntimeError('Failed to send configure command to %s:%d!' % (host, port))
 	return 0
-
 def sendCmdFileToApp(host, port, classname, instance, cmdFile, verbose=0, dry=False): ## UNTESTED
 	"""Sends a SOAP message contained in cmdfile to the application with classname and instance on host:port"""
 	if dry:
@@ -196,7 +194,6 @@ def sendCmdFileToApp(host, port, classname, instance, cmdFile, verbose=0, dry=Fa
 	return sendSOAPMessage(host, port, message, command)
 
 	if not dry: return subprocess.check_call(['sendCmdFileToApp', host, str(port), classname, str(instance), cmdFile])
-
 def sendCmdToApp(host, port, classname, instance, command, verbose=0, dry=False):
 	"""Sends a simple command via SOAP to the application with classname and instance on host:port"""
 	if dry:
@@ -204,14 +201,11 @@ def sendCmdToApp(host, port, classname, instance, command, verbose=0, dry=False)
 		return 0
 	message = 'Content-Location: urn:xdaq-application:class=%s,instance=%d' % (classname, int(instance))
 	return sendSOAPMessage(host, port, message, command)
-
-def downloadMeasurements(host, port, classname, instance, outputfile, verbose=0, dry=False):
-	if verbose > 1: print separator
-	url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
-	url = url % (host, int(port), classname, int(instance))
-	if dry: print 'curl -o', outputfile, url
-	else: subprocess.check_call(['curl', '-o', outputfile, url])
-
+def writeItem(host, port, classname, instance, item, data, offset=0, verbose=0, dry=False):
+	body = '<xdaq:WriteItem xmlns:xdaq="urn:xdaq-soap:3.0" offset="%s"  item="%s" data="%s"/>' % (str(offset), item, str(data))
+	cmd = SOAPEnvelope % body
+	cmd = cmd.replace('\"','\\\"') ## need to escape the quotes when passing as argument
+	return sendCmdToApp(host, port, classname, str(instance), cmd)
 def tryWebPing(host, port, verbose=0, dry=False):
 	if dry:
 		print '%-18s %25s:%-5d' % ('webPing', host, port)
@@ -219,6 +213,53 @@ def tryWebPing(host, port, verbose=0, dry=False):
 	cmd = "wget -o /dev/null -O /dev/null --timeout=30 http://%s:%d/urn:xdaq-application:lid=3" % (host,int(port))
 	if verbose>0: print 'Checking %25s:%-5d' % (host,int(port))
 	return subprocess.call(shlex.split(cmd))
+
+def checkApplicationState(host, classname, instance, statename):
+	## Special case until stateName is added to the application infospace in the FerolController
+	if host.type == 'FEROLCONTROLLER':
+		url = 'http://%s:%d/urn:xdaq-application:lid=109' % (host.host, host.port)
+		items = loadMonitoringItemsFromURL(url)
+		state = items['stateName']
+		if not state == statename:
+			printError('Application %s, instance %d, on host %s:%-d, did not return state "%s", instead was "%s".' %(classname, instance, host.host, host.port, statename, state))
+			return False
+		return True
+
+	## Normal case
+	state = getParam(host.host, host.port, classname, instance, 'stateName', 'xsd:string')
+	state = state.strip('\n') ## remove trailing newlines
+	if not state == statename:
+		printError('Application %s, instance %d, on host %s:%-d, did not return state "%s", instead was "%s".' %(classname, instance, host.host, host.port, statename, state))
+		return False
+	return True
+
+def checkStates(hosts, statename, verbose=0):
+	"""Checks a fixed list of applications on hosts to be in statename"""
+	applications_to_check = {
+		'FEROLCONTROLLER' : ['ferol::FerolController'],
+		'FEROL'           : ['Client', 'evb::test::DummyFEROL'],
+		'RU'              : ['evb::EVM', 'evb::RU', 'gevb2g::RU'],
+		'BU'              : ['evb::BU', 'gevb2g::BU'],
+		'EFED'            : ['d2s::FEDEmulator'],
+		'GTPE'            : ['d2s::GTPeController'],
+		'FMM'             : ['tts::FMMController']}
+	for host in hosts:
+		for app,inst in host.applications:
+			if not app in applications_to_check[host.type]: continue
+
+			if verbose > 0: stdout.write('Checking whether application %s(%d) on %s:%d is in state "%s" ... ' % (app, inst, host.host, host.port, statename))
+			if not checkApplicationState(host, app, inst, statename):
+				if verbose > 0: stdout.write(' FAILED\n')
+				return False
+			if verbose > 0: stdout.write(' OK\n')
+	return True
+
+def downloadMeasurements(host, port, classname, instance, outputfile, verbose=0, dry=False):
+	if verbose > 1: print separator
+	url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
+	url = url % (host, int(port), classname, int(instance))
+	if dry: print 'curl -o', outputfile, url
+	else: subprocess.check_call(['curl', '-o', outputfile, url])
 
 def stopXDAQPacked(packedargs):
 	(host, verbose, dry) = packedargs
@@ -263,27 +304,18 @@ def sendSimpleCmdToAppPacked(packedargs):
 def sendSimpleCmdToApp(host, port, classname, instance, cmdName, verbose=0, dry=False):
 	if verbose > 1 and dry: print '%-18s %25s:%-5d %25s %1s\t%-12s' % ('sendSimpleCmdToApp', host, port, classname, instance, cmdName)
 	if not dry: return subprocess.check_call(['sendSimpleCmdToApp', host, str(port), classname, str(instance), cmdName])
-
 def sendCmdToLauncher(host, port, cmd, verbose=0, dry=False):
 	if verbose > 1 and dry: print '%-18s %25s:%-5d %-15s' % ('sendCmdToLauncher', host, port, cmd)
 	if not dry: return subprocess.call(['sendCmdToLauncher', host, str(port), cmd])
-
 def setParam(host, port, classname, instance, paramName, paramType, paramValue, verbose=0, dry=False):
 	if verbose > 1 and dry: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s %6s' % ('setParam', host, port, classname, instance, paramName, paramType, paramValue)
 	if not dry: return subprocess.check_call(['setParam', host, str(port), classname, str(instance), paramName, paramType, str(paramValue)])
-
 def getParam(host, port, classname, instance, paramName, paramType, verbose=0, dry=False):
 	if verbose > 1 and dry: print '%-18s %25s:%-5d %25s %1s\t%-25s %12s' % ('getParam', host, port, classname, instance, paramName, paramType)
 	if not dry:
 		call = subprocess.Popen(['getParam', host, str(port), classname, str(instance), paramName, paramType], stdout=subprocess.PIPE)
 		out,err = call.communicate()
 		return out
-
-def writeItem(host, port, classname, instance, item, data, offset=0, verbose=0, dry=False):
-	body = '<xdaq:WriteItem xmlns:xdaq="urn:xdaq-soap:3.0" offset="%s"  item="%s" data="%s"/>' % (str(offset), item, str(data))
-	cmd = SOAPEnvelope % body
-	cmd = cmd.replace('\"','\\\"') ## need to escape the quotes when passing as argument
-	return sendCmdToApp(host, port, classname, str(instance), cmd)
 
 def getIfStatThroughput(host, duration, delay=5, verbose=0, interface='p2p1', dry=False):
 	"""Use Petr's ifstat script to get the throughput every [delay] seconds for a total duration of [duration]"""
@@ -345,7 +377,6 @@ def printError(message, instance=None):
 	else:
 		print ">> %s" % (message)
 	print errordelim
-
 def printWarningWithWait(message, waitfunc=sleep, waittime=10, instance=None):
 	errordelim = 40*'>>'
 	print errordelim
