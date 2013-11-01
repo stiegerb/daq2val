@@ -85,9 +85,18 @@ WARNING: Your maximum size for scanning doesn't seem to
 	#####################################
 	## Test event building first
 	if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
-		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
+		## Retry once
+		if options.verbose > 0: printWarningWithWait('Test failed, will stop everything and try again.', waittime=0, instance=d2c)
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
-		exit(-1)
+		d2c.start(options.minSize, float(options.relRMS)*options.minSize, rate=options.useRate)
+
+		## Check again
+		if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
+			## Give up
+			if options.verbose > 0: printError('Test failed, built less than 1000 events! Giving up.', instance=d2c)
+			utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+			exit(0)
+	## Everything ok
 	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
 
 	#####################################
@@ -95,19 +104,23 @@ WARNING: Your maximum size for scanning doesn't seem to
 	for step in steps:
 		d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
 
-		## Test whether the GTPe did start up properly:
-		if d2c.config.useGTPe:
+		## Test whether the GTPe did start up properly (does not make sense when changing size on the fly):
+		if d2c.config.useGTPe and options.stopRestart:
 			if not testBuilding(d2c, minevents=10, waittime=5, verbose=0, dry=options.dry):
-				if options.verbose > 0: print 'GTPe does not seem to be running, will stop and restart.'
+				## Retry once
+				if options.verbose > 0: printWarningWithWait('GTPe does not seem to be running, will stop and restart.', waittime=0, instance=d2c)
 				d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
+
+				## Check again
 				if not testBuilding(d2c, minevents=10, waittime=5, verbose=0, dry=options.dry):
+					## Give up
 					if options.verbose > 0: printError('Failed to start event building.', self)
-					raise RuntimeError
+					exit(0)
 
 		if options.verbose > 0: print separator
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, options.duration)
 		if options.useIfstat:
-			## Get throughput directly from RU using ifstat script
+			## Get throughput directly from RU using ifstat script ## NOT REALLY TESTED YET
 			d2c.getResultsFromIfstat(options.duration)
 		elif d2c.config.useEvB:
 			## Get results ala testRubuilder script every 5 seconds
