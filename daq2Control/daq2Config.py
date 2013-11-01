@@ -19,6 +19,7 @@ class host(object):
 		self.port  = soapport
 		self.type  = hosttype
 		self.lport = 0 # launcher port
+		self.applications = [] ## should be filled with ('classname', instance) tuples
 	def __str__(self):
 		return '%-20s%3d at %25s:%-5d with launcher at %-5d' % (self.type, self.index, self.host, self.port, self.lport)
 
@@ -121,7 +122,12 @@ class daq2Config(object):
 		out.write('%s%s configuration with %s\n' % (prepend, config, builder))
 		out.write(prepend+separator+'\n')
 		for host in self.hosts:
-			out.write(prepend+'%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER)\n' % (host.name, host.host, host.port, host.lport))
+			out.write(prepend+'%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER), Applications:' % (host.name, host.host, host.port, host.lport))
+			for app,inst in host.applications:
+				if inst is not None: out.write(' %s(%d)' % (app, inst))
+				else:                out.write(' %s' % app)
+			out.write('\n')
+
 			if host.__class__ == eFED:
 				for n,(instance,fedid) in enumerate(host.streams):
 					out.write(prepend+'  stream %d at instance %2d, fedid %d\n' % (n, instance, fedid))
@@ -161,6 +167,14 @@ class daq2Config(object):
 			try:
 				if self.verbose > 2: print 'Adding', h+n
 				ho = host(h+n, int(n), h)
+
+				## Save a list of all applications and instances running in each context
+				for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+					try:
+						classname,instance = (str(app.attrib['class']), int(app.attrib['instance']))
+					except KeyError:
+						classname,instance = (str(app.attrib['class']), None)
+					ho.applications.append((classname, instance))
 
 				## For FEROLs, check which of the streams are enabled
 				if h == 'FEROLCONTROLLER':
