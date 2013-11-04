@@ -143,8 +143,8 @@ def printTable(filename):
 		(sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize)
 
 	print "--------------------------------------------------------------------------------------"
-def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, nologx=False, logy=False, tag='', legends=[], makePNGs=True, rate=100):
-	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TPaveText
+def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, nologx=False, logy=False, tag='', subtag='', legends=[], makePNGs=True, rate=100):
+	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TLatex, TPave
 	from operator import itemgetter
 
 	## Build caselist
@@ -175,17 +175,55 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	axes.GetXaxis().SetMoreLogLabels()
 	axes.GetXaxis().SetNoExponent()
 	axes.Draw()
+
+	tl = TLatex()
+	tl.SetTextFont(42)
+	tl.SetNDC(1)
 	if len(tag) > 0:
-		width = 0.022*len(tag)
-		pave = TPaveText(0.12, 0.80, 0.12+width, 0.899, 'NDC')
-		pave.SetTextFont(42)
-		pave.SetTextSize(0.05)
+		width = 0.021*len(tag)
+		pave = TPave(0.12, 0.80, 0.12+width, 0.899, 0, 'NDC')
 		pave.SetFillStyle(1001)
 		pave.SetFillColor(0)
-		pave.SetBorderSize(0)
-		pave.SetTextAlign(12)
-		pave.AddText(tag)
 		pave.Draw()
+	if len(subtag) > 0:
+		width2 = 0.015*len(subtag)
+		pave2 = TPave(0.12, 0.75, 0.12+width2, 0.899, 0, 'NDC')
+		pave2.SetFillStyle(1001)
+		pave2.SetFillColor(0)
+		pave2.Draw()
+	if len(tag) > 0:
+		tl.SetTextSize(0.05)
+		tl.DrawLatex(0.14, 0.83, tag)
+	if len(subtag) > 0:
+		tl.SetTextSize(0.035)
+		tl.DrawLatex(0.145, 0.77, subtag)
+
+
+	# if len(tag) > 0:
+	# 	width = 0.019*len(tag)
+	# 	print width
+	# 	pave = TPaveText(0.12, 0.80, 0.12+width, 0.899, 'NDC')
+	# 	pave.SetTextFont(42)
+	# 	pave.SetTextSize(0.05)
+	# 	pave.SetFillStyle(1001)
+	# 	pave.SetFillColor(0)
+	# 	pave.SetBorderSize(0)
+	# 	pave.SetTextAlign(11)
+	# 	pave.AddText(tag)
+	# 	pave.Draw()
+
+	# if len(subtag) > 0:
+	# 	width = 0.019*len(subtag)
+	# 	print width
+	# 	pave2 = TPaveText(0.12, 0.75, 0.12+width, 0.799, 'NDC')
+	# 	pave2.SetTextFont(42)
+	# 	pave2.SetTextSize(0.035)
+	# 	pave2.SetFillStyle(1001)
+	# 	pave2.SetFillColor(0)
+	# 	pave2.SetBorderSize(0)
+	# 	pave2.SetTextAlign(11)
+	# 	pave2.AddText(subtag)
+	# 	pave2.Draw()
 
 	graphs = []
 	configs = set()
@@ -306,8 +344,9 @@ def drawDate(filename):
 ## User interface
 def addPlottingOptions(parser):
 	# parser.usage = usage
-	parser.add_argument("-o", "--outputName", default="plot.pdf", action="store",  type=str,   dest="outputName",        help="File for plot output [default: %(default)s]")
-	parser.add_argument("-t", "--tag",        default="",         action="store",  type=str,   dest="tag",               help="Title tag in plot canvas")
+	parser.add_argument("-o",  "--outputName", default="plot.pdf", action="store",  type=str,   dest="outputName",        help="File for plot output [default: %(default)s]")
+	parser.add_argument("-t",  "--tag",        default="",         action="store",  type=str,   dest="tag",               help="Title tag in plot canvas")
+	parser.add_argument("-t2", "--subtag",     default="",         action="store",  type=str,   dest="subtag",            help="Subtitle tag in plot canvas")
 	parser.add_argument("--outdir",           default="",         action="store",  type=str,   dest="outdir",            help="Output directory for the plots")
 	parser.add_argument('--legend',           default=[],         action="append", type=str,   dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
 	parser.add_argument("-r", "--rate",       default="100",      action="store",  type=float, dest="rate",              help="Rate in kHz to be displayed on the plot: [default: %(default)s kHz]")
@@ -360,7 +399,7 @@ if __name__ == "__main__":
 		if args.outdir: args.outputName = args.outdir + '/' + args.outputName
 		legends=[]
 		if len(args.legend)>0: legends=args.legend[0]
-		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, legends=legends, frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
+		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, subtag=args.subtag, legends=legends, frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
 		exit(0)
 
 	parser.print_help()
