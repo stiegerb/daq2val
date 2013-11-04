@@ -114,7 +114,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 				## Check again
 				if not testBuilding(d2c, minevents=10, waittime=5, verbose=0, dry=options.dry):
 					## Give up
-					if options.verbose > 0: printError('Failed to start event building.', self)
+					if options.verbose > 0: printError('Failed to start event building.', d2c)
 					exit(0)
 
 		if options.verbose > 0: print separator
