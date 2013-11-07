@@ -180,14 +180,16 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	tl.SetTextFont(42)
 	tl.SetNDC(1)
 	if len(tag) > 0:
-		width = 0.020*len(tag)
-		pave = TPave(0.12, 0.80, 0.12+width, 0.899, 0, 'NDC')
+		width = 0.12+0.020*len(tag)
+		if width > 0.9: width=0.899
+		pave = TPave(0.12, 0.80, width, 0.899, 0, 'NDC')
 		pave.SetFillStyle(1001)
 		pave.SetFillColor(0)
 		pave.Draw()
 	if len(subtag) > 0:
-		width2 = 0.015*len(subtag)
-		pave2 = TPave(0.12, 0.75, 0.12+width2, 0.899, 0, 'NDC')
+		width2 = 0.12+0.015*len(subtag)
+		if width2 > 0.9: width2=0.899
+		pave2 = TPave(0.12, 0.75, width2, 0.899, 0, 'NDC')
 		pave2.SetFillStyle(1001)
 		pave2.SetFillColor(0)
 		pave2.Draw()
