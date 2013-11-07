@@ -79,6 +79,10 @@ class daq2Control(object):
 		self._testEnv   = ""
 		if len(self._testType) > 0: self._testEnv = "-"+self._testType
 
+	def reset(self):
+		"""Reset counters."""
+		self.__RETRY_COUNTER = 0
+
 	## Multi-commands
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
 		if self.options.verbose > 0: print separator
@@ -292,7 +296,7 @@ class daq2Control(object):
 
 		## Enable FEROLs
 		self.sendCmdToFEROLs('Enable')
-		sleep(2, self.options.verbose, self.options.dry)
+		sleep(3, self.options.verbose, self.options.dry)
 
 		## Check Status of FEROLs and EVM/RUs:
 		if self.options.verbose > 0: print separator

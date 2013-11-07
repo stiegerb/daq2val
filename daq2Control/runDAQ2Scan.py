@@ -102,6 +102,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 	#####################################
 	## Start the scanning
 	for step in steps:
+		d2c.reset() ## reset retry counter
 		d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
 
 		## Test whether the GTPe did start up properly (does not make sense when changing size on the fly):
