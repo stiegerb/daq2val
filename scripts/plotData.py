@@ -6,6 +6,12 @@ months_tostr = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8
 
 ##---------------------------------------------------------------------------------
 ## Utilities
+def checkMSIO(filename):
+	with open(filename, 'r') as f:
+		if '#Server(0)' in f.readline():
+			return True
+		else: return False
+	return False
 def getConfig(string):
 	"""Extract number of streams, readout units, builder units, and RMS from strings such as
 	8x1x2 or 16s8fx2x4_RMS_0.5 (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
@@ -39,6 +45,8 @@ def processFile(filename, config, startfragsize=256):
 	f = open(filename,'r')
 	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
 
+	msio = checkMSIO(filename)
+
 	## Process .csv file first
 	data_dict = {} ## store everything in this dictionary of size -> rate
 	for line in f:
@@ -62,6 +70,16 @@ def processFile(filename, config, startfragsize=256):
 
 
 	nstreams, nrus, nbus, rms, strperfrl = config
+
+	## If first line in file is "#Server(0)", divide the rates by the number of BUs
+	if msio:
+		for size in data_dict.keys():
+			newrate = [a/nbus for a in data_dict[size]]
+			data_dict[size] = newrate
+
+		## IGNORE number of RUs now:
+		nrus = 1
+
 
 	# LOWERLIMIT=32
 	LOWERLIMIT=24
@@ -233,6 +251,7 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 		try:
 			graphs.append(getGraph(filename))
 			nstreams, nrus, nbus, rms, strperfrl = getConfig(case)
+			if checkMSIO(filename): nrus = 1 ## ignore number of RUs if MSIO
 			configs.add(nstreams//nrus) ## care only about Nstreams per RU
 		except AttributeError:
 			print "#### Couldn't get graph for ", case, "in file", filename
@@ -281,7 +300,7 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	# 	daq1_graph.Draw("PL")
 
 	for n,streams_per_ru in enumerate(configs):
-		func = getRateGraph(streams_per_ru, frag=frag, rate=rate)
+		func = getRateGraph(streams_per_ru, frag=frag, rate=rate, xmax=rangex[1])
 		func.SetLineColor(colors[n])
 		func.SetLineWidth(1)
 		func.DrawCopy("same")
@@ -349,10 +368,10 @@ def addPlottingOptions(parser):
 	parser.add_argument("-o",  "--outputName", default="plot.pdf", action="store",  type=str,   dest="outputName",        help="File for plot output [default: %(default)s]")
 	parser.add_argument("-t",  "--tag",        default="",         action="store",  type=str,   dest="tag",               help="Title tag in plot canvas")
 	parser.add_argument("-t2", "--subtag",     default="",         action="store",  type=str,   dest="subtag",            help="Subtitle tag in plot canvas")
-	parser.add_argument("--outdir",           default="",         action="store",  type=str,   dest="outdir",            help="Output directory for the plots")
-	parser.add_argument('--legend',           default=[],         action="append", type=str,   dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
-	parser.add_argument("-r", "--rate",       default="100",      action="store",  type=float, dest="rate",              help="Rate in kHz to be displayed on the plot: [default: %(default)s kHz]")
-	parser.add_argument("-q", "--quiet",      default=False,      action="store_true",         dest="quiet",             help="Do not print the tables")
+	parser.add_argument("--outdir",            default="",         action="store",  type=str,   dest="outdir",            help="Output directory for the plots")
+	parser.add_argument('--legend',            default=[],         action="append", type=str,   dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
+	parser.add_argument("-r", "--rate",        default="100",      action="store",  type=float, dest="rate",              help="Rate in kHz to be displayed on the plot: [default: %(default)s kHz]")
+	parser.add_argument("-q", "--quiet",       default=False,      action="store_true",         dest="quiet",             help="Do not print the tables")
 
 	parser.add_argument("--miny",   default="0",     action="store", type=float, dest="miny",   help="Y axis range, minimum")
 	parser.add_argument("--maxy",   default="5500",  action="store", type=float, dest="maxy",   help="Y axis range, maximum")
