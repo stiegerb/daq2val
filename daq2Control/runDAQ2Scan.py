@@ -7,9 +7,10 @@ from daq2Utils import sleep, printError, printWarningWithWait, testBuilding, SIZ
 def getListOfSizes(maxSize, minSize=256, short=False):
 	stepsize = 256
 	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
-	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
+	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
+	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 20480, 24576, 28672, 32768]
 	# if short: allsteps = [1024, 16000]
-	if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16000]
+	if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768]
 
 	steps = []
 	for step in allsteps:

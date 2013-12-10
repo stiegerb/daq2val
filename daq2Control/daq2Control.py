@@ -326,12 +326,10 @@ class daq2Control(object):
 		## In case of eFED:
 		if len(self.config.eFEDs) > 0:
 			self.sendCmdToGTPeFMM('Configure', invert=False)
-			sleep(10, self.options.verbose, self.options.dry)
 			self.sendCmdToEVMRUBU('Configure')
-
-			fmm = self.symbolMap('FMM0')
-			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
-			self.sendCmdToEFEDs('Enable')
+			self.sendCmdToEFEDs('Configure')
+			self.sendCmdToFEROLs('Configure')
+			sleep(10, self.options.verbose, self.options.dry)
 			return
 
 		## In case of FEROLs:
@@ -359,31 +357,35 @@ class daq2Control(object):
 			self.sendCmdToFEROLs('Enable')
 			sleep(3, self.options.verbose, self.options.dry)
 
+			## Enable FMM:
+			if self.config.useGTPe:
+				fmm = self.symbolMap('FMM0')
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+				self.sendCmdToEFEDs('Enable')
+
 			## Check Status of FEROLs and EVM/RUs:
 			if self.options.verbose > 0: print separator
 			if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
-				## Not everything enabled, retry
-				if self.__RETRY_COUNTER < 1:
-					self.__RETRY_COUNTER += 1
-					printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
-					utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-					self.start(fragSize=fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
-				else:
-					printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
-					raise RuntimeError
+				# ## Not everything enabled, retry
+				# if self.__RETRY_COUNTER < 1:
+				# 	self.__RETRY_COUNTER += 1
+				# 	printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
+				# 	utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+				# 	self.start(fragSize=fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
+				# else:
+				###########################
+				### NEED TO FIX THIS ######
+				###########################
+				printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
+				raise RuntimeError
 			if self.options.verbose > 0: print separator
-
-			## Enable FMM:
-			if self.config.useGTPe and not len(self.config.eFEDs)>0:
-				fmm = self.symbolMap('FMM0')
-				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
 
 			## Enable GTPe:
 			if self.config.useGTPe:
 				gtpe = self.symbolMap('GTPE0')
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
 
-			sleep(10, self.options.verbose, self.options.dry)
+			sleep(2, self.options.verbose, self.options.dry)
 			return
 
 		printWarningWithWait("Doing nothing.", waittime=0, instance=self)
