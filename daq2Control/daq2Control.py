@@ -130,6 +130,14 @@ class daq2Control(object):
 				printError("You're trying to send a command to a non-existing GTPe...", self)
 				raise RuntimeError('Addressing GTPe in non-GTPe running mode')
 			raise e
+	def sendCmdToFMM(self, cmd):
+		try:
+			fmm = self.symbolMap('FMM0')
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port, 'tts::FMMController', '0', cmd, verbose=self.options.verbose, dry=self.options.dry)
+		except KeyError as e:
+			printError('No FMM found in symbol map, aborting.', self)
+			raise e
+
 
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
 		if self.options.verbose > 0: print separator
@@ -307,42 +315,80 @@ class daq2Control(object):
 		## Set Runnumber:
 		self.setRunNumber()
 
-		## Enable FMM and eFEDs:
-		if len(self.config.eFEDs)>0:
+		## Configure and enable:
+		self.configure()
+		self.enable()
+
+	def configure(self):
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print "Configuring"
+
+		## In case of eFED:
+		if len(self.config.eFEDs) > 0:
+			self.sendCmdToGTPeFMM('Configure', invert=False)
+			sleep(10, self.options.verbose, self.options.dry)
+			self.sendCmdToEVMRUBU('Configure')
+
 			fmm = self.symbolMap('FMM0')
 			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
 			self.sendCmdToEFEDs('Enable')
-			## Don't need to enable GTPe when running with eFEDs?
+			return
 
-		## Enable FEROLs
-		self.sendCmdToFEROLs('Enable')
-		sleep(3, self.options.verbose, self.options.dry)
+		## In case of FEROLs:
+		if len(self.config.FEROLs) > 0:
+			self.sendCmdToFEROLs('Configure')
+			sleep(5, self.options.verbose, self.options.dry)
 
-		## Check Status of FEROLs and EVM/RUs:
-		if self.options.verbose > 0: print separator
-		if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
-			## Not everything enabled, retry
-			if self.__RETRY_COUNTER < 1:
-				self.__RETRY_COUNTER += 1
-				printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
-				utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-				self.start(fragSize=fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
-			else:
-				printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
-				raise RuntimeError
-		if self.options.verbose > 0: print separator
+			## Configure GTPe and FMM:
+			if self.config.useGTPe:
+				self.sendCmdToGTPeFMM('Configure', invert=False)
+				sleep(10, self.options.verbose, self.options.dry)
 
-		## Enable FMM:
-		if self.config.useGTPe and not len(self.config.eFEDs)>0:
-			fmm = self.symbolMap('FMM0')
-			utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+			## Configure and Enable EVM/RU/BU
+			self.sendCmdToEVMRUBU('Configure')
+			return
+		printWarningWithWait("Doing nothing.", waittime=0, instance=self)
+		return
 
-		## Enable GTPe:
-		if self.config.useGTPe:
-			gtpe = self.symbolMap('GTPE0')
-			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+	def enable(self):
+		## In case of eFEDs or FEROLs:
+		if len(self.config.eFEDs) > 0 or len(self.config.FEROLs) > 0:
+			self.sendCmdToRUEVMBU('Enable')
 
-		sleep(10, self.options.verbose, self.options.dry)
+			## Enable FEROLs
+			self.sendCmdToFEROLs('Enable')
+			sleep(3, self.options.verbose, self.options.dry)
+
+			## Check Status of FEROLs and EVM/RUs:
+			if self.options.verbose > 0: print separator
+			if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
+				## Not everything enabled, retry
+				if self.__RETRY_COUNTER < 1:
+					self.__RETRY_COUNTER += 1
+					printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
+					utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+					self.start(fragSize=fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
+				else:
+					printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
+					raise RuntimeError
+			if self.options.verbose > 0: print separator
+
+			## Enable FMM:
+			if self.config.useGTPe and not len(self.config.eFEDs)>0:
+				fmm = self.symbolMap('FMM0')
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+
+			## Enable GTPe:
+			if self.config.useGTPe:
+				gtpe = self.symbolMap('GTPE0')
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
+
+			sleep(10, self.options.verbose, self.options.dry)
+			return
+
+		printWarningWithWait("Doing nothing.", waittime=0, instance=self)
+		return
+
 	def prepareOutputDir(self):
 		import glob
 		if not self.options.outputDir:
@@ -394,7 +440,6 @@ class daq2Control(object):
 			try:
 				gtpe = self.symbolMap('GTPE0')
 				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'triggerRate', 'double', str(float(rate)*1000), verbose=self.options.verbose, dry=self.options.dry)
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Configure', verbose=self.options.verbose, dry=self.options.dry)
 			except KeyError as e:
 				message = "Need to use GTPe with eFEDs!"
 				printError(message, self)
@@ -402,21 +447,6 @@ class daq2Control(object):
 			except ValueError as e:
 				if rate == 'max': printError('Failed to specify a rate when running with GTPe. Use option --useRate', self)
 				raise e
-
-			self.sendCmdToEFEDs('Configure')
-			self.sendCmdToFEROLs('Configure')
-			sleep(5, self.options.verbose, self.options.dry)
-
-			try:
-				fmm = self.symbolMap('FMM0')
-				utils.sendSimpleCmdToApp(fmm.host, fmm.port, 'tts::FMMController', '0', 'Configure', verbose=self.options.verbose, dry=self.options.dry)
-			except KeyError as e:
-				printError('Need to configure an FMM when running with eFEDs!', self)
-				raise e
-
-			sleep(10, self.options.verbose, self.options.dry)
-			self.sendCmdToEVMRUBU('Configure')
-			self.sendCmdToRUEVMBU('Enable')
 			return
 
 		## In case of FEROLs:
@@ -444,21 +474,9 @@ class daq2Control(object):
 					for n,bu in enumerate(self.config.BUs):
 						print bu.name, 'dummyFedPayloadSize', int(utils.getParam(bu.host, bu.port, 'gevb2g::BU', str(n), 'currentSize', 'xsd:unsignedLong'))
 
-			## Configure FEROLs
-			self.sendCmdToFEROLs('Configure')
-			sleep(5, self.options.verbose, self.options.dry)
-
-			## Configure GTPe and FMM:
-			if self.config.useGTPe:
-				self.sendCmdToGTPeFMM('Configure', invert=False)
-				sleep(10, self.options.verbose, self.options.dry)
-
-			## Configure and Enable EVM/RU/BU
-			self.sendCmdToEVMRUBU('Configure')
-			self.sendCmdToRUEVMBU('Enable')
 			return
 
-		## In case of eFEROLs:
+		## In case of eFEROLs (also configure and enable in this case):
 		elif len(self.config.eFEROLs) > 0:
 			from multiprocessing import Pool
 			pool = Pool(len(self.config.eFEROLs))
