@@ -201,6 +201,23 @@ class daq2Control(object):
 				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSize',       'unsignedInt', int(fragSize),        verbose=self.options.verbose, dry=self.options.dry)
 				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0, 'eventSizeStdDev', 'unsignedInt', int(relRMS*fragSize), verbose=self.options.verbose, dry=self.options.dry)
 
+	def setRunNumber(self, number=0):
+		## Set Runnumber here:
+		if number==0:
+			number = time.strftime('%m%d%H%M%S')
+
+		if self.options.verbose > 0: print "Setting run number", number
+
+		for n,h in enumerate(self.config.FMM):
+			utils.setParam(h.host, h.port, 'tts::FMMController',            str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
+		for n,h in enumerate(self.config.RUs):
+			classname = 'RU' if not self.config.useEvB or n>0 else 'EVM'
+			utils.setParam(h.host, h.port, self.config.namespace+classname, str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
+		for n,h in enumerate(self.config.EVM):
+			utils.setParam(h.host, h.port, self.config.namespace+'EVM',     str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
+		for n,h in enumerate(self.config.BUs):
+			utils.setParam(h.host, h.port, self.config.namespace+'BU',      str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
+
 	## Control methods
 	def setup(self):
 		"""Clean up and re-create run directory, fill config templates, create output directory"""
@@ -287,6 +304,9 @@ class daq2Control(object):
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		sleep(2, self.options.verbose, self.options.dry)
 
+		## Set Runnumber:
+		self.setRunNumber()
+
 		## Enable FMM and eFEDs:
 		if len(self.config.eFEDs)>0:
 			fmm = self.symbolMap('FMM0')
@@ -300,7 +320,7 @@ class daq2Control(object):
 
 		## Check Status of FEROLs and EVM/RUs:
 		if self.options.verbose > 0: print separator
-		if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose):
+		if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
 			## Not everything enabled, retry
 			if self.__RETRY_COUNTER < 1:
 				self.__RETRY_COUNTER += 1
@@ -361,7 +381,6 @@ class daq2Control(object):
 			outfile.close()
 
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
-		## This is supposed to work both for eFEROLs and FEROLS!
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s kHz rate" % (fragSize, fragSizeRMS, str(rate))
 

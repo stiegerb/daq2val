@@ -220,8 +220,7 @@ class daq2Config(object):
 				raise RuntimeError("Didn't find all Event_Length_Max_bytes parameter in config file?!")
 
 			## Check they are all the same:
-			size_set = set()
-			for x in maxsizes: size_set.add(x)
+			size_set = set(maxsizes)
 			if len(size_set) > 1:
 				message = """
 WARNING: You have FEROLs with different

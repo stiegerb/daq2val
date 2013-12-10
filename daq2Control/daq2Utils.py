@@ -214,8 +214,9 @@ def tryWebPing(host, port, verbose=0, dry=False):
 	if verbose>0: print 'Checking %25s:%-5d' % (host,int(port))
 	return subprocess.call(shlex.split(cmd))
 
-def checkApplicationState(host, classname, instance, statename):
+def checkApplicationState(host, classname, instance, statename, dry=False):
 	## Special case until stateName is added to the application infospace in the FerolController
+	if dry: return True
 	if host.type == 'FEROLCONTROLLER':
 		url = 'http://%s:%d/urn:xdaq-application:lid=109' % (host.host, host.port)
 		items = loadMonitoringItemsFromURL(url)
@@ -233,7 +234,7 @@ def checkApplicationState(host, classname, instance, statename):
 		return False
 	return True
 
-def checkStates(hosts, statename, verbose=0):
+def checkStates(hosts, statename, verbose=0, dry=False):
 	"""Checks a fixed list of applications on hosts to be in statename"""
 	applications_to_check = {
 		'FEROLCONTROLLER' : ['ferol::FerolController'],
@@ -248,7 +249,7 @@ def checkStates(hosts, statename, verbose=0):
 			if not app in applications_to_check[host.type]: continue
 
 			if verbose > 0: stdout.write('Checking whether application %s(%d) on %s:%d is in state "%s" ... ' % (app, inst, host.host, host.port, statename))
-			if not checkApplicationState(host, app, inst, statename):
+			if not checkApplicationState(host, app, inst, statename, dry=dry):
 				if verbose > 0: stdout.write(' FAILED\n')
 				return False
 			if verbose > 0: stdout.write(' OK\n')
