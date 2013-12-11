@@ -234,13 +234,11 @@ class daq2Config(object):
 							efedns = '{urn:xdaq-application:tts::FMMController}'
 							prop = app.find(efedns + 'properties')
 							config = prop.find(efedns + 'config')
-							# print ET.dump(config)
 							for item in config.findall(efedns+"item"):
 								geoslot = int(item.find(efedns+'geoslot').text)
 								label   = str(item.find(efedns+'label').text)
 								inputs  = str(item.find(efedns+'inputLabels').text)
 								outputs = str(item.find(efedns+'outputLabels').text)
-								print (geoslot, label, inputs, outputs)
 								ho.addSlot(geoslot, label, inputs, outputs)
 
 				if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
