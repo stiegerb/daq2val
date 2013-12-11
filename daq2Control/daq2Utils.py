@@ -292,7 +292,7 @@ def pauseGTPe(symbolMap, verbose=0, dry=False):
 		if tryWebPing(gtpe.host, gtpe.port) == 0:
 			if verbose>1: print 'Trying to pause GTPe.'
 			sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', 'Pause', verbose=verbose, dry=dry)
-			sleep(0.5, verbose=0, dry=dry)
+			sleep(2, verbose=0, dry=dry)
 		else:
 			if verbose>1: print 'GTPe not running.'
 	except KeyError: ## no GTPe defined in symbolmap

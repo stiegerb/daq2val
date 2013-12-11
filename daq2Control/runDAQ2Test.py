@@ -88,6 +88,9 @@ if __name__ == "__main__":
 	parser.add_option("--start",      default=False, action="store_true", dest="start",      help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
 	parser.add_option("--changeSize", default=False, action="store_true", dest="changeSize", help="Halt, change size and resume. Needs config and new size as arguments.")
 	parser.add_option("--stop",       default=False, action="store_true", dest="stop",       help="Stop all the XDAQ processes and exit")
+	parser.add_option("--configure",  default=False, action="store_true", dest="configure",  help="Configure and exit")
+	parser.add_option("--enable",     default=False, action="store_true", dest="enable",     help="Enable and exit")
+	parser.add_option("--prepare",    default=False, action="store_true", dest="prepare",    help="Start XDAQ processes, send configuration files, set size and run number, but don't configure and enable")
 	(options, args) = parser.parse_args()
 
 	if options.useRate == 0: options.useRate = 'max'
@@ -98,6 +101,54 @@ if __name__ == "__main__":
 		sm = daq2SymbolMap()
 		utils.stopXDAQs(sm, verbose=options.verbose, dry=options.dry)
 		print separator
+		exit(0)
+
+	######################
+	## --prepare
+	if options.prepare and len(args) > 1:
+		fragSize = int(args[1])
+		if len(args) > 2:
+			relRMS = float(args[2])
+			options.useLogNormal = True
+			options.relRMS = relRMS
+		else:
+			relRMS = 0
+			options.useLogNormal = False
+			options.relRMS = None
+
+		d2c = daq2Control(args[0], options)
+		d2c.currentFragSize    = fragSize
+		d2c.currentFragSizeRMS = int(relRMS*fragSize)
+		d2c.currentRate        = options.useRate
+
+		## Stop previously running things
+		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+
+		d2c.setup()
+		d2c.start(fragSize, relRMS*fragSize, rate=options.useRate, onlyPrepare=True)
+		exit(0)
+
+	######################
+	## --configure
+	if options.configure and len(args) > 0:
+		d2c = daq2Control(args[0], options)
+		d2c.configure()
+
+		######################
+		## NEED TO FIX THIS ##
+		######################
+		## Check everything is 'Configured' (or 'Ready' in case of EVM)
+		tobechecked = [(d2c.config.FEROLs + d2c.config.RUs + d2c.config.BUs + d2c.config.eFEDs + d2c.config.GTPe + d2c.config.FMM, 'Configured'), (d2c.config.EVM, 'Ready')]
+		for hostlist, state in tobechecked:
+			if not utils.checkStates(hostlist, state, verbose=options.verbose, dry=options.dry):
+				printWarningWithWait('Configure failed for some machines.', waittime=0, instance=self)
+		exit(0)
+
+	######################
+	## --enable
+	if options.enable and len(args) > 0:
+		d2c = daq2Control(args[0], options)
+		d2c.enable()
 		exit(0)
 
 	######################

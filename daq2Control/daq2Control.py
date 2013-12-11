@@ -195,7 +195,7 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 
 		## Flat profile (i.e. each stream has the same size)
-		if self.options.sizeProfile == 'flat': ## UNTESTED
+		if self.options.sizeProfile == 'flat':
 			for efed in self.config.eFEDs: ## loop on eFED machines
 				for instance,fedid in efed.streams: ## loop on applications for each eFED
 					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', instance, 'eventSize',       'unsignedInt', int(fragSize),    verbose=self.options.verbose, dry=self.options.dry)
@@ -214,7 +214,9 @@ class daq2Control(object):
 		if number==0:
 			number = time.strftime('%m%d%H%M%S')
 
+		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting run number", number
+		if self.options.verbose > 0: print separator
 
 		for n,h in enumerate(self.config.FMM):
 			utils.setParam(h.host, h.port, 'tts::FMMController',            str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
@@ -256,9 +258,14 @@ class daq2Control(object):
 				configureBody = '<xdaq:Configure xmlns:xdaq=\"urn:xdaq-soap:3.0\">\n\n\n' + filledconfig + '\n\n\n</xdaq:Configure>\n'
 				configureCmd = utils.SOAPEnvelope % configureBody
 				file.write(configureCmd)
-	def start(self, fragSize, fragSizeRMS=0, rate='max'):
-		"""Start all XDAQ processes, set configuration for fragSize and start running"""
-		self.currentFragSize = fragSize
+	def start(self, fragSize, fragSizeRMS=0, rate='max', onlyPrepare=False):
+		"""Start all XDAQ processes, set configuration for fragSize and start running
+			onlyPrepare=True will stop before configuring and enabling
+		"""
+		self.currentFragSize    = fragSize
+		self.currentFragSizeRMS = fragSizeRMS
+		self.currentRate        = rate
+
 		## Start the xdaq processes from the launchers
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Starting XDAQ processes"
@@ -305,15 +312,16 @@ class daq2Control(object):
 			## Try again to send the command file
 			if not utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry)):
 				raise RuntimeError('Failed to send command file to all hosts')
-
-
-		## Set the fragment size, rms, and rate, configure, and enable
 		sleep(2, self.options.verbose, self.options.dry)
+
+		## Set the fragment size, rms, and rate
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		sleep(2, self.options.verbose, self.options.dry)
 
 		## Set Runnumber:
 		self.setRunNumber()
+
+		if onlyPrepare: return
 
 		## Configure and enable:
 		self.configure()
@@ -322,6 +330,7 @@ class daq2Control(object):
 	def configure(self):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring"
+		if self.options.verbose > 0: print separator
 
 		## In case of eFED:
 		if len(self.config.eFEDs) > 0:
@@ -345,10 +354,12 @@ class daq2Control(object):
 			## Configure and Enable EVM/RU/BU
 			self.sendCmdToEVMRUBU('Configure')
 			return
-		printWarningWithWait("Doing nothing.", waittime=0, instance=self)
+		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
 		return
-
 	def enable(self):
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print "Enabling"
+		if self.options.verbose > 0: print separator
 		## In case of eFEDs or FEROLs:
 		if len(self.config.eFEDs) > 0 or len(self.config.FEROLs) > 0:
 			self.sendCmdToRUEVMBU('Enable')
@@ -366,18 +377,15 @@ class daq2Control(object):
 			## Check Status of FEROLs and EVM/RUs:
 			if self.options.verbose > 0: print separator
 			if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
-				# ## Not everything enabled, retry
-				# if self.__RETRY_COUNTER < 1:
-				# 	self.__RETRY_COUNTER += 1
-				# 	printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
-				# 	utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-				# 	self.start(fragSize=fragSize, fragSizeRMS=fragSizeRMS, rate=rate)
-				# else:
-				###########################
-				### NEED TO FIX THIS ######
-				###########################
-				printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
-				raise RuntimeError
+				## Not everything enabled, retry
+				if self.__RETRY_COUNTER < 1:
+					self.__RETRY_COUNTER += 1
+					printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
+					utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+					self.start(fragSize=self.currentFragSize, fragSizeRMS=self.currentFragSizeRMS, rate=self.currentRate)
+				else:
+					printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
+					raise RuntimeError
 			if self.options.verbose > 0: print separator
 
 			## Enable GTPe:
@@ -388,7 +396,7 @@ class daq2Control(object):
 			sleep(2, self.options.verbose, self.options.dry)
 			return
 
-		printWarningWithWait("Doing nothing.", waittime=0, instance=self)
+		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
 		return
 
 	def prepareOutputDir(self):
@@ -431,12 +439,14 @@ class daq2Control(object):
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s kHz rate" % (fragSize, fragSizeRMS, str(rate))
+		self.currentFragSize    = fragSize
+		self.currentFragSizeRMS = fragSizeRMS
+		self.currentRate        = rate
 
 		## In case of eFED:
 		if len(self.config.eFEDs) > 0:
 			## Set fragment size and delay for eFEDs:
 			self.setSizeEFEDs(fragSize, fragSizeRMS)
-			self.currentFragSize = fragSize
 
 			## Set trigger rate at GTPe
 			try:
@@ -455,7 +465,6 @@ class daq2Control(object):
 		if len(self.config.FEROLs) > 0:
 			## Set fragment size and delay for FEROLs:
 			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
-			self.currentFragSize = fragSize
 
 			## Set trigger rate at GTPe
 			if self.config.useGTPe:
@@ -501,7 +510,6 @@ class daq2Control(object):
 			for n,efrl in enumerate(self.config.eFEROLs):
 				if self.config.useEvB or self.options.useLogNormal: utils.setParam(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'fedSize',     'unsignedInt',  fragSize, verbose=self.options.verbose, dry=self.options.dry)
 				else:                                               utils.setParam(efrl.host, efrl.port, 'Client',                n, 'currentSize', 'unsignedLong', fragSize, verbose=self.options.verbose, dry=self.options.dry)
-			self.currentFragSize = fragSize
 
 
 			## Set lognormal rms for eFEROLs (when running with --useLogNormal)
@@ -545,6 +553,9 @@ class daq2Control(object):
 
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
+		self.currentFragSize    = fragSize
+		self.currentFragSizeRMS = fragSizeRMS
+		self.currentRate        = rate
 
 		## Pause GTPe
 		if self.config.useGTPe:
@@ -560,7 +571,6 @@ class daq2Control(object):
 
 			## Set fragment size on eFEDs
 			self.setSizeEFEDs(fragSize, fragSizeRMS)
-			self.currentFragSize = fragSize
 
 			# ## Set trigger rate at GTPe
 			# ## This doesn't work yet?
@@ -583,7 +593,6 @@ class daq2Control(object):
 
 			## Change fragment size and delay for FEROLs:
 			self.setSizeFEROLs(fragSize, fragSizeRMS, rate)
-			self.currentFragSize = fragSize
 
 			## Halt EVM/RUs/BUs
 			self.sendCmdToEVMRUBU('Halt')
