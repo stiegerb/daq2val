@@ -42,16 +42,34 @@ class eFED(host):
 	def __init__(self,name,index,soaphost='undefined',soapport=-99):
 		super(FEROL, self).__init__()
 		streams = []
-	def addStream(self, instance, fedid=900):
+	def addStream(self, instance, fedid=900, slot=-1):
 		if not hasattr(self, 'streams'): ## want to morph hosts into eFEDs, i.e. constructor might not have been called
 			self.streams = []
-		self.streams.append((instance, fedid))
+		self.streams.append((instance, fedid, slot))
 	def __len__(self):
 		return len(streams)
 	def __str__(self):
 		text  = '%-20s%3d at %25s:%-5d with launcher at %-5d\n' % (self.type, self.index, self.host, self.port, self.lport)
-		for n,(instance,fedid) in enumerate(self.streams):
-			text += '  stream %d at instance %2d, fedid %d\n' % (n, instance, fedid)
+		for n,(instance,fedid,slot) in enumerate(self.streams):
+			text += '  stream %d at instance %2d, fedid %d, slot %d\n' % (n, instance, fedid, slot)
+		return text
+
+######################################################################
+class FMM(host):
+	"""Holds additional information on FMM configuration"""
+	def __init__(self,name,index,soaphost='undefined',soapport=-99):
+		super(FEROL, self).__init__()
+		streams = []
+	def addSlot(self, geoslot=0, label='', inputs='', outputs=''):
+		if not hasattr(self, 'slots'): ## want to morph hosts into FMMs, i.e. constructor might not have been called
+			self.slots = []
+		self.slots.append((geoslot, label, inputs, outputs))
+	def __len__(self):
+		return len(streams)
+	def __str__(self):
+		text  = '%-20s%3d at %25s:%-5d with launcher at %-5d\n' % (self.type, self.index, self.host, self.port, self.lport)
+		for n,(geoslot, label, inputs, outputs) in enumerate(self.slots):
+			text += '  geoslot %d (%-15s) inputLabels: %-82s outputLabels: %-20s\n' % (geoslot, label, inputs, outputs)
 		return text
 
 ######################################################################
@@ -129,8 +147,11 @@ class daq2Config(object):
 			out.write('\n')
 
 			if host.__class__ == eFED:
-				for n,(instance,fedid) in enumerate(host.streams):
-					out.write(prepend+'  stream %d at instance %2d, fedid %d\n' % (n, instance, fedid))
+				for n,(instance,fedid,slot) in enumerate(host.streams):
+					out.write(prepend+'  stream %d at instance %2d, fedid %d, slot %d\n' % (n, instance, fedid, slot))
+			if host.__class__ == FMM:
+				for n,(geoslot, label, inputs, outputs) in enumerate(host.slots):
+					out.write(prepend+'  geoslot %d (%-15s) inputLabels: %-82s outputLabels: %-20s\n' % (geoslot, label, inputs, outputs))
 		out.write(prepend+separator+'\n')
 
 	def readXDAQConfigTemplate(self, configFile):
@@ -201,8 +222,26 @@ class daq2Config(object):
 							efedns = '{urn:xdaq-application:d2s::FEDEmulator}'
 							prop = app.find(efedns + 'properties')
 							fedid    = int(prop.find(efedns + 'FedSourceId').text)
+							slot     = int(prop.find(efedns + 'slot').text)
 							instance = int(app.attrib['instance'])
-							ho.addStream(instance, fedid)
+							ho.addStream(instance, fedid, slot)
+
+				## For FMM, check the different geoslots and input/output labels
+				if h == 'FMM':
+					ho.__class__ = FMM ## Make it an FMM
+					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+						if app.attrib['class'] == 'tts::FMMController':
+							efedns = '{urn:xdaq-application:tts::FMMController}'
+							prop = app.find(efedns + 'properties')
+							config = prop.find(efedns + 'config')
+							# print ET.dump(config)
+							for item in config.findall(efedns+"item"):
+								geoslot = int(item.find(efedns+'geoslot').text)
+								label   = str(item.find(efedns+'label').text)
+								inputs  = str(item.find(efedns+'inputLabels').text)
+								outputs = str(item.find(efedns+'outputLabels').text)
+								print (geoslot, label, inputs, outputs)
+								ho.addSlot(geoslot, label, inputs, outputs)
 
 				if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
 					self.nStreams += 1
