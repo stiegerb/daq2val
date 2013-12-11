@@ -133,15 +133,6 @@ if __name__ == "__main__":
 	if options.configure and len(args) > 0:
 		d2c = daq2Control(args[0], options)
 		d2c.configure()
-
-		######################
-		## NEED TO FIX THIS ##
-		######################
-		## Check everything is 'Configured' (or 'Ready' in case of EVM)
-		tobechecked = [(d2c.config.FEROLs + d2c.config.RUs + d2c.config.BUs + d2c.config.eFEDs + d2c.config.GTPe + d2c.config.FMM, 'Configured'), (d2c.config.EVM, 'Ready')]
-		for hostlist, state in tobechecked:
-			if not utils.checkStates(hostlist, state, verbose=options.verbose, dry=options.dry):
-				printWarningWithWait('Configure failed for some machines.', waittime=0, instance=self)
 		exit(0)
 
 	######################

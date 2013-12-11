@@ -24,10 +24,10 @@ SOAPEnvelope = '''<SOAP-ENV:Envelope
 
 SIZE_LIMIT_TABLE = {
      # max size, scan until
-	 1 : (64000, 16000),  # merging by  1
-	 4 : (32000, 16000),  # merging by  4
-	 8 : (32000, 16000),  # merging by  8
-	12 : (21000, 10240),  # merging by 12
+	 1 : (64000, 32768),  # merging by  1
+	 4 : (32000, 32768),  # merging by  4
+	 8 : (32000, 32768),  # merging by  8
+	12 : (21000, 32768),  # merging by 12
 	16 : (16000,  8192),  # merging by 16
 	20 : (12800,  6400),  # merging by 20
 	24 : (10500,  5120),  # merging by 24
@@ -222,6 +222,7 @@ def checkApplicationState(host, classname, instance, statename, dry=False):
 		items = loadMonitoringItemsFromURL(url)
 		state = items['stateName']
 		if not state == statename:
+			stdout.write('\n')
 			printError('Application %s, instance %d, on host %s:%-d, did not return state "%s", instead was "%s".' %(classname, instance, host.host, host.port, statename, state))
 			return False
 		return True
@@ -230,6 +231,7 @@ def checkApplicationState(host, classname, instance, statename, dry=False):
 	state = getParam(host.host, host.port, classname, instance, 'stateName', 'xsd:string')
 	state = state.strip('\n') ## remove trailing newlines
 	if not state == statename:
+		stdout.write('\n')
 		printError('Application %s, instance %d, on host %s:%-d, did not return state "%s", instead was "%s".' %(classname, instance, host.host, host.port, statename, state))
 		return False
 	return True
@@ -384,7 +386,6 @@ def printWarningWithWait(message, waitfunc=sleep, waittime=10, instance=None):
 	if instance != None: print ">> %s >>" % (instance.__class__.__name__)
 	print message
 	if waittime > 0:
-		print " will wait for you to read this for", waittime ,"s and then continue..."
 		if waitfunc==None:
 			from time import sleep
 			sleep(waittime)

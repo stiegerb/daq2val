@@ -53,7 +53,7 @@ class daq2Control(object):
 
 		self.config = daq2Config(configFile)
 		self.config.fillFromSymbolMap(self.symbolMap)
-		self.config.printHosts()
+		if self.options.verbose>1: self.config.printHosts()
 
 		self.__RETRY_COUNTER = 0
 
@@ -111,7 +111,7 @@ class daq2Control(object):
 	def sendCmdToEFEDs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for efed in self.config.eFEDs:
-			for instance,_ in efed.streams:
+			for instance,_,_ in efed.streams:
 				utils.sendSimpleCmdToApp(efed.host, efed.port, 'd2s::FEDEmulator', instance, cmd, verbose=self.options.verbose, dry=self.options.dry)
 	def sendCmdToGTPeFMM(self, cmd, invert=False):
 		try:
@@ -197,7 +197,7 @@ class daq2Control(object):
 		## Flat profile (i.e. each stream has the same size)
 		if self.options.sizeProfile == 'flat':
 			for efed in self.config.eFEDs: ## loop on eFED machines
-				for instance,fedid in efed.streams: ## loop on applications for each eFED
+				for instance,fedid,_ in efed.streams: ## loop on applications for each eFED
 					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', instance, 'eventSize',       'unsignedInt', int(fragSize),    verbose=self.options.verbose, dry=self.options.dry)
 					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', instance, 'eventSizeStdDev', 'unsignedInt', int(fragSizeRMS), verbose=self.options.verbose, dry=self.options.dry)
 		else: ## UNTESTED
@@ -330,7 +330,6 @@ class daq2Control(object):
 	def configure(self):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring"
-		if self.options.verbose > 0: print separator
 
 		## In case of eFED:
 		if len(self.config.eFEDs) > 0:
@@ -339,27 +338,48 @@ class daq2Control(object):
 			self.sendCmdToEFEDs('Configure')
 			self.sendCmdToFEROLs('Configure')
 			sleep(10, self.options.verbose, self.options.dry)
+			if not self.checkConfigured():
+				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
+				if not self.checkConfigured():
+					self.retry('Failed to configure.')
 			return
 
 		## In case of FEROLs:
 		if len(self.config.FEROLs) > 0:
 			self.sendCmdToFEROLs('Configure')
-			sleep(5, self.options.verbose, self.options.dry)
+			self.sendCmdToEVMRUBU('Configure')
 
 			## Configure GTPe and FMM:
 			if self.config.useGTPe:
 				self.sendCmdToGTPeFMM('Configure', invert=False)
-				sleep(10, self.options.verbose, self.options.dry)
 
-			## Configure and Enable EVM/RU/BU
-			self.sendCmdToEVMRUBU('Configure')
+			sleep(10, self.options.verbose, self.options.dry)
+			if not self.checkConfigured():
+				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
+				if not self.checkConfigured():
+					self.retry('Failed to configure.')
 			return
+
 		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
 		return
+	def checkConfigured(self):
+		if self.options.verbose > 0: print separator
+		## Check everything is 'Configured' or 'Ready'
+		to_be_checked = [(self.config.RUs[1:] + self.config.FEROLs, 'Configured'), ([self.config.RUs[0]] + self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.FMM + self.config.GTPe, 'Ready')]
+		if not self.config.useEvB:
+			to_be_checked = [(self.config.RUs + self.config.FEROLs, 'Configured'), (self.config.BUs + self.config.EVM + self.config.FMM + self.config.eFEDs + self.config.GTPe, 'Ready')]
+
+		for hostlist, state in to_be_checked:
+			if utils.checkStates(hostlist, state, verbose=self.options.verbose, dry=self.options.dry): continue
+			printWarningWithWait('Configure failed for some machines.', waittime=0, instance=self)
+			return False
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print 'CONFIGURED'
+		if self.options.verbose > 0: print separator
+		return True
 	def enable(self):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Enabling"
-		if self.options.verbose > 0: print separator
 		## In case of eFEDs or FEROLs:
 		if len(self.config.eFEDs) > 0 or len(self.config.FEROLs) > 0:
 			self.sendCmdToRUEVMBU('Enable')
@@ -372,21 +392,12 @@ class daq2Control(object):
 			if self.config.useGTPe:
 				fmm = self.symbolMap('FMM0')
 				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', 'Enable', verbose=self.options.verbose, dry=self.options.dry)
-				self.sendCmdToEFEDs('Enable')
 
-			## Check Status of FEROLs and EVM/RUs:
-			if self.options.verbose > 0: print separator
-			if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
-				## Not everything enabled, retry
-				if self.__RETRY_COUNTER < 1:
-					self.__RETRY_COUNTER += 1
-					printWarningWithWait('Not all FEROLs or RUs enabled, will try again.', waittime=0, instance=self)
-					utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-					self.start(fragSize=self.currentFragSize, fragSizeRMS=self.currentFragSizeRMS, rate=self.currentRate)
-				else:
-					printError('Failed to enable all FEROLs and RUs after retrying, aborting.', instance=self)
-					raise RuntimeError
-			if self.options.verbose > 0: print separator
+			self.sendCmdToEFEDs('Enable')
+
+			if not self.checkEnabled():
+				self.retry('Failed to enable all FEROLs and RUs.')
+
 
 			## Enable GTPe:
 			if self.config.useGTPe:
@@ -398,6 +409,25 @@ class daq2Control(object):
 
 		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
 		return
+	def checkEnabled(self):
+		if self.options.verbose > 0: print separator
+
+		## Check Status of FEROLs and EVM/RUs:
+		if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
+			return False
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print 'ENABLED'
+		if self.options.verbose > 0: print separator
+		return True
+	def retry(self, message):
+		if self.__RETRY_COUNTER < 2:
+			self.__RETRY_COUNTER += 1
+			printWarningWithWait(message+' ... retrying', waittime=0, instance=self)
+			utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+			self.start(fragSize=self.currentFragSize, fragSizeRMS=self.currentFragSizeRMS, rate=self.currentRate)
+		else:
+			printError(message, instance=self)
+			raise RuntimeError(message)
 
 	def prepareOutputDir(self):
 		import glob
