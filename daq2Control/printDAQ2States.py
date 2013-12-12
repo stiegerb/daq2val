@@ -4,6 +4,7 @@ from daq2Config import daq2Config
 from daq2Control import separator
 from daq2SymbolMap import daq2SymbolMap
 from daq2Utils import loadMonitoringItemsFromURL, getParam
+import urllib2
 
 if __name__ == "__main__":
 	from optparse import OptionParser
@@ -26,11 +27,17 @@ if __name__ == "__main__":
 			state = 'UNKNOWN'
 			if host.type == 'FEROLCONTROLLER': ## Special case for FEROLCONTROLLER
 				url = 'http://%s:%d/urn:xdaq-application:lid=109' % (host.host, host.port)
-				items = loadMonitoringItemsFromURL(url)
-				state = items['stateName']
+				try:
+					items = loadMonitoringItemsFromURL(url)
+					state = items['stateName']
+				except urllib2.URLError:
+					state = 'NO REPLY'
 			else:
 				state = getParam(host.host, host.port, app, inst, 'stateName', 'xsd:string')
 				state = state.strip('\n') ## remove trailing newlines
+				if 'ERROR COMMAND' in state:
+					if 'REPLY=NONE'          in state: state = 'NO REPLY'
+					if 'ApplicationNotFound' in state: state = 'APP NOT FOUND'
 			print'%-17s %-25s(%2d) %-20s' % (host.name, app, inst, state)
 	print separator
 
