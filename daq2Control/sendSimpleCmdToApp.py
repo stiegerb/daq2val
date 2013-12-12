@@ -26,7 +26,6 @@ if __name__ == "__main__":
 		printError('Host %s not defined in symbolmap!'%args[0])
 		exit(-1)
 	except IndexError:
-		printError('Not enough arguments!')
 		parser.print_help()
 		exit(-1)
 
