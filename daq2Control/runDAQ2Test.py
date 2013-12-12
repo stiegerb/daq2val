@@ -87,20 +87,35 @@ if __name__ == "__main__":
 	parser.add_option("--runTest",    default=False, action="store_true", dest="runTest",    help="Run a test setup, needs two arguments: config and fragment size")
 	parser.add_option("--start",      default=False, action="store_true", dest="start",      help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
 	parser.add_option("--changeSize", default=False, action="store_true", dest="changeSize", help="Halt, change size and resume. Needs config and new size as arguments.")
-	parser.add_option("--stop",       default=False, action="store_true", dest="stop",       help="Stop all the XDAQ processes and exit")
-	parser.add_option("--configure",  default=False, action="store_true", dest="configure",  help="Configure and exit")
-	parser.add_option("--enable",     default=False, action="store_true", dest="enable",     help="Enable and exit")
+	parser.add_option("--kill",       default=False, action="store_true", dest="kill",       help="Kill all the XDAQ processes and exit")
+	parser.add_option("--stop",       default=False, action="store_true", dest="stop",       help="Stop all applications, should reach 'Configured' state.")
+	parser.add_option("--test",       default=False, action="store_true", dest="test",       help="Test event building. Use --testTime option to set duration.")
+	parser.add_option("--configure",  default=False, action="store_true", dest="configure",  help="Configure")
+	parser.add_option("--enable",     default=False, action="store_true", dest="enable",     help="Enable")
 	parser.add_option("--prepare",    default=False, action="store_true", dest="prepare",    help="Start XDAQ processes, send configuration files, set size and run number, but don't configure and enable")
 	(options, args) = parser.parse_args()
 
 	if options.useRate == 0: options.useRate = 'max'
 
 	######################
+	## --test
+	if options.test and len(args)>0:
+		d2c = daq2Control(args[0], options)
+		testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry)
+		exit(0)
+
+	######################
+	## --kill
+	if options.kill:
+		d2SM  = daq2SymbolMap()
+		utils.stopXDAQs(d2SM, verbose=options.verbose, dry=options.dry)
+		exit(0)
+
+	######################
 	## --stop
-	if options.stop:
-		sm = daq2SymbolMap()
-		utils.stopXDAQs(sm, verbose=options.verbose, dry=options.dry)
-		print separator
+	if options.stop and len(args) > 1:
+		d2c = daq2Control(args[0], options)
+		d2c.stop()
 		exit(0)
 
 	######################
