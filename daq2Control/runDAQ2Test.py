@@ -65,6 +65,23 @@ def addOptions(parser):
 	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true",        dest="waitBeforeStop", help="For for key press before stopping the event building")
 	parser.add_option("-v", "--verbose",        default=1,     action="store", type='int', dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
 
+def setCurrentSizeFromArgs(d2c, args, options):
+	if len(args) > 1: ## if given, set also fragsize and relRMS
+		fragSize = int(args[1])
+		if len(args) > 2:
+			relRMS = float(args[2])
+			options.useLogNormal = True
+			options.relRMS = relRMS
+		else:
+			relRMS = 0
+			options.useLogNormal = False
+			options.relRMS = None
+
+		d2c.currentFragSize    = fragSize
+		d2c.currentFragSizeRMS = int(relRMS*fragSize)
+		d2c.currentRate        = options.useRate
+	return
+
 
 if __name__ == "__main__":
 	from optparse import OptionParser
@@ -121,20 +138,8 @@ if __name__ == "__main__":
 	######################
 	## --prepare
 	if options.prepare and len(args) > 1:
-		fragSize = int(args[1])
-		if len(args) > 2:
-			relRMS = float(args[2])
-			options.useLogNormal = True
-			options.relRMS = relRMS
-		else:
-			relRMS = 0
-			options.useLogNormal = False
-			options.relRMS = None
-
 		d2c = daq2Control(args[0], options)
-		d2c.currentFragSize    = fragSize
-		d2c.currentFragSizeRMS = int(relRMS*fragSize)
-		d2c.currentRate        = options.useRate
+		setCurrentSizeFromArgs(d2c, args, options)
 
 		## Stop previously running things
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
@@ -147,6 +152,7 @@ if __name__ == "__main__":
 	## --configure
 	if options.configure and len(args) > 0:
 		d2c = daq2Control(args[0], options)
+		setCurrentSizeFromArgs(d2c, args, options)
 		d2c.configure()
 		exit(0)
 
@@ -154,6 +160,7 @@ if __name__ == "__main__":
 	## --enable
 	if options.enable and len(args) > 0:
 		d2c = daq2Control(args[0], options)
+		setCurrentSizeFromArgs(d2c, args, options)
 		d2c.enable()
 		exit(0)
 

@@ -134,8 +134,15 @@ class daq2Control(object):
 			fmm = self.symbolMap('FMM0')
 			utils.sendSimpleCmdToApp(fmm.host, fmm.port, 'tts::FMMController', '0', cmd, verbose=self.options.verbose, dry=self.options.dry)
 		except KeyError as e:
-			printError('No FMM found in symbol map, aborting.', self)
+			printWarningWithWait('No FMM found in symbol map, aborting.', waittime=0, instance=self)
 			raise e
+	def sendCmdToGTPe(self, cmd):
+		try:
+			gtpe = self.symbolMap('GTPE0')
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', cmd, verbose=self.options.verbose, dry=self.options.dry)
+		except KeyError as e:
+			printWarningWithWait('No GTPe found in symbol map, aborting.', waittime=0, instance=self)
+			pass
 
 
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
@@ -317,14 +324,44 @@ class daq2Control(object):
 		self.setSize(fragSize, fragSizeRMS, rate=rate)
 		sleep(2, self.options.verbose, self.options.dry)
 
-		## Set Runnumber:
-		self.setRunNumber()
-
 		if onlyPrepare: return
 
 		## Configure and enable:
 		self.configure()
 		self.enable()
+	def stop(self):
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print "Stopping"
+
+		## Pause GTPe
+		if self.config.useGTPe:
+			self.sendCmdToGTPe('Pause')
+			sleep(2, self.options.verbose, self.options.dry)
+
+		## Stop EVM, RUs, BUs, eFEDs, FEROLs, FMM, and GTPe
+		self.sendCmdToEVMRUBU('Stop')
+		self.sendCmdToEFEDs(  'Stop')
+		self.sendCmdToFEROLs( 'Stop')
+		if self.config.useGTPe:
+			self.sendCmdToGTPe('Stop')
+		sleep(3, self.options.verbose, self.options.dry)
+		self.checkStopped()
+		return
+	def checkStopped(self):
+		if self.options.verbose > 0: print separator
+		## Check everything is 'Configured' or 'Ready'
+		to_be_checked = [(self.config.RUs[1:] + self.config.FEROLs, 'Configured'), ([self.config.RUs[0]] + self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.GTPe, 'Ready')]
+		if not self.config.useEvB:
+			to_be_checked = [(self.config.RUs + self.config.FEROLs, 'Configured'), (self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.GTPe, 'Ready')]
+
+		for hostlist, state in to_be_checked:
+			if utils.checkStates(hostlist, state, verbose=self.options.verbose, dry=self.options.dry): continue
+			printWarningWithWait("Failed to reach 'Configured' state.", waittime=0, instance=self)
+			return False
+		if self.options.verbose > 0: print separator
+		if self.options.verbose > 0: print 'STOPPED'
+		if self.options.verbose > 0: print separator
+		return True
 
 	def configure(self):
 		if self.options.verbose > 0: print separator
@@ -379,6 +416,10 @@ class daq2Control(object):
 	def enable(self):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Enabling"
+
+		## Set Runnumber:
+		self.setRunNumber()
+
 		## In case of eFEDs or FEROLs:
 		if len(self.config.eFEDs) > 0 or len(self.config.FEROLs) > 0:
 			self.sendCmdToRUEVMBU('Enable')
