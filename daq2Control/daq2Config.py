@@ -112,6 +112,7 @@ class daq2Config(object):
 		self.useGTPe = False
 		if len(self.GTPe) > 0:
 			self.useGTPe = True
+		if self.verbose>1: self.printHosts()
 
 	def fillFromSymbolMap(self, symbolMap):
 		"""Adds the hostname and ports from a symbol map for each host"""
