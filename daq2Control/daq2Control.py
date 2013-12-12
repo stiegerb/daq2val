@@ -53,6 +53,7 @@ class daq2Control(object):
 
 		self.config = daq2Config(configFile)
 		self.config.fillFromSymbolMap(self.symbolMap)
+		if self.options.verbose>1: self.config.printHosts()
 
 		self.__RETRY_COUNTER = 0
 
