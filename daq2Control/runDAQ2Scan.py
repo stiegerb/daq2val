@@ -10,7 +10,8 @@ def getListOfSizes(maxSize, minSize=256, short=False):
 	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
 	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 20480, 24576, 28672, 32768]
 	# if short: allsteps = [1024, 16000]
-	if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768]
+	if short: allsteps = [256, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 14336, 16384, 20480, 24576, 28672, 32768]
+	# if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768]
 
 	steps = []
 	for step in allsteps:
@@ -22,7 +23,6 @@ def getListOfSizes(maxSize, minSize=256, short=False):
 if __name__ == "__main__":
 	from optparse import OptionParser
 	from runDAQ2Test import addOptions, testBuilding
-	parser = OptionParser()
 	usage = """
 	%prog [options] config.xml relRMS
 
@@ -30,6 +30,7 @@ if __name__ == "__main__":
 	%prog config.xml
 	%prog --short --maxSize 8192 --duration 300 --useRate 100 config.xml 0.0
 	"""
+	parser = OptionParser(usage=usage)
 	addOptions(parser)
 	parser.add_option("--maxSize",     default=32768, action="store", type="int", dest="maxSize",     help="Maximum fragment size of a scan in bytes, [default: %default]")
 	parser.add_option("--minSize",     default=256,   action="store", type="int", dest="minSize",     help="Minimum fragment size of a scan in bytes, [default: %default]")
