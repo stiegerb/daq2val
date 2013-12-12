@@ -22,7 +22,7 @@ class daq2SymbolMap(object):
 			try:
 				self._symbolMapFile = os.environ['TESTS_SYMBOL_MAP']
 			except KeyError as e:
-				printError(self, 'Need to provide an input file somehow!')
+				printError('Need to provide an input file somehow! Forgot to source setenv-COL.sh?', self)
 				raise e
 		else: self._symbolMapFile = symbolMapFile
 
