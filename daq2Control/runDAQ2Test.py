@@ -47,8 +47,8 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 ## main
 def addOptions(parser):
 	## Common options:
-	parser.add_option("-d", "--duration", default=120,   action="store", type="int", dest="duration",    help="Duration of a single step in seconds, [default: %default s]")
-	parser.add_option("--useRate",        default=0,     action="store", type="int", dest="useRate",     help="Event rate in kHz, [default is maximum rate]")
+	parser.add_option("-d", "--duration", default=120,   action="store", type="int",   dest="duration",    help="Duration of a single step in seconds, [default: %default s]")
+	parser.add_option("--useRate",        default=0,     action="store", type="float", dest="useRate",     help="Event rate in kHz, [default is maximum rate]")
 	parser.add_option("--testTime",       default=10,    action="store", type="int", dest="testTime",    help="Time for which event building is tested before starting, [default is %default]")
 	parser.add_option("--dropAtRU",       default=False, action="store_true",        dest="dropAtRU",    help="Run with dropping the fragments at the RU without building. (Use with --useIfstat to get throughput)")
 	parser.add_option("--useIfstat",      default=False, action="store_true",        dest="useIfstat",   help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
