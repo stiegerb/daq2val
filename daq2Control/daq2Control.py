@@ -461,7 +461,8 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		return True
 	def retry(self, message):
-		if self.__RETRY_COUNTER < 2:
+		print " -- retry", self.__RETRY_COUNTER+1, "of", self.options.retries
+		if self.__RETRY_COUNTER < self.options.retries:
 			self.__RETRY_COUNTER += 1
 			printWarningWithWait(message+' ... retrying', waittime=0, instance=self)
 			utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)

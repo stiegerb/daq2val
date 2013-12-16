@@ -268,16 +268,16 @@ WARNING: You have FEROLs with different
 """
 				printWarningWithWait(message, instance=self)
 
-			## Check they are correct and alert
-			if not checkMaxSize(maxsizes[0], self.nStreams//len(self.RUs)):
-			# if maxsizes[0] != SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]:
-				message = """
-WARNING: Event_Length_Max_bytes for FEROLs seems to be set
-         to the wrong value in your config .xml file!
+# 			## Check they are correct and alert
+# 			if not checkMaxSize(maxsizes[0], self.nStreams//len(self.RUs)):
+# 			# if maxsizes[0] != SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]:
+# 				message = """
+# WARNING: Event_Length_Max_bytes for FEROLs seems to be set
+#          to the wrong value in your config .xml file!
 
- Is set to: %d in config. Expected value: %d
-""" % (int(maxsizes[0]), int(SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]))
-				printWarningWithWait(message, instance=self)
+#  Is set to: %d in config. Expected value: %d
+# """ % (int(maxsizes[0]), int(SIZE_LIMIT_TABLE[self.nStreams//len(self.RUs)][0]))
+# 				printWarningWithWait(message, instance=self)
 
 		if len(tcp_cwnd) > 0:
 			## Check whether they were all filled

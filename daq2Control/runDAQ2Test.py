@@ -110,6 +110,7 @@ if __name__ == "__main__":
 	parser.add_option("--configure",  default=False, action="store_true", dest="configure",  help="Configure")
 	parser.add_option("--enable",     default=False, action="store_true", dest="enable",     help="Enable")
 	parser.add_option("--prepare",    default=False, action="store_true", dest="prepare",    help="Start XDAQ processes, send configuration files, set size and run number, but don't configure and enable")
+	parser.add_option("--retries",    default=5,     action="store",      type="int",        dest="retries", help="Number of retries when things go wrong.")
 	(options, args) = parser.parse_args()
 
 	if options.useRate == 0: options.useRate = 'max'
@@ -139,7 +140,19 @@ if __name__ == "__main__":
 	## --prepare
 	if options.prepare and len(args) > 1:
 		d2c = daq2Control(args[0], options)
-		setCurrentSizeFromArgs(d2c, args, options)
+		fragSize = int(args[1])
+		if len(args) > 2:
+			relRMS = float(args[2])
+			options.useLogNormal = True
+			options.relRMS = relRMS
+		else:
+			relRMS = 0
+			options.useLogNormal = False
+			options.relRMS = None
+
+		d2c.currentFragSize    = fragSize
+		d2c.currentFragSizeRMS = int(relRMS*fragSize)
+		d2c.currentRate        = options.useRate
 
 		## Stop previously running things
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
