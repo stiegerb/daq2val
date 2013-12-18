@@ -56,6 +56,8 @@ class daq2Control(object):
 		if self.options.verbose>1: self.config.printHosts()
 
 		self.__RETRY_COUNTER = 0
+		if not hasattr(self.options, 'retries'):
+			self.options.retries = 5
 
 		# if self.config.useGTPe and self.config.useEvB:
 		# 	printError("Don't know about GTPe with EvB yet. Aborting...", self)
@@ -379,6 +381,7 @@ class daq2Control(object):
 				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
+
 			return
 
 		## In case of FEROLs:
@@ -396,6 +399,8 @@ class daq2Control(object):
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
 			return
+
+
 
 		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
 		return
