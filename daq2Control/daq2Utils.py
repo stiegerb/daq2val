@@ -276,8 +276,10 @@ def stopXDAQ(host, verbose=0, dry=False):
 	while tryWebPing(host.host, host.port) == 0:
 		sendCmdToLauncher(host.host, host.lport, 'STOPXDAQ', verbose=verbose, dry=dry)
 		iterations += 1
-		if iterations > 1:
+		if iterations > 1 and iterations < 3:
 			print " repeating %s:%-d" % (host.host, host.port)
+		if iterations > 2:
+			break
 
 def stopXDAQs(symbolMap, verbose=0, dry=False):
 	"""Sends a 'STOPXDAQ' cmd to all SOAP hosts defined in the symbolmap that respond to a tryWebPing call"""
