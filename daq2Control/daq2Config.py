@@ -179,13 +179,16 @@ class daq2Config(object):
 
 		maxsizes = []
 		tcp_cwnd = []
-		## Scan <xc:Context>'s to extract configuration
+		checked_ibv = False
+
+		#### Scan <xc:Context>'s to extract configuration
 		for context in partition:
 			if not context.tag.endswith('Context'): continue
 
+			## Match context url
 			url = context.attrib['url']
 			pattern = re.compile(r'http://([A-Z_0-9]*?)([0-9]+)_SOAP_HOST_NAME:.*')
-			h,n = pattern.match(url).group(1), pattern.match(url).group(2)
+			h,n = pattern.match(url).group(1), pattern.match(url).group(2) ## so h will be RU/BU/EVM/FEROLCONTROLLER/..., n will be 0,1,2,3,...
 			try:
 				if self.verbose > 2: print 'Adding', h+n
 				ho = host(h+n, int(n), h)
@@ -197,6 +200,18 @@ class daq2Config(object):
 					except KeyError:
 						classname,instance = (str(app.attrib['class']), None)
 					ho.applications.append((classname, instance))
+
+				## For RU, check whether IVB or UDAPL (only do it once)
+				if h == 'RU' and checked_ibv == False:
+					self.useIBV = False
+					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+						if app.attrib['class'] == 'pt::ibv::Application':
+							self.useIBV = True  ## Found IBV configuration
+							break
+						if app.attrib['class'] == 'pt::udapl::Application':
+							self.useIBV = False ## Found UDAPL configuration
+							break
+					checked_ibv = True
 
 				## For FEROLs, check which of the streams are enabled
 				if h == 'FEROLCONTROLLER':
@@ -215,6 +230,7 @@ class daq2Config(object):
 								maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED1').text))
 								tcp_cwnd.append(int(prop.find(frlns + 'TCP_CWND_FED1').text))
 							break
+
 				## For eFEDs, count the number of enabled streams and their instances
 				if h == 'EFED':
 					ho.__class__ = eFED ## Make it an eFED

@@ -382,6 +382,11 @@ class daq2Control(object):
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
 
+			if self.config.useIBV: ## Only do this for ibv!
+				for h in self.config.RUs:
+					print "Sending init to", h.name
+					utils.sendSimpleCmdToApp(h.host, h.port, "pt::ibv::Application", 0, "init", verbose=self.options.verbose, dry=self.options.dry)
+				sleep(2, self.options.verbose, self.options.dry)
 			return
 
 		## In case of FEROLs:
@@ -398,6 +403,12 @@ class daq2Control(object):
 				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
+
+			if self.config.useIBV: ## Only do this for ibv!
+				for h in self.config.RUs:
+					print "Sending init to", h.name
+					utils.sendSimpleCmdToApp(h.host, h.port, "pt::ibv::Application", 0, "init", verbose=self.options.verbose, dry=self.options.dry)
+				sleep(2, self.options.verbose, self.options.dry)
 			return
 
 
