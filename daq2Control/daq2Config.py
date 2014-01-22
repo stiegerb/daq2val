@@ -81,7 +81,7 @@ class daq2Config(object):
 
  - Reads a template xdaq config.xml file and returns an object that will know the
    setup of the system.
- - Checks the config for EvB vs gevb2g cases, for GTPe, etc.
+ - Checks the config for EvB vs gevb2g cases, for GTPe, IBV/UDAPL, etc.
  - Additional checks on the config file, such as enableStream0/1,
    Event_Length_Max_bytes_FED0/1, etc.
 ---------------------------------------------------------------------
@@ -138,7 +138,8 @@ class daq2Config(object):
 		if len(self.FEROLs) > 0: config = '%ds%dfx%dx%d' % (streams, len(self.FEROLs), len(self.RUs), len(self.BUs))
 		else              : config = '%dx%dx%d'     % (len(self.eFEROLs), len(self.RUs), len(self.BUs))
 		builder = 'EvB' if self.useEvB else 'gevb2g'
-		out.write('%s%s configuration with %s\n' % (prepend, config, builder))
+		ptprotocol = 'IBV' if self.useIBV else 'UDAPL'
+		out.write('%s%s configuration with %s/%s\n' % (prepend, config, builder,ptprotocol))
 		out.write(prepend+separator+'\n')
 		for host in self.hosts:
 			out.write(prepend+'%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER), Applications:' % (host.name, host.host, host.port, host.lport))
@@ -207,9 +208,11 @@ class daq2Config(object):
 					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
 						if app.attrib['class'] == 'pt::ibv::Application':
 							self.useIBV = True  ## Found IBV configuration
+							if self.verbose > 2 : print "Found IBV peer transport protocol"
 							break
 						if app.attrib['class'] == 'pt::udapl::Application':
 							self.useIBV = False ## Found UDAPL configuration
+							if self.verbose > 2 : print "Found UDAPL peer transport protocol"
 							break
 					checked_ibv = True
 
@@ -322,7 +325,7 @@ WARNING: TCP_CWND_FEDX for FEROLs seems to be set
 """
 			cwnd = cwnd_set.pop()
 			if self.nStreams == len(self.FEROLs) and cwnd not in [80000, 55000]:
-				printWarningWithWait(message%(cwnd, 80000), instance=self)
+				printWarningWithWait(message%(cwnd, 80000), instance=self, waittime=2)
 			if self.nStreams == 2*len(self.FEROLs) and cwnd not in [40000, 35000]:
-				printWarningWithWait(message%(cwnd, 40000), instance=self)
+				printWarningWithWait(message%(cwnd, 40000), instance=self, waittime=2)
 

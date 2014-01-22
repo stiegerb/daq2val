@@ -31,7 +31,6 @@ class daq2Control(object):
 
  - Takes a daq2Config and a daq2SymbolMap to setup
  - Sets up and starts a FRL/eFRL x RU x BU system
- - Replaces the previous control scripts
 ---------------------------------------------------------------------
 '''
 	def __init__(self, configFile, options):
@@ -58,10 +57,6 @@ class daq2Control(object):
 		self.__RETRY_COUNTER = 0
 		if not hasattr(self.options, 'retries'):
 			self.options.retries = 5
-
-		# if self.config.useGTPe and self.config.useEvB:
-		# 	printError("Don't know about GTPe with EvB yet. Aborting...", self)
-		# 	raise RuntimeError
 
 		if self.config.useGTPe and self.options.useRate == 'max':
 			printWarningWithWait("Failed to specify rate for GTPe. Setting it to 100 kHz.", waittime=0, instance=self)
@@ -147,7 +142,6 @@ class daq2Control(object):
 			printWarningWithWait('No GTPe found in symbol map, aborting.', waittime=0, instance=self)
 			pass
 
-
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
 		if self.options.verbose > 0: print separator
 
@@ -226,6 +220,10 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting run number", number
 		if self.options.verbose > 0: print separator
+		self.runNumber = number
+
+		## gevb2g doesn't know about runnumbers
+		if not self.config.useEvB: return
 
 		for n,h in enumerate(self.config.FMM):
 			utils.setParam(h.host, h.port, 'tts::FMMController',            str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
@@ -420,7 +418,7 @@ class daq2Control(object):
 		## Check everything is 'Configured' or 'Ready'
 		to_be_checked = [(self.config.RUs[1:] + self.config.FEROLs, 'Configured'), ([self.config.RUs[0]] + self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.FMM + self.config.GTPe, 'Ready')]
 		if not self.config.useEvB:
-			to_be_checked = [(self.config.RUs + self.config.FEROLs, 'Configured'), (self.config.BUs + self.config.EVM + self.config.FMM + self.config.eFEDs + self.config.GTPe, 'Ready')]
+			to_be_checked = [(self.config.FEROLs, 'Configured')]
 
 		for hostlist, state in to_be_checked:
 			if utils.checkStates(hostlist, state, verbose=self.options.verbose, dry=self.options.dry): continue
@@ -470,8 +468,11 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 
 		## Check Status of FEROLs and EVM/RUs:
-		if not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
+		if self.config.useEvB     and not utils.checkStates(self.config.FEROLs + self.config.RUs + self.config.BUs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
 			return False
+		if not self.config.useEvB and not utils.checkStates(self.config.FEROLs, 'Enabled', verbose=self.options.verbose, dry=self.options.dry):
+			return False
+
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print 'ENABLED'
 		if self.options.verbose > 0: print separator
