@@ -66,6 +66,10 @@ def addOptions(parser):
 	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true",        dest="waitBeforeStop", help="For for key press before stopping the event building")
 	parser.add_option("-v", "--verbose",        default=1,     action="store", type='int', dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
 
+	parser.add_option("--setCWND",           default=-1,    action="store",      type='int', dest="setCWND",           help="Set the TCP_CWND_FEDX parameter in the FEROL config, overriding the configuration file [default: %default]")
+	parser.add_option("--disablePauseFrame", default=False, action="store_true",             dest="disablePauseFrame", help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'false', overriding the configuration file")
+	parser.add_option("--enablePauseFrame",  default=False, action="store_true",             dest="enablePauseFrame",  help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'true', overriding the configuration file")
+
 def setCurrentSizeFromArgs(d2c, args, options):
 	if len(args) > 1: ## if given, set also fragsize and relRMS
 		fragSize = int(args[1])

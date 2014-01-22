@@ -50,9 +50,7 @@ class daq2Control(object):
 		else:
 			self.symbolMap = daq2SymbolMap() ## will take it from the environment
 
-		self.config = daq2Config(configFile)
-		self.config.fillFromSymbolMap(self.symbolMap)
-		if self.options.verbose>1: self.config.printHosts()
+		self.setupConfig(configFile)
 
 		self.__RETRY_COUNTER = 0
 		if not hasattr(self.options, 'retries'):
@@ -79,6 +77,16 @@ class daq2Control(object):
 	def reset(self):
 		"""Reset counters."""
 		self.__RETRY_COUNTER = 0
+	def setupConfig(self, configFile):
+		self.config = daq2Config(configFile)
+		self.config.fillFromSymbolMap(self.symbolMap)
+		if self.options.enablePauseFrame:  self.config.setFerolParameter('ENA_PAUSE_FRAME', 'true')
+		if self.options.disablePauseFrame: self.config.setFerolParameter('ENA_PAUSE_FRAME', 'false')
+		if self.options.setCWND > 0:
+			self.config.setFerolParameter('TCP_CWND_FED0', self.options.setCWND)
+			self.config.setFerolParameter('TCP_CWND_FED1', self.options.setCWND)
+		if self.options.verbose>1: self.config.printHosts()
+
 
 	## Multi-commands
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
@@ -252,10 +260,12 @@ class daq2Control(object):
 		self.prepareOutputDir()
 
 		## Fill configuration template
-		if self.options.verbose > 0: print 'Filling configuration template in ' + self._runDir + '/configuration.xml'
+		runconfig = self._runDir + '/configuration.xml'
+		if self.options.verbose > 0: print 'Filling configuration template in ' + runconfig
 		if not self.options.dry:
-			filledconfig = self.symbolMap.fillTemplate(self.config.file)
-			with open(self._runDir+'/configuration.xml', 'w') as file:
+			tempconfig = self.config.writeConfig(runconfig) ## write out the parsed xml to a file (still templated)
+			filledconfig = self.symbolMap.fillTemplate(runconfig) ## fill the template with actual hosts and port numbers
+			with open(runconfig, 'w') as file:
 				file.write(filledconfig)
 
 		## Produce configure command file

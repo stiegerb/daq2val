@@ -88,17 +88,17 @@ class daq2Config(object):
 '''
 	def __init__(self, configFile, verbose=1):
 		self.verbose = verbose
-		self.file = configFile
-		self.hosts     = [] ## a list of the hosts defined in the xml config
-		self.FEROLs    = []
-		self.eFEROLs   = []
-		self.nStreams  = 0  ## total number of streams
-		self.RUs       = []
-		self.BUs       = []
-		self.EVM       = []
-		self.eFEDs     = []
-		self.GTPe      = []
-		self.FMM       = []
+		self.configfile = configFile
+		self.hosts      = [] ## a list of the hosts defined in the xml config
+		self.FEROLs     = []
+		self.eFEROLs    = []
+		self.nStreams   = 0  ## total number of streams
+		self.RUs        = []
+		self.BUs        = []
+		self.EVM        = []
+		self.eFEDs      = []
+		self.GTPe       = []
+		self.FMM        = []
 		self._hostTypes = {'FEROLCONTROLLER' : self.FEROLs,
 		                   'FEROL'           : self.eFEROLs,
 		                   'RU'              : self.RUs,
@@ -112,6 +112,12 @@ class daq2Config(object):
 		self.useGTPe = False
 		if len(self.GTPe) > 0:
 			self.useGTPe = True
+
+		self.xmlns_xc      = "http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30"
+		self.xmlns_soapenc = "http://schemas.xmlsoap.org/soap/encoding/"
+		self.xmlns_xsi     = "http://www.w3.org/2001/XMLSchema-instance"
+		self.xmlns_ferol   = "urn:xdaq-application:ferol::FerolController"
+
 		if self.verbose>1: self.printHosts()
 
 	def fillFromSymbolMap(self, symbolMap):
@@ -156,13 +162,33 @@ class daq2Config(object):
 					out.write(prepend+'  geoslot %d (%-15s) inputLabels: %-82s outputLabels: %-20s\n' % (geoslot, label, inputs, outputs))
 		out.write(prepend+separator+'\n')
 
+	def setFerolParameter(self, param_name, param_value):
+		partition = self.config.getroot()
+		for context in partition.getiterator(ET.QName(self.xmlns_xc,'Context').text):
+			if not 'FEROLCONTROLLER' in context.attrib['url']: continue
+			param = context.find(ET.QName(self.xmlns_xc,'Application').text+'/'+ET.QName(self.xmlns_ferol,'properties').text+'/'+ET.QName(self.xmlns_ferol,param_name).text)
+			if param is not None:
+				param.text = str(param_value)
+			else:
+				raise KeyError('Ferol parameter '+param_name+' not found')
+
+	def printFerolParameter(self, param_name):
+		partition = self.config.getroot()
+		for context in partition.getiterator(ET.QName(self.xmlns_xc,'Context').text):
+			if not 'FEROLCONTROLLER' in context.attrib['url']: continue
+			param = context.find(ET.QName(self.xmlns_xc,'Application').text+'/'+ET.QName(self.xmlns_ferol,'properties').text+'/'+ET.QName(self.xmlns_ferol,param_name).text)
+			if param is not None:
+				print context.attrib['url'], param_name, param.text
+			else:
+				raise KeyError('Ferol parameter '+param_name+' not found')
+
 	def readXDAQConfigTemplate(self, configFile):
 		if not os.path.exists(configFile):
 			raise IOError('File '+configFile+' not found')
 		self.testCase      = os.path.dirname(configFile[configFile.find('cases/')+6:])
 		self.testCaseShort = os.path.dirname(configFile).split('/')[-1]
-		config = ET.parse(configFile)
-		partition = config.getroot()
+		self.config = ET.parse(configFile)
+		partition = self.config.getroot()
 
 		## Check <i2o:protocol> element for evb: or gevb2g: tags to determine which of the two we're dealing with here:
 		i2o_namespace = 'http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30'
@@ -253,8 +279,8 @@ class daq2Config(object):
 						if app.attrib['class'] == 'tts::FMMController':
 							efedns = '{urn:xdaq-application:tts::FMMController}'
 							prop = app.find(efedns + 'properties')
-							config = prop.find(efedns + 'config')
-							for item in config.findall(efedns+"item"):
+							fmmconfig = prop.find(efedns + 'config')
+							for item in fmmconfig.findall(efedns+"item"):
 								geoslot = int(item.find(efedns+'geoslot').text)
 								label   = str(item.find(efedns+'label').text)
 								inputs  = str(item.find(efedns+'inputLabels').text)
@@ -271,6 +297,7 @@ class daq2Config(object):
 				printError('Unknown host type %s. Aborting.' % h, self)
 				raise e
 
+		if self.verbose < 1: return
 		if len(maxsizes) > 0:
 			## Check whether they were all filled
 			if len(maxsizes) != self.nStreams:
@@ -328,4 +355,8 @@ WARNING: TCP_CWND_FEDX for FEROLs seems to be set
 				printWarningWithWait(message%(cwnd, 80000), instance=self, waittime=2)
 			if self.nStreams == 2*len(self.FEROLs) and cwnd not in [40000, 35000]:
 				printWarningWithWait(message%(cwnd, 40000), instance=self, waittime=2)
+
+
+	def writeConfig(self, destination):
+		self.config.write(destination)
 

@@ -7,10 +7,11 @@ from daq2Utils import sleep, printError, printWarningWithWait, testBuilding, SIZ
 def getListOfSizes(maxSize, minSize=256, short=False):
 	stepsize = 256
 	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
-	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
-	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 20480, 24576, 28672, 32500]
+	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
+	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 20480, 24576, 28672, 32500]
 	# if short: allsteps = [1024, 16000]
-	if short: allsteps = [256, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 14336, 16384, 20480, 24576, 28672, 32500]
+	if short: allsteps = [256, 512, 1024, 1535, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 12288, 14336, 16000, 20480, 24576, 28672, 32500]
+	# if short: allsteps = [256, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 14336, 16384, 20480, 24576, 28672, 32500]
 	# if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768]
 
 	steps = []
@@ -80,7 +81,7 @@ WARNING: Your maximum size for scanning doesn't seem to
  Is set to: %d. Expected to scan only until: %d
  		(i.e. use option --maxSize %d)
 		""" % (steps[-1], SIZE_LIMIT_TABLE[mergingby][1], SIZE_LIMIT_TABLE[mergingby][1])
-		printWarningWithWait(message, waitfunc=sleep, waittime=10)
+		printWarningWithWait(message, waitfunc=sleep, waittime=2)
 
 	d2c.start(options.minSize, float(options.relRMS)*options.minSize, rate=options.useRate)
 
