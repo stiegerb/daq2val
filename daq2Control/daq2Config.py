@@ -3,6 +3,7 @@ import re, os, shlex
 import time
 from sys import stdout
 import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import QName as QN
 
 from daq2Utils import printError, printWarningWithWait, sleep, SIZE_LIMIT_TABLE, checkMaxSize
 
@@ -108,15 +109,18 @@ class daq2Config(object):
 		                   'GTPE'            : self.GTPe,
 		                   'FMM'             : self.FMM}
 
+		self.config   = ET.parse(configFile)
+		self.ETroot   = self.config.getroot()
+
+		self.xcns     = re.match(r'\{(.*?)\}Partition', self.ETroot.tag).group(1) ## Extract xdaq namespace
+		self.ferolns  = "urn:xdaq-application:ferol::FerolController"
+
+		self.contexts = self.ETroot.getiterator(str(QN(self.xcns,'Context')))
+
 		self.readXDAQConfigTemplate(configFile)
 		self.useGTPe = False
 		if len(self.GTPe) > 0:
 			self.useGTPe = True
-
-		self.xmlns_xc      = "http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30"
-		self.xmlns_soapenc = "http://schemas.xmlsoap.org/soap/encoding/"
-		self.xmlns_xsi     = "http://www.w3.org/2001/XMLSchema-instance"
-		self.xmlns_ferol   = "urn:xdaq-application:ferol::FerolController"
 
 		if self.verbose>1: self.printHosts()
 
@@ -163,36 +167,42 @@ class daq2Config(object):
 		out.write(prepend+separator+'\n')
 
 	def setFerolParameter(self, param_name, param_value):
-		partition = self.config.getroot()
-		for context in partition.getiterator(ET.QName(self.xmlns_xc,'Context').text):
+		for context in self.contexts:
 			if not 'FEROLCONTROLLER' in context.attrib['url']: continue
-			param = context.find(ET.QName(self.xmlns_xc,'Application').text+'/'+ET.QName(self.xmlns_ferol,'properties').text+'/'+ET.QName(self.xmlns_ferol,param_name).text)
+			param = context.find(QN(self.xcns,'Application').text+'/'+QN(self.ferolns,'properties').text+'/'+QN(self.ferolns,param_name).text)
 			if param is not None:
 				param.text = str(param_value)
 			else:
 				raise KeyError('Ferol parameter '+param_name+' not found')
 
 	def printFerolParameter(self, param_name):
-		partition = self.config.getroot()
-		for context in partition.getiterator(ET.QName(self.xmlns_xc,'Context').text):
+		for context in self.contexts:
 			if not 'FEROLCONTROLLER' in context.attrib['url']: continue
-			param = context.find(ET.QName(self.xmlns_xc,'Application').text+'/'+ET.QName(self.xmlns_ferol,'properties').text+'/'+ET.QName(self.xmlns_ferol,param_name).text)
+			param = context.find(QN(self.xcns,'Application').text+'/'+QN(self.ferolns,'properties').text+'/'+QN(self.ferolns,param_name).text)
 			if param is not None:
 				print context.attrib['url'], param_name, param.text
 			else:
 				raise KeyError('Ferol parameter '+param_name+' not found')
+
+	def urlToHostAndNumber(self, url):
+		"""
+		Converts context url strings like
+		'http://RU0_SOAP_HOST_NAME:RU0_SOAP_PORT'
+		to a pair of strings of hosttype and index. I.e. 'RU' and '0' in this case.
+		"""
+		pattern = re.compile(r'http://([A-Z_0-9]*?)([0-9]+)_SOAP_HOST_NAME:.*')
+		h,n = pattern.match(url).group(1), pattern.match(url).group(2) ## so h will be RU/BU/EVM/FEROLCONTROLLER/..., n will be 0,1,2,3,...
+		return h,n
 
 	def readXDAQConfigTemplate(self, configFile):
 		if not os.path.exists(configFile):
 			raise IOError('File '+configFile+' not found')
 		self.testCase      = os.path.dirname(configFile[configFile.find('cases/')+6:])
 		self.testCaseShort = os.path.dirname(configFile).split('/')[-1]
-		self.config = ET.parse(configFile)
-		partition = self.config.getroot()
 
 		## Check <i2o:protocol> element for evb: or gevb2g: tags to determine which of the two we're dealing with here:
 		i2o_namespace = 'http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30'
-		i2o_protocol = partition.find("{%s}protocol" % i2o_namespace)
+		i2o_protocol = self.ETroot.find(QN(i2o_namespace, 'protocol').text)
 		if 'gevb2g::' in i2o_protocol[0].attrib['class']: ## there is something with a gevb2g tag
 			if self.verbose > 2 : print "Found a gevb2g configuration"
 			self.useEvB = False
@@ -209,19 +219,16 @@ class daq2Config(object):
 		checked_ibv = False
 
 		#### Scan <xc:Context>'s to extract configuration
-		for context in partition:
-			if not context.tag.endswith('Context'): continue
-
+		for context in self.contexts:
+			apps = context.findall(QN(self.xcns, 'Application').text) ## all 'Application's of this context
 			## Match context url
-			url = context.attrib['url']
-			pattern = re.compile(r'http://([A-Z_0-9]*?)([0-9]+)_SOAP_HOST_NAME:.*')
-			h,n = pattern.match(url).group(1), pattern.match(url).group(2) ## so h will be RU/BU/EVM/FEROLCONTROLLER/..., n will be 0,1,2,3,...
+			h,n = self.urlToHostAndNumber(context.attrib['url'])
 			try:
 				if self.verbose > 2: print 'Adding', h+n
 				ho = host(h+n, int(n), h)
 
 				## Save a list of all applications and instances running in each context
-				for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+				for app in apps:
 					try:
 						classname,instance = (str(app.attrib['class']), int(app.attrib['instance']))
 					except KeyError:
@@ -231,7 +238,7 @@ class daq2Config(object):
 				## For RU, check whether IVB or UDAPL (only do it once)
 				if h == 'RU' and checked_ibv == False:
 					self.useIBV = False
-					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+					for app in apps:
 						if app.attrib['class'] == 'pt::ibv::Application':
 							self.useIBV = True  ## Found IBV configuration
 							if self.verbose > 2 : print "Found IBV peer transport protocol"
@@ -244,47 +251,46 @@ class daq2Config(object):
 
 				## For FEROLs, check which of the streams are enabled
 				if h == 'FEROLCONTROLLER':
-					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+					for app in apps:
 						if app.attrib['class'] == 'ferol::FerolController':
-							frlns = '{urn:xdaq-application:ferol::FerolController}'
-							prop = app.find(frlns + 'properties')
+							prop = app.find(QN(self.ferolns,'properties').text)
 							ho.__class__ = FEROL ## Make it a FEROL
-							ho.setStreams(prop.find(frlns + 'enableStream0').text, prop.find(frlns + 'enableStream1').text)
+							ho.setStreams(prop.find(QN(self.ferolns, 'enableStream0').text).text, prop.find(QN(self.ferolns, 'enableStream0').text).text)
 							if ho.enableStream0:
 								self.nStreams += 1
-								maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED0').text))
-								tcp_cwnd.append(int(prop.find(frlns + 'TCP_CWND_FED0').text))
+								maxsizes.append(int(prop.find(QN(self.ferolns, 'Event_Length_Max_bytes_FED0').text).text))
+								tcp_cwnd.append(int(prop.find(QN(self.ferolns, 'TCP_CWND_FED0').text).text))
 							if ho.enableStream1:
 								self.nStreams += 1
-								maxsizes.append(int(prop.find(frlns + 'Event_Length_Max_bytes_FED1').text))
-								tcp_cwnd.append(int(prop.find(frlns + 'TCP_CWND_FED1').text))
+								maxsizes.append(int(prop.find(QN(self.ferolns, 'Event_Length_Max_bytes_FED1').text).text))
+								tcp_cwnd.append(int(prop.find(QN(self.ferolns, 'TCP_CWND_FED1').text).text))
 							break
 
 				## For eFEDs, count the number of enabled streams and their instances
 				if h == 'EFED':
 					ho.__class__ = eFED ## Make it an eFED
-					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+					for app in apps:
 						if app.attrib['class'] == 'd2s::FEDEmulator':
-							efedns = '{urn:xdaq-application:d2s::FEDEmulator}'
-							prop = app.find(efedns + 'properties')
-							fedid    = int(prop.find(efedns + 'FedSourceId').text)
-							slot     = int(prop.find(efedns + 'slot').text)
+							efedns = 'urn:xdaq-application:d2s::FEDEmulator'
+							prop = app.find(QN(efedns,'properties').text)
+							fedid    = int(prop.find(QN(efedns,'FedSourceId').text).text)
+							slot     = int(prop.find(QN(efedns,'slot').text).text)
 							instance = int(app.attrib['instance'])
 							ho.addStream(instance, fedid, slot)
 
 				## For FMM, check the different geoslots and input/output labels
 				if h == 'FMM':
 					ho.__class__ = FMM ## Make it an FMM
-					for app in context.findall("./{http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30}Application"):
+					for app in apps:
 						if app.attrib['class'] == 'tts::FMMController':
-							efedns = '{urn:xdaq-application:tts::FMMController}'
-							prop = app.find(efedns + 'properties')
-							fmmconfig = prop.find(efedns + 'config')
-							for item in fmmconfig.findall(efedns+"item"):
-								geoslot = int(item.find(efedns+'geoslot').text)
-								label   = str(item.find(efedns+'label').text)
-								inputs  = str(item.find(efedns+'inputLabels').text)
-								outputs = str(item.find(efedns+'outputLabels').text)
+							efedns = 'urn:xdaq-application:tts::FMMController'
+							prop = app.find(QN(efedns,'properties').text)
+							fmmconfig = prop.find(QN(efedns,'config').text)
+							for item in fmmconfig.findall(QN(efedns,"item").text):
+								geoslot = int(item.find(QN(efedns,'geoslot').text).text)
+								label   = str(item.find(QN(efedns,'label').text).text)
+								inputs  = str(item.find(QN(efedns,'inputLabels').text).text)
+								outputs = str(item.find(QN(efedns,'outputLabels').text).text)
 								ho.addSlot(geoslot, label, inputs, outputs)
 
 				if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
