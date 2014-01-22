@@ -167,22 +167,43 @@ class daq2Config(object):
 		out.write(prepend+separator+'\n')
 
 	def setFerolParameter(self, param_name, param_value):
-		for context in self.contexts:
-			if not 'FEROLCONTROLLER' in context.attrib['url']: continue
-			param = context.find(QN(self.xcns,'Application').text+'/'+QN(self.ferolns,'properties').text+'/'+QN(self.ferolns,param_name).text)
-			if param is not None:
-				param.text = str(param_value)
-			else:
-				raise KeyError('Ferol parameter '+param_name+' not found')
+		self.setProperty(['FEROLCONTROLLER'], 'ferol::FerolController', param_name, param_value)
 
 	def printFerolParameter(self, param_name):
 		for context in self.contexts:
 			if not 'FEROLCONTROLLER' in context.attrib['url']: continue
 			param = context.find(QN(self.xcns,'Application').text+'/'+QN(self.ferolns,'properties').text+'/'+QN(self.ferolns,param_name).text)
-			if param is not None:
+			try:
 				print context.attrib['url'], param_name, param.text
-			else:
+			except AttributeError:
 				raise KeyError('Ferol parameter '+param_name+' not found')
+
+	def setRUIBVParameter(self, param_name, param_value):
+		self.setProperty(['RU','EVM'], 'pt::ibv::Application', param_name, param_value)
+
+	def setProperty(self, context_list, classname, prop_name, prop_value):
+		for context in self.contexts:
+			if not self.urlToHostAndNumber(context.attrib['url'])[0] in context_list: continue
+			for app in context.findall(QN(self.xcns, 'Application').text):
+				if not app.attrib['class'] == classname: continue ## find correct application
+				try:
+					prop = app[0] ## Assume here that there is only one element, which is the properties
+					if not 'properties' in prop.tag:
+						raise RuntimeError('Could not identify properties of %s application in %s context.'%(app.attrib['class'], context.attrib['url']))
+					appns = re.match(r'\{(.*?)\}properties', prop.tag).group(1) ## Extract namespace
+				except IndexError: ## i.e. app[0] didn't work
+					raise RuntimeError('Application %s in context %s does not have properties.'%(app.attrib['class'], context.attrib['url']))
+
+				prop = app.find(QN(appns,'properties').text+'/'+QN(appns,prop_name).text)
+				try:
+					prop.text = str(prop_value)
+				except AttributeError:
+					raise KeyError('Property %s of application %s in context %s not found.'%(prop_name, app.attrib['class'], context.attrib['url']))
+				break
+
+			else:
+				raise RuntimeError('Application %s not found in context %s.'%(classname, context.attrib['url']))
+
 
 	def urlToHostAndNumber(self, url):
 		"""
