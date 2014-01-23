@@ -421,6 +421,32 @@ def getFerolDelay(fragSize, rate='max'):
 			return 20
 		return delay
 
+def getConfig(string=""):
+	"""Extract number of streams, readout units, builder units, and RMS from strings such as
+	8x1x2 or 16s8fx2x4_RMS_0.5 (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
+	"""
+	string = string.split('_')
+	case = string[0].split('x')
+	rms = None
+	strperfrl = 1
+	pattern = re.compile(r'([0-9]+)s([0-9]+)f')
+	if pattern.match(case[0]):
+		nstreams = int(pattern.match(case[0]).group(1))
+		if nstreams > int(pattern.match(case[0]).group(2)): strperfrl = 2
+
+	else: nstreams = int(case[0])
+	nrus = int(case[1]) ## Introduces notation: no _ before the trailing tags
+	nbus = int(case[2])
+
+	for i in xrange(len(string)):
+		if string[i] == 'RMS':
+			try:
+				rms = float(string[i+1])
+			except ValueError, StopIteration:
+				print 'RMS needs to be a floating point number'
+				rms = None
+
+	return nstreams, nrus, nbus, rms, strperfrl
 
 
 ##########################################
