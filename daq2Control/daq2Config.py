@@ -224,16 +224,19 @@ class daq2Config(object):
 		## Check <i2o:protocol> element for evb: or gevb2g: tags to determine which of the two we're dealing with here:
 		i2o_namespace = 'http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30'
 		i2o_protocol = self.ETroot.find(QN(i2o_namespace, 'protocol').text)
-		if 'gevb2g::' in i2o_protocol[0].attrib['class']: ## there is something with a gevb2g tag
-			if self.verbose > 2 : print "Found a gevb2g configuration"
-			self.useEvB = False
-			self.namespace = 'gevb2g::'
-		elif 'evb::' in i2o_protocol[0].attrib['class']: ## there is something with a evb tag
-			if self.verbose > 2 : print "Found an EvB configuration"
-			self.useEvB = True
-			self.namespace = 'evb::'
-		else:
-			raise RuntimeError("Couldn't determine EvB/gevb2g case!")
+		try:
+			if 'gevb2g::' in i2o_protocol[0].attrib['class']: ## there is something with a gevb2g tag
+				if self.verbose > 2 : print "Found a gevb2g configuration"
+				self.useEvB = False
+				self.namespace = 'gevb2g::'
+			elif 'evb::' in i2o_protocol[0].attrib['class']: ## there is something with a evb tag
+				if self.verbose > 2 : print "Found an EvB configuration"
+				self.useEvB = True
+				self.namespace = 'evb::'
+			else:
+				raise RuntimeError("Couldn't determine EvB/gevb2g case!")
+		except TypeError:
+			raise RuntimeError("Did not find i2o protocol in config file!")
 
 		maxsizes = []
 		tcp_cwnd = []
@@ -378,10 +381,10 @@ WARNING: TCP_CWND_FEDX for FEROLs seems to be set
  Is set to: %d in config. Expected value: %d
 """
 			cwnd = cwnd_set.pop()
-			if self.nStreams == len(self.FEROLs) and cwnd not in [80000, 55000]:
-				printWarningWithWait(message%(cwnd, 80000), instance=self, waittime=2)
-			if self.nStreams == 2*len(self.FEROLs) and cwnd not in [40000, 35000]:
-				printWarningWithWait(message%(cwnd, 40000), instance=self, waittime=2)
+			if self.nStreams == len(self.FEROLs) and cwnd not in [135000]:
+				printWarningWithWait(message%(cwnd, 135000), instance=self, waittime=2)
+			if self.nStreams == 2*len(self.FEROLs) and cwnd not in [62500]:
+				printWarningWithWait(message%(cwnd, 62500), instance=self, waittime=2)
 
 
 	def writeConfig(self, destination):
