@@ -23,7 +23,8 @@ if __name__ == "__main__":
 	parser.add_option("--useUDAPL",          default=False, action="store_true",             dest="useUDAPL",          help="Use UDAPL protocol for builder network peer transport")
 
 	parser.add_option("-m", "--ferolMode",   default='ferol_emulator', action="store", type="string", dest="ferolMode",   help="Set ferol operation mode, can be either 'ferol_emulator', 'frl_autotrigger', 'frl_gtpe_trigger', or 'efed_slink_gtpe'")
-	parser.add_option("--fragmentDir",       default='fragments/',     action="store", type="string", dest="fragmentDir", help="Use config fragments from a directory other than the default ('%default')")
+	parser.add_option("-r", "--ferolRack",   default=1,                action="store", type='int',    dest="ferolRack",   help="Which ferol rack to use (1,2, or 3) [default: %default]")
+	parser.add_option("--fragmentDir",       default='',               action="store", type="string", dest="fragmentDir", help="Use config fragments from a directory other than the default")
 	parser.add_option("-v", "--verbose",     default=1,                action="store", type='int',    dest="verbose",     help="Set the verbose level, [default: %default (semi-quiet)]")
 	parser.add_option("-o", "--output",      default='configuration.template.xml', action="store", type='string', dest="output", help="Where to put the output file [default %default]")
 
@@ -32,14 +33,17 @@ if __name__ == "__main__":
 		nstreams, nrus, nbus, _, strperfrl = getConfig(args[0])
 		nferols = nstreams//strperfrl
 
+		if len(options.fragmentDir) == 0:
+			options.fragmentDir = '/nfshome0/stiegerb/Workspace/daq2val/daq2Control/fragments'
 		configurator = daq2Configurator(options.fragmentDir, verbose=options.verbose)
 
 		configurator.enablePauseFrame  = options.enablePauseFrame
 		configurator.disablePauseFrame = options.disablePauseFrame ## in case both are true, they will be enabled
 		configurator.setCWND           = options.setCWND ## -1 doesn't do anything
-		configurator.evbns             = 'EvB' if options.useEvB else 'gevb2g'
+		configurator.evbns             = 'evb' if options.useEvB else 'gevb2g'
 		configurator.ptprot            = 'udapl' if options.useUDAPL and not options.useIBV else 'ibv'
 		configurator.operation_mode    = options.ferolMode
+		configurator.ferolRack         = options.ferolRack
 
 		configurator.makeConfig(nferols,strperfrl,nrus,nbus,options.output)
 
