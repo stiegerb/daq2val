@@ -6,6 +6,12 @@ months_tostr = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8
 
 ##---------------------------------------------------------------------------------
 ## Utilities
+def checkMSIO(filename):
+	with open(filename, 'r') as f:
+		if '#Server(0)' in f.readline():
+			return True
+		else: return False
+	return False
 def getConfig(string):
 	"""Extract number of streams, readout units, builder units, and RMS from strings such as
 	8x1x2 or 16s8fx2x4_RMS_0.5 (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
@@ -33,22 +39,94 @@ def getConfig(string):
 				rms = None
 
 	return nstreams, nrus, nbus, rms, strperfrl
-def processFile(filename, config):
+def processFile(filename, config, startfragsize=256):
 	from numpy import mean, std
+	from logNormalTest import averageFractionSize
 	f = open(filename,'r')
 	if not f: raise RuntimeError, "Cannot open "+filename+"\n"
 
-	data = []
-	nstreams, nrus, nbus, rms, strperfrl = config
+	msio = checkMSIO(filename)
+
+	## Process .csv file first
+	data_dict = {} ## store everything in this dictionary of size -> rate
 	for line in f:
 		if len(line.strip()) == 0 or line.strip()[0] == '#': continue
 		spline = line.replace("\n","").split(",")
 
 		rate = map(lambda x: int(float(x)), spline[1:])
-		eventsize = int(spline[0]) ## convert already to fragment size and throughput per RU
-		fragsize = eventsize/nstreams
-		sufragsize = eventsize/nrus
-		data.append((fragsize, sufragsize*mean(rate)/1e6, sufragsize*std(rate)/1e6))
+
+		if int(spline[0]) not in data_dict.keys(): ## first time seeing this size
+			data_dict[int(spline[0])] = rate
+		else: ## have already a line with this size
+			prev_rate = data_dict[int(spline[0])]
+
+			## Fix different sample sizes:
+			if len(rate) > len(prev_rate):
+				rate = rate[:len(prev_rate)]
+			if len(rate) < len(prev_rate):
+				prev_rate = prev_rate[:len(rate)]
+			## Add to the previous samples
+			data_dict[int(spline[0])] = map(lambda a,b:a+b, prev_rate, rate)
+
+
+	nstreams, nrus, nbus, rms, strperfrl = config
+
+	## If first line in file is "#Server(0)", divide the rates by the number of BUs
+	if msio:
+		for size in data_dict.keys():
+			newrate = [a/nbus for a in data_dict[size]]
+			data_dict[size] = newrate
+
+		## IGNORE number of RUs now:
+		nrus = 1
+
+
+	# LOWERLIMIT=32
+	LOWERLIMIT=24
+	UPPERLIMIT=16000
+	if nstreams/nrus==4:  UPPERLIMIT = 64000 ## This is only true for eFEROLs!
+	if nstreams/nrus==8:  UPPERLIMIT = 32000
+	if nstreams/nrus==12: UPPERLIMIT = 21000
+	if nstreams/nrus==16: UPPERLIMIT = 16000
+	if nstreams/nrus==24: UPPERLIMIT = 10000
+
+	data = []
+
+	output_case = 0 ## 0 (fragsize), 1 (superfragsize), 2 (eventsize)
+	checked = False
+
+	for size in sorted(data_dict.keys()):
+		if abs(mean(data_dict[size])) < 0.01 and abs(std(data_dict[size])) < 0.01: continue ## skip empty lines
+
+		## Determine what the first item in the server.csv file stands for
+		if not checked: ## only do this for the first time
+			checked = True
+			if   int(size)//startfragsize == 1:             output_case = 0 ## size = fragment size
+			elif int(size)//startfragsize == nstreams/nrus: output_case = 1 ## size = superfragment size
+			elif int(size)//startfragsize == nstreams:      output_case = 2 ## size = event size
+			else:                                           output_case = 1 ## default
+
+		## Extract event size
+		eventsize = float(size)*nstreams ## default (output_case == 0)
+		if output_case == 1:
+			eventsize = float(size)*nrus
+		if output_case == 2:
+			eventsize = float(size)
+
+		## Calculate fragment and super fragment sizes
+		fragsize    = eventsize/nstreams
+		sufragsize  = eventsize/nrus
+		if rms is not None and rms != 0.0:
+			fragsize = averageFractionSize(eventsize/nstreams, rms*eventsize/nstreams, LOWERLIMIT, UPPERLIMIT)
+			sufragsize = fragsize*nstreams/nrus
+
+		## Calculate rate
+		avrate      = mean(data_dict[size])
+		stdrate     = std(data_dict[size])
+		throughput  = sufragsize*avrate/1e6 ## in MB/s
+		throughputE = sufragsize*stdrate/1e6
+
+		data.append((fragsize, throughput, throughputE))
 
 	f.close()
 	return data
@@ -83,8 +161,8 @@ def printTable(filename):
 		(sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize)
 
 	print "--------------------------------------------------------------------------------------"
-def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, nologx=False, logy=False, tag='', legends=[], makePNGs=True, rate=100):
-	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TPaveText
+def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, nologx=False, logy=False, tag='', subtag='', legends=[], makePNGs=True, rate=100):
+	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TLatex, TPave
 	from operator import itemgetter
 
 	## Build caselist
@@ -115,24 +193,66 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	axes.GetXaxis().SetMoreLogLabels()
 	axes.GetXaxis().SetNoExponent()
 	axes.Draw()
+
+	tl = TLatex()
+	tl.SetTextFont(42)
+	tl.SetNDC(1)
 	if len(tag) > 0:
-		width = 0.022*len(tag)
-		pave = TPaveText(0.12, 0.80, 0.12+width, 0.899, 'NDC')
-		pave.SetTextFont(42)
-		pave.SetTextSize(0.05)
+		width = 0.12+0.020*len(tag)
+		if width > 0.9: width=0.899
+		pave = TPave(0.12, 0.80, width, 0.899, 0, 'NDC')
 		pave.SetFillStyle(1001)
 		pave.SetFillColor(0)
-		pave.SetBorderSize(0)
-		pave.SetTextAlign(12)
-		pave.AddText(tag)
 		pave.Draw()
+	if len(subtag) > 0:
+		width2 = 0.12+0.015*len(subtag)
+		if width2 > 0.9: width2=0.899
+		pave2 = TPave(0.12, 0.75, width2, 0.899, 0, 'NDC')
+		pave2.SetFillStyle(1001)
+		pave2.SetFillColor(0)
+		pave2.Draw()
+	if len(tag) > 0:
+		tl.SetTextSize(0.05)
+		tl.DrawLatex(0.14, 0.83, tag)
+	if len(subtag) > 0:
+		tl.SetTextSize(0.035)
+		tl.DrawLatex(0.145, 0.77, subtag)
+
+
+	# if len(tag) > 0:
+	# 	width = 0.019*len(tag)
+	# 	print width
+	# 	pave = TPaveText(0.12, 0.80, 0.12+width, 0.899, 'NDC')
+	# 	pave.SetTextFont(42)
+	# 	pave.SetTextSize(0.05)
+	# 	pave.SetFillStyle(1001)
+	# 	pave.SetFillColor(0)
+	# 	pave.SetBorderSize(0)
+	# 	pave.SetTextAlign(11)
+	# 	pave.AddText(tag)
+	# 	pave.Draw()
+
+	# if len(subtag) > 0:
+	# 	width = 0.019*len(subtag)
+	# 	print width
+	# 	pave2 = TPaveText(0.12, 0.75, 0.12+width, 0.799, 'NDC')
+	# 	pave2.SetTextFont(42)
+	# 	pave2.SetTextSize(0.035)
+	# 	pave2.SetFillStyle(1001)
+	# 	pave2.SetFillColor(0)
+	# 	pave2.SetBorderSize(0)
+	# 	pave2.SetTextAlign(11)
+	# 	pave2.AddText(subtag)
+	# 	pave2.Draw()
 
 	graphs = []
 	configs = set()
 	for filename,case in zip(filelist,caselist):
 		try:
 			graphs.append(getGraph(filename))
-			configs.add(getConfig(case))
+			nstreams, nrus, nbus, rms, strperfrl = getConfig(case)
+			if checkMSIO(filename): nrus = 1 ## ignore number of RUs if MSIO
+			configs.add(nstreams//nrus) ## care only about Nstreams per RU
 		except AttributeError:
 			print "#### Couldn't get graph for ", case, "in file", filename
 			return
@@ -143,7 +263,7 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	# if args.daq1:
 	# 	daq1_graph = getDAQ1Graph()
 
-	configs = sorted(configs, key=itemgetter(0))
+	configs = sorted(configs)
 	nlegentries = len(filelist)
 	# nlegentries = len(caselist) if not args.daq1 else len(caselist) + 1
 	legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
@@ -179,12 +299,12 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	# if args.daq1:
 	# 	daq1_graph.Draw("PL")
 
-	for n,c in enumerate(configs):
-		func = getRateGraph(c[0]/c[1], frag=frag, rate=rate)
+	for n,streams_per_ru in enumerate(configs):
+		func = getRateGraph(streams_per_ru, frag=frag, rate=rate, xmax=rangex[1])
 		func.SetLineColor(colors[n])
 		func.SetLineWidth(1)
-		leg.AddEntry(func, '%.0f kHz (%d streams)'% (rate, c[0]/c[1]), 'l')
 		func.DrawCopy("same")
+		leg.AddEntry(func, '%.0f kHz (%d streams)'% (rate, streams_per_ru), 'l')
 
 	leg.Draw()
 
@@ -245,12 +365,13 @@ def drawDate(filename):
 ## User interface
 def addPlottingOptions(parser):
 	# parser.usage = usage
-	parser.add_argument("-o", "--outputName", default="plot.pdf", action="store",  type=str,   dest="outputName",        help="File for plot output [default: %(default)s]")
-	parser.add_argument("-t", "--tag",        default="",         action="store",  type=str,   dest="tag",               help="Title tag in plot canvas")
-	parser.add_argument("--outdir",           default="",         action="store",  type=str,   dest="outdir",            help="Output directory for the plots")
-	parser.add_argument('--legend',           default=[],         action="append", type=str,   dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
-	parser.add_argument("-r", "--rate",       default="100",      action="store",  type=float, dest="rate",              help="Rate in kHz to be displayed on the plot: [default: %(default)s kHz]")
-	parser.add_argument("-q", "--quiet",      default=False,      action="store_true",         dest="quiet",             help="Do not print the tables")
+	parser.add_argument("-o",  "--outputName", default="plot.pdf", action="store",  type=str,   dest="outputName",        help="File for plot output [default: %(default)s]")
+	parser.add_argument("-t",  "--tag",        default="",         action="store",  type=str,   dest="tag",               help="Title tag in plot canvas")
+	parser.add_argument("-t2", "--subtag",     default="",         action="store",  type=str,   dest="subtag",            help="Subtitle tag in plot canvas")
+	parser.add_argument("--outdir",            default="",         action="store",  type=str,   dest="outdir",            help="Output directory for the plots")
+	parser.add_argument('--legend',            default=[],         action="append", type=str,   dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
+	parser.add_argument("-r", "--rate",        default="100",      action="store",  type=float, dest="rate",              help="Rate in kHz to be displayed on the plot: [default: %(default)s kHz]")
+	parser.add_argument("-q", "--quiet",       default=False,      action="store_true",         dest="quiet",             help="Do not print the tables")
 
 	parser.add_argument("--miny",   default="0",     action="store", type=float, dest="miny",   help="Y axis range, minimum")
 	parser.add_argument("--maxy",   default="5500",  action="store", type=float, dest="maxy",   help="Y axis range, maximum")
@@ -299,7 +420,7 @@ if __name__ == "__main__":
 		if args.outdir: args.outputName = args.outdir + '/' + args.outputName
 		legends=[]
 		if len(args.legend)>0: legends=args.legend[0]
-		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, legends=legends, frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
+		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, subtag=args.subtag, legends=legends, frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
 		exit(0)
 
 	parser.print_help()
