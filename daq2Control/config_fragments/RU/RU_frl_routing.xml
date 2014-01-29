@@ -1,0 +1,5 @@
+<item xmlns="urn:xdaq-application:pt::frl::Application" xsi:type="soapenc:Struct" soapenc:position="[0]" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+	<fedid xsi:type="xsd:string">0</fedid>
+	<className xsi:type="xsd:string">gevb2g::RU</className>
+	<instance xsi:type="xsd:string">0</instance>
+</item>

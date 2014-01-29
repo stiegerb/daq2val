@@ -40,7 +40,7 @@ if __name__ == "__main__":
 		nferols = nstreams//strperfrl
 
 		if len(options.fragmentDir) == 0:
-			options.fragmentDir = '/nfshome0/stiegerb/Workspace/daq2val/daq2Control/fragments'
+			options.fragmentDir = '/nfshome0/stiegerb/Workspace/daq2val/daq2Control/config_fragments/'
 		configurator = daq2Configurator(options.fragmentDir, verbose=options.verbose)
 
 		configurator.evbns             = 'evb'   if options.useEvB   and not options.useGevb2g else 'gevb2g'

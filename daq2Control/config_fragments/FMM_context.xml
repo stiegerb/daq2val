@@ -1,0 +1,17 @@
+<xc:Context url="http://FMM0_SOAP_HOST_NAME:FMM0_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+	<xc:Application class="tts::FMMController" id="50" instance="0" network="local" service="fmmcontroller" group="unit_FMMCrate,crate_00,subs_CSC,ttcp_CSC_EFED,subs_ECAL,ttcp_ECAL_EFED,subs_TRACKER,ttcp_TRACKER_EFED" heartbeat="true">
+		<properties xmlns="urn:xdaq-application:tts::FMMController" xsi:type="soapenc:Struct">
+			<config soapenc:arrayType="xsd:ur-type[3]" xsi:type="soapenc:Array">
+				<!-- Add items/cards here -->
+			</config>
+			<useTriggerDistributor xsi:type="xsd:boolean">false</useTriggerDistributor>
+			<logHistoryToFile xsi:type="xsd:boolean">true</logHistoryToFile>
+			<logFileSizeLimitBytes xsi:type="xsd:unsignedInt">4000000000</logFileSizeLimitBytes>
+			<specialStateLogFileNameBase xsi:type="xsd:string">/var/log/fmm/specialState_fmm</specialStateLogFileNameBase>
+			<logFileNameBase xsi:type="xsd:string">/var/log/fmm/fmm</logFileNameBase>
+			<enableLogRotation xsi:type="xsd:boolean">false</enableLogRotation>
+			<monitorForcePushIntervalSeconds xsi:type="xsd:unsignedInt">2</monitorForcePushIntervalSeconds>
+		</properties>
+	</xc:Application>
+	<xc:Module>$XDAQ_ROOT/lib/libttsfmmcontroller.so</xc:Module>
+</xc:Context>

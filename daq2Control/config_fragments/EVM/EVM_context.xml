@@ -1,0 +1,20 @@
+<xc:Context url="http://EVM%d_SOAP_HOST_NAME:EVM%d_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<xc:Application class="xmem::probe::Application" id="61" instance="0" network="local" />
+	<xc:Module>$XDAQ_ROOT/lib/libxmemprobe.so</xc:Module>
+	<xc:Application class="gevb2g::EVM" id="43" instance="0" network="infini">
+		<properties xmlns="urn:xdaq-application:gevb2g::EVM" xsi:type="soapenc:Struct">
+			<triggerDisable xsi:type="xsd:boolean">true</triggerDisable>
+			<triggerQueueSize xsi:type="xsd:unsignedLong">65536</triggerQueueSize>
+			<resourceQueueSize xsi:type="xsd:unsignedLong">65536</resourceQueueSize>
+			<shipFrameSize xsi:type="xsd:unsignedLong">16384</shipFrameSize>
+			<triggerGather xsi:type="xsd:unsignedLong">16384</triggerGather>
+			<triggerClassName xsi:type="xsd:string">unknwon</triggerClassName>
+			<triggerClassInstance xsi:type="xsd:unsignedLong">0</triggerClassInstance>
+			<poolName xsi:type="xsd:string">sudapl</poolName>
+			<createPool xsi:type="xsd:boolean">false</createPool>
+		</properties>
+	</xc:Application>
+	<xc:Module>$XDAQ_ROOT/lib/libgevb2g.so</xc:Module>
+	<xc:Module>$XDAQ_ROOT/lib/libtcpla.so</xc:Module>
+    <xc:Module>/usr/lib64/libdat2.so</xc:Module>
+</xc:Context>

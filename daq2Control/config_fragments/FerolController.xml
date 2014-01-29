@@ -1,0 +1,62 @@
+<xc:Context url="http://FEROLCONTROLLER%d_SOAP_HOST_NAME:FEROLCONTROLLER%d_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<xc:Application class="ferol::FerolController" id="109" instance="0" network="local" service="ferolcontroller" group="unit_FRLCrate,subs_TRACKER,ttcp_TIBTID,fb_17,crate_00,geoslot_02">
+		<properties xmlns="urn:xdaq-application:ferol::FerolController" xsi:type="soapenc:Struct">
+			<!-- Settings for each individual FEROL -->
+			<slotNumber xsi:type="xsd:unsignedInt">1</slotNumber>
+			<expectedFedId_0 xsi:type="xsd:unsignedInt">0</expectedFedId_0>
+			<expectedFedId_1 xsi:type="xsd:unsignedInt">1</expectedFedId_1>
+			<SourceIP xsi:type="xsd:string">dvferol-c2f32-28-01.dvfbs2v0.cms</SourceIP>
+
+			<!-- Common FEROL Settings -->
+			<enableStream0 xsi:type="xsd:boolean">true</enableStream0>
+			<enableStream1 xsi:type="xsd:boolean">true</enableStream1>
+			<OperationMode xsi:type="xsd:string">FEROL_EMULATOR_MODE</OperationMode>
+			<FrlTriggerMode xsi:type="xsd:string">FRL_AUTOTRIGGER_MODE</FrlTriggerMode>
+			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">62500</TCP_CWND_FED0>
+			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">62500</TCP_CWND_FED1>
+			<ENA_PAUSE_FRAME xsi:type="xsd:boolean">true</ENA_PAUSE_FRAME>
+
+			<!-- Settings for groups of FEROLs -->
+			<DestinationIP xsi:type="xsd:string">RU0_FRL_HOST_NAME</DestinationIP>
+			<TCP_DESTINATION_PORT_FED0 xsi:type="xsd:unsignedInt">RU0_FRL_PORT</TCP_DESTINATION_PORT_FED0>
+			<TCP_DESTINATION_PORT_FED1 xsi:type="xsd:unsignedInt">RU0_FRL_PORT</TCP_DESTINATION_PORT_FED1>
+
+			<!-- Default Settings (untouched by Configurator) -->
+			<N_Descriptors_FRL xsi:type="xsd:unsignedInt">32</N_Descriptors_FRL>
+			<Event_Length_bytes_FED0 xsi:type="xsd:unsignedInt">2048</Event_Length_bytes_FED0>
+			<Event_Length_bytes_FED1 xsi:type="xsd:unsignedInt">2048</Event_Length_bytes_FED1>
+			<Event_Length_Stdev_bytes_FED0 xsi:type="xsd:unsignedInt">0</Event_Length_Stdev_bytes_FED0>
+			<Event_Length_Stdev_bytes_FED1 xsi:type="xsd:unsignedInt">0</Event_Length_Stdev_bytes_FED1>
+			<Event_Length_Max_bytes_FED0 xsi:type="xsd:unsignedInt">16000</Event_Length_Max_bytes_FED0>
+			<Event_Length_Max_bytes_FED1 xsi:type="xsd:unsignedInt">16000</Event_Length_Max_bytes_FED1>
+			<Event_Delay_ns_FED0 xsi:type="xsd:unsignedInt">20</Event_Delay_ns_FED0>
+			<Event_Delay_ns_FED1 xsi:type="xsd:unsignedInt">20</Event_Delay_ns_FED1>
+			<Event_Delay_Stdev_ns_FED0 xsi:type="xsd:unsignedInt">0</Event_Delay_Stdev_ns_FED0>
+			<Event_Delay_Stdev_ns_FED1 xsi:type="xsd:unsignedInt">0</Event_Delay_Stdev_ns_FED1>
+			<MAX_ARP_Tries xsi:type="xsd:unsignedInt">20</MAX_ARP_Tries>
+			<ARP_Timeout_Ms xsi:type="xsd:unsignedInt">1500</ARP_Timeout_Ms>
+			<Connection_Timeout_Ms xsi:type="xsd:unsignedInt">7000</Connection_Timeout_Ms>
+			<SourceMACAddressMol xsi:type="xsd:unsignedLong">234945892</SourceMACAddressMol>
+			<enableSpy xsi:type="xsd:boolean">false</enableSpy>
+			<MolMode xsi:type="xsd:boolean">false</MolMode>
+			<TCP_SOURCE_PORT_FED0 xsi:type="xsd:unsignedInt">10</TCP_SOURCE_PORT_FED0>
+			<TCP_SOURCE_PORT_FED1 xsi:type="xsd:unsignedInt">11</TCP_SOURCE_PORT_FED1>
+			<deltaTMonMs xsi:type="xsd:unsignedInt">1000</deltaTMonMs>
+			<TCP_CONFIGURATION_FED0 xsi:type="xsd:unsignedInt">16384</TCP_CONFIGURATION_FED0>
+			<TCP_CONFIGURATION_FED1 xsi:type="xsd:unsignedInt">16384</TCP_CONFIGURATION_FED1>
+			<TCP_OPTIONS_MSS_SCALE_FED0 xsi:type="xsd:unsignedInt">74496</TCP_OPTIONS_MSS_SCALE_FED0>
+			<TCP_OPTIONS_MSS_SCALE_FED1 xsi:type="xsd:unsignedInt">74496</TCP_OPTIONS_MSS_SCALE_FED1>
+			<TCP_TIMER_RTT_FED0 xsi:type="xsd:unsignedInt">312500</TCP_TIMER_RTT_FED0>
+			<TCP_TIMER_RTT_FED1 xsi:type="xsd:unsignedInt">312500</TCP_TIMER_RTT_FED1>
+			<TCP_TIMER_RTT_SYN_FED0 xsi:type="xsd:unsignedInt">312500000</TCP_TIMER_RTT_SYN_FED0>
+			<TCP_TIMER_RTT_SYN_FED1 xsi:type="xsd:unsignedInt">312500000</TCP_TIMER_RTT_SYN_FED1>
+			<TCP_TIMER_PERSIST_FED0 xsi:type="xsd:unsignedInt">40000</TCP_TIMER_PERSIST_FED0>
+			<TCP_TIMER_PERSIST_FED1 xsi:type="xsd:unsignedInt">40000</TCP_TIMER_PERSIST_FED1>
+			<TCP_REXMTTHRESH_FED0 xsi:type="xsd:unsignedInt">3</TCP_REXMTTHRESH_FED0>
+			<TCP_REXMTTHRESH_FED1 xsi:type="xsd:unsignedInt">3</TCP_REXMTTHRESH_FED1>
+			<TCP_REXMTCWND_SHIFT_FED0 xsi:type="xsd:unsignedInt">6</TCP_REXMTCWND_SHIFT_FED0>
+			<TCP_REXMTCWND_SHIFT_FED1 xsi:type="xsd:unsignedInt">6</TCP_REXMTCWND_SHIFT_FED1>
+		</properties>
+	</xc:Application>
+	<xc:Module>$XDAQ_ROOT/lib/libFerolController.so</xc:Module>
+</xc:Context>

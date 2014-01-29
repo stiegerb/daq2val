@@ -1,0 +1,4 @@
+<xc:Context url="http://EFED%d_SOAP_HOST_NAME:EFED%d_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30">
+	<!-- Add eFED applications here, with increasing 'instance' and 'id' attributes, and unique fed ids and slot numbers -->
+	<xc:Module>$XDAQ_ROOT/lib/libFEDEmulator.so</xc:Module>
+</xc:Context>

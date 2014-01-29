@@ -1,0 +1,15 @@
+<xc:Context url="http://GTPE0_SOAP_HOST_NAME:GTPE0_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<xc:Application class="d2s::GTPeController" id="50" instance="0" network="local" heartbeat="true">
+		<properties xmlns="urn:xdaq-application:d2s::GTPeController" xsi:type="soapenc:Struct">
+			<triggerRate xsi:type="xsd:double">100.</triggerRate>
+			<detPartitionEnableMask xsi:type="xsd:unsignedShort">0x8</detPartitionEnableMask>
+			<daqPartitionId xsi:type="xsd:unsignedShort">3</daqPartitionId>
+			<autoDAQPartitionId xsi:type="xsd:boolean">true</autoDAQPartitionId>
+			<enableATTSInput xsi:type="xsd:boolean">false</enableATTSInput>
+			<clockedMode xsi:type="xsd:boolean">false</clockedMode>
+			<clockedModeFrequency xsi:type="xsd:double">100.</clockedModeFrequency>
+			<SLINKRequired xsi:type="xsd:boolean">false</SLINKRequired>
+		</properties>
+	</xc:Application>
+	<xc:Module>$XDAQ_ROOT/lib/libd2sgtpecontroller.so</xc:Module>
+</xc:Context>

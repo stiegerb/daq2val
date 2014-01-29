@@ -1,0 +1,9 @@
+<xc:Application class="pt::udapl::Application" id="21" network="infini" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<properties xmlns="urn:xdaq-application:pt::udapl::Application" xsi:type="soapenc:Struct">
+		<senderPoolSize xsi:type="xsd:unsignedInt">0x4000000</senderPoolSize>
+		<receiverPoolSize xsi:type="xsd:unsignedInt">0x10000000</receiverPoolSize>
+		<iaName xsi:type="xsd:string">ofa-v2-ib0</iaName>
+		<sendPoolName xsi:type="xsd:string">sudapl</sendPoolName>
+		<recvPoolName xsi:type="xsd:string">rudapl</recvPoolName>
+	</properties>
+</xc:Application>

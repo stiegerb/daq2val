@@ -1,0 +1,47 @@
+<xc:Context url="http://RU%d_SOAP_HOST_NAME:RU%d_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+	<xc:Endpoint protocol="ftcp" service="frl" hostname="RU%d_FRL_HOST_NAME" port="RU%d_FRL_PORT" network="ferola" sndTimeout="2000" rcvTimeout="0" targetId="43" affinity="RCV:P,SND:W,DSR:W,DSS:W" singleThread="true" pollingCycle="4" rmode="select" nonblock="true" datagramSize="131072" />
+	<xc:Endpoint protocol="ftcp" service="frl" hostname="RU%d_FRL_HOST_NAME" port="60600"         network="ferolb" sndTimeout="2000" rcvTimeout="0" targetId="43" affinity="RCV:P,SND:W,DSR:W,DSS:W" singleThread="true" pollingCycle="4" rmode="select" nonblock="true" datagramSize="131072" />
+
+	<!-- BU endpoint fragment here (IBV/UDAPL) -->
+	<!-- BU Network pt Application Fragment here (IBV/UDAPL) -->
+
+	<xc:Application class="pt::frl::Application" id="12" instance="1" network="local">
+		<properties xmlns="urn:xdaq-application:pt::frl::Application" xsi:type="soapenc:Struct">
+			<frlRouting xsi:type="soapenc:Array" soapenc:arrayType="xsd:ur-type[16]">
+
+				<!-- frl Routing fragments here -->
+
+			</frlRouting>
+			<frlDispatcher xsi:type="xsd:string">copy</frlDispatcher>
+			<useUdaplPool xsi:type="xsd:boolean">true</useUdaplPool>
+			<autoConnect xsi:type="xsd:boolean">false</autoConnect>
+			<!-- Copy worker configuration -->
+			<i2oFragmentBlockSize xsi:type="xsd:unsignedInt">32768</i2oFragmentBlockSize>
+			<i2oFragmentsNo xsi:type="xsd:unsignedInt">128</i2oFragmentsNo>
+			<i2oFragmentPoolSize xsi:type="xsd:unsignedInt">10000000</i2oFragmentPoolSize>
+			<copyWorkerQueueSize xsi:type="xsd:unsignedInt">16</copyWorkerQueueSize>
+			<copyWorkersNo xsi:type="xsd:unsignedInt">4</copyWorkersNo>
+			<!-- Super fragment configuration -->
+			<doSuperFragment xsi:type="xsd:boolean">false</doSuperFragment>
+			<superFragmentWorkersNo xsi:type="xsd:unsignedInt">1</superFragmentWorkersNo>
+			<superFragmentWorkerQueueSize xsi:type="xsd:unsignedLong">1024</superFragmentWorkerQueueSize>
+			<destinationClassName xsi:type="xsd:string">evb::EVM</destinationClassName>
+			<destinationClassInstance xsi:type="xsd:unsignedLong">0</destinationClassInstance>
+			<dropAtSuperFragmentWorker xsi:type="xsd:boolean">false</dropAtSuperFragmentWorker>
+			<dropAtSuperFragmentDelivery xsi:type="xsd:boolean">false</dropAtSuperFragmentDelivery>
+			<!-- Input configuration e.g. PSP -->
+			<inputStreamPoolSize xsi:type="xsd:double">1400000</inputStreamPoolSize>
+			<maxClients xsi:type="xsd:unsignedInt">20</maxClients>
+			<ioQueueSize xsi:type="xsd:unsignedInt">64</ioQueueSize>
+			<eventQueueSize xsi:type="xsd:unsignedInt">64</eventQueueSize>
+			<maxInputReceiveBuffers xsi:type="xsd:unsignedInt">8</maxInputReceiveBuffers>
+			<maxInputBlockSize xsi:type="xsd:unsignedInt">131072</maxInputBlockSize>
+		</properties>
+	</xc:Application>
+	<xc:Module>$XDAQ_ROOT/lib/libtcpla.so</xc:Module>
+	<xc:Module>$XDAQ_ROOT/lib/libptfrl.so</xc:Module>
+	<xc:Application class="xmem::probe::Application" id="21" instance="0" network="local" />
+	<xc:Module>$XDAQ_ROOT/lib/libxmemprobe.so</xc:Module>
+	<xc:Module>$XDAQ_ROOT/lib/libevb.so</xc:Module>
+	<xc:Module>/usr/lib64/libdat2.so</xc:Module>
+</xc:Context>

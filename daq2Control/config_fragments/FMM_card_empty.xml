@@ -1,0 +1,13 @@
+<item xmlns="urn:xdaq-application:tts::FMMController" soapenc:position="[0]" xsi:type="soapenc:Struct" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<geoslot xsi:type="xsd:unsignedShort">5</geoslot>
+	<inputEnableMask xsi:type="xsd:unsignedInt">0x400</inputEnableMask>
+	<inputLabels xsi:type="xsd:string">N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;950;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C</inputLabels>
+	<outputLabels xsi:type="xsd:string">GTPe:3;N/C;N/C;N/C</outputLabels>
+	<label xsi:type="xsd:string">CSC_EFED</label>
+	<serialnumber xsi:type="xsd:string">unused</serialnumber>
+	<dual xsi:type="xsd:boolean">false</dual>
+	<threshold20 xsi:type="xsd:unsignedShort">0</threshold20>
+	<threshold10A xsi:type="xsd:unsignedShort">0</threshold10A>
+	<threshold10B xsi:type="xsd:unsignedShort">0</threshold10B>
+	<forceControl xsi:type="xsd:boolean">true</forceControl>
+</item>

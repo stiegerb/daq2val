@@ -1,0 +1,20 @@
+<xc:Application class="d2s::FEDEmulator" id="50" instance="0" network="local" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<properties xmlns="urn:xdaq-application:d2s::FEDEmulator" xsi:type="soapenc:Struct">
+		<slot xsi:type="xsd:unsignedInt">2</slot>
+		<FedSourceId xsi:type="xsd:unsignedInt">900</FedSourceId>
+		<MonFile xsi:type="xsd:string">DefaultMonFile.txt</MonFile>
+		<triggerSource xsi:type="xsd:unsignedInt">0</triggerSource>
+		<eventTableRank xsi:type="xsd:unsignedInt">16</eventTableRank>
+		<eventSizeSeed xsi:type="xsd:unsignedInt">1</eventSizeSeed>
+		<eventSize xsi:type="xsd:unsignedInt">1024</eventSize>
+		<deltaTevt xsi:type="xsd:unsignedInt">0</deltaTevt>
+		<eventSizeStdDev xsi:type="xsd:unsignedInt">0</eventSizeStdDev>
+		<minEventSize xsi:type="xsd:unsignedInt">24</minEventSize>
+		<maxEventSize xsi:type="xsd:unsignedInt">65536</maxEventSize>
+		<initialEventNumber xsi:type="xsd:unsignedInt">1</initialEventNumber>
+		<setupName xsi:type="xsd:string">CESSY</setupName>
+		<GIIIversion xsi:type="xsd:unsignedInt">0x3f210015</GIIIversion>
+		<thresholdTTSReady xsi:type="xsd:unsignedShort">64</thresholdTTSReady>
+		<thresholdTTSBusy xsi:type="xsd:unsignedShort">96</thresholdTTSBusy>
+	</properties>
+</xc:Application>

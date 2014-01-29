@@ -1,0 +1,6 @@
+<xc:Context url="http://BU%d_SOAP_HOST_NAME:BU%d_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<xc:Application class="xmem::probe::Application" id="61" instance="0" network="local" />
+	<xc:Module>$XDAQ_ROOT/lib/libxmemprobe.so</xc:Module>
+	<xc:Module>$XDAQ_ROOT/lib/libtcpla.so</xc:Module>
+    <xc:Module>/usr/lib64/libdat2.so</xc:Module>
+</xc:Context>

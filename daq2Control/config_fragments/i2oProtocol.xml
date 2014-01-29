@@ -1,0 +1,6 @@
+<i2o:protocol xmlns:i2o="http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30">
+	<i2o:target class="gevb2g::RU" instance="0" tid="22" />
+	<i2o:target class="gevb2g::BU" instance="0" tid="26" />
+	<i2o:target class="gevb2g::BU" instance="1" tid="28" />
+	<i2o:target class="gevb2g::EVM" instance="0" tid="39" />
+</i2o:protocol>

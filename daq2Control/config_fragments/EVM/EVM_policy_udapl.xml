@@ -1,0 +1,10 @@
+<pol:policy xmlns:pol="http://xdaq.web.cern.ch/xdaq/xsd/2013/XDAQPolicy-10">
+	<pol:element pattern="gevb2g-ru-loop-(.+)" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="15" />
+	<pol:element pattern="gevb2g-ru-SuperFragmentWorker-0-0/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="14" />
+	<pol:element pattern="urn:toolbox-task-workloop:udapl-i2o-dispatcher-loop/polling" type="thread" package="numa" mempolicy="local" affinity="8" />
+	<pol:element pattern="urn:toolbox-task-workloop:udapl-receiver/polling" type="thread" package="numa" mempolicy="local" affinity="12" />
+	<pol:element pattern="urn:toolbox-task-workloop:udapl-sender/polling" type="thread" package="numa" mempolicy="local" affinity="10" />
+	<pol:element pattern="toolbox-mem-allocator-udapl-sender-ofa-v2-ib0" type="alloc" package="numa" mempolicy="onnode" node="1" />
+	<pol:element pattern="toolbox-mem-allocator-udapl-receiver-ofa-v2-ib0" type="alloc" package="numa" mempolicy="onnode" node="1" />
+	<pol:element pattern="urn:EVM(.+)" type="alloc" package="numa" mempolicy="onnode" node="1" />
+</pol:policy>
