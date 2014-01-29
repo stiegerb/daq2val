@@ -355,13 +355,13 @@ class daq2Configurator(object):
 		# inputEnableMasks = ['0xAA', '0xAA', '0x78']
 		# return zip(geoslots, inputEnableMasks, inputlabels, outputlabels, labels)
 		return cards
-	def createEmptyFMMCard():
+	def createEmptyFMMCard(self):
 		geoslot     = 5
 		inputmask   = "0x400"
 		inputlabel  = "N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;950;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C"
 		outputlabel = "GTPe:3;N/C;N/C;N/C"
 		label       = "CSC_EFED"
-		return [[geoslot, inputmas, inputlabel, outputlabel, label]]
+		return [[geoslot, inputmask, inputlabel, outputlabel, label]]
 
 	def makeRU(self, index):
 		fragmentname = 'RU/%s/RU_context.xml'%self.evbns

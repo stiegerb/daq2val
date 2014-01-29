@@ -18,10 +18,10 @@ if __name__ == "__main__":
 	parser.usage = usage
 	parser.add_option("--useEvB",            default=False, action="store_true",             dest="useEvB",            help="Use EvB for event building (instead of gevb2g (default))")
 	parser.add_option("--useGevb2g",         default=False, action="store_true",             dest="useGevb2g",         help="Use gevb2g for event building (instead of EvB)")
-	parser.add_option("--useIBV",            default=False, action="store_true",             dest="useIBV",            help="Use IBV protocol for builder network peer transport (default)")
-	parser.add_option("--useUDAPL",          default=False, action="store_true",             dest="useUDAPL",          help="Use UDAPL protocol for builder network peer transport")
-	parser.add_option("--useGTPe",           default=False, action="store_true",             dest="useGTPe",           help="Use the GTPe for triggering at a certain rate.")
-	parser.add_option("--useEFEDs",          default=False, action="store_true",             dest="useEFEDs",          help="Use the FED emulators to generate events. Implies 'efed_slink_gtpe' for ferolMode")
+	parser.add_option("--useIBV",            default=False, action="store_true",             dest="useIBV",            help="Use IBV protocol for builder network peer transport")
+	parser.add_option("--useUDAPL",          default=False, action="store_true",             dest="useUDAPL",          help="Use UDAPL protocol for builder network peer transport (default)")
+	parser.add_option("--useGTPe",           default=False, action="store_true",             dest="useGTPe",           help="Use the GTPe for triggering at a certain rate. Implies 'frl_gtpe_trigger' or 'efed_slink_gtpe' for --ferolMode")
+	parser.add_option("--useEFEDs",          default=False, action="store_true",             dest="useEFEDs",          help="Use the FED emulators to generate events. Implies --useGTPe and 'efed_slink_gtpe' for --ferolMode")
 
 	parser.add_option("--setCWND",           default=-1,    action="store",      type='int', dest="setCWND",           help="Set the TCP_CWND_FEDX parameter in the FEROL config [default: take from config fragment]")
 	parser.add_option("--disablePauseFrame", default=False, action="store_true",             dest="disablePauseFrame", help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'false' [default: take from config fragment]")
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
 	parser.add_option("--fragmentDir",       default='', action="store", type="string", dest="fragmentDir", help="Use config fragments from a directory other than the default")
 	parser.add_option("-v", "--verbose",     default=1,  action="store", type='int',    dest="verbose",     help="Set the verbose level, [default: %default (semi-quiet)]")
-	parser.add_option("-o", "--output",      default='configuration.template.xml', action="store", type='string', dest="output", help="Where to put the output file [default %default]")
+	parser.add_option("-o", "--output",      default='', action="store", type='string', dest="output", help="Where to put the output file")
 
 	(options, args) = parser.parse_args()
 	if len(args) > 0:
@@ -43,8 +43,8 @@ if __name__ == "__main__":
 			options.fragmentDir = '/nfshome0/stiegerb/Workspace/daq2val/daq2Control/config_fragments/'
 		configurator = daq2Configurator(options.fragmentDir, verbose=options.verbose)
 
-		configurator.evbns             = 'evb'   if options.useEvB   and not options.useGevb2g else 'gevb2g'
-		configurator.ptprot            = 'udapl' if options.useUDAPL and not options.useIBV    else 'ibv'
+		configurator.evbns             = 'evb' if options.useEvB and not options.useGevb2g else 'gevb2g'
+		configurator.ptprot            = 'ibv' if options.useIBV and not options.useUDAPL  else 'udapl'
 
 		configurator.enablePauseFrame  = options.enablePauseFrame
 		configurator.disablePauseFrame = options.disablePauseFrame ## in case both are true, they will be enabled
@@ -79,6 +79,9 @@ if __name__ == "__main__":
 		if configurator.operation_mode == 'frl_gtpe_trigger': output+='_gtpe'
 		if configurator.operation_mode == 'frl_autotrigger':  output+='_frlAT'
 		output+='.xml'
+
+		if len(options.output)>0:
+			output = options.output
 
 		configurator.makeConfig(nferols,strperfrl,nrus,nbus,output)
 
