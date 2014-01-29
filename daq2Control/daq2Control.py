@@ -223,7 +223,7 @@ class daq2Control(object):
 	def setRunNumber(self, number=0):
 		## Set Runnumber here:
 		if number==0:
-			number = time.strftime('%m%d%H%M%S')
+			number = time.strftime('%d%H%M')
 
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting run number", number
@@ -265,6 +265,7 @@ class daq2Control(object):
 		if not self.options.dry:
 			tempconfig = self.config.writeConfig(runconfig) ## write out the parsed xml to a file (still templated)
 			filledconfig = self.symbolMap.fillTemplate(runconfig) ## fill the template with actual hosts and port numbers
+			# filledconfig = self.symbolMap.fillTemplate(self.config.configfile) ## fill the template with actual hosts and port numbers
 			with open(runconfig, 'w') as file:
 				file.write(filledconfig)
 
