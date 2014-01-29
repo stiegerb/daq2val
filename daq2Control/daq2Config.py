@@ -307,14 +307,14 @@ class daq2Config(object):
 					ho.__class__ = FMM ## Make it an FMM
 					for app in apps:
 						if app.attrib['class'] == 'tts::FMMController':
-							efedns = 'urn:xdaq-application:tts::FMMController'
-							prop = app.find(QN(efedns,'properties').text)
-							fmmconfig = prop.find(QN(efedns,'config').text)
-							for item in fmmconfig.findall(QN(efedns,"item").text):
-								geoslot = int(item.find(QN(efedns,'geoslot').text).text)
-								label   = str(item.find(QN(efedns,'label').text).text)
-								inputs  = str(item.find(QN(efedns,'inputLabels').text).text)
-								outputs = str(item.find(QN(efedns,'outputLabels').text).text)
+							fmmns = 'urn:xdaq-application:tts::FMMController'
+							prop = app.find(QN(fmmns,'properties').text)
+							fmmconfig = prop.find(QN(fmmns,'config').text)
+							for item in fmmconfig.findall(QN(fmmns,"item").text):
+								geoslot = int(item.find(QN(fmmns,'geoslot').text).text)
+								label   = str(item.find(QN(fmmns,'label').text).text)
+								inputs  = str(item.find(QN(fmmns,'inputLabels').text).text)
+								outputs = str(item.find(QN(fmmns,'outputLabels').text).text)
 								ho.addSlot(geoslot, label, inputs, outputs)
 
 				if h == 'FEROL': ## Misnomer, eFEROLs are called FEROLS
