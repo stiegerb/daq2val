@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 from daq2Configurator import daq2Configurator
-from daq2Utils import getConfig
+from daq2Utils import getConfig, printWarningWithWait, printError
+
+MAXNEFEDS = 16
 
 if __name__ == "__main__":
 	from optparse import OptionParser
@@ -53,13 +55,32 @@ if __name__ == "__main__":
 		configurator.useGTPe           = options.useGTPe
 		configurator.useEFEDs          = options.useEFEDs
 
+		## Some checks:
+		if configurator.evbns == 'evb' and nbus < 4:
+			printWarningWithWait("Are you sure you want to run with only %d BUs and the EvB?"%nbus, waittime=3)
+		if configurator.evbns == 'gevb2g'and nbus > 3:
+			printWarningWithWait("Are you sure you want to run with %d BUs and the gevb2g?"%nbus, waittime=3)
+		if options.useEFEDs and nstreams > MAXNEFEDS:
+			printError("There are more streams (%d) than eFEDs available (%d)!" %(nstreams, MAXNEFEDS))
+			exit(-1)
+
 		configurator.operation_mode    = options.ferolMode if len(options.ferolMode)>0 else 'ferol_emulator'
 		if options.useGTPe and options.ferolMode == '': ## automatically use frl_gtpe_trigger mode when running with GTPe
 			configurator.operation_mode = 'frl_gtpe_trigger'
 			if options.useEFEDs:  ## automatically use efed_slink_gtpe mode when running with GTPe/EFEDs
 				configurator.operation_mode = 'efed_slink_gtpe'
 
-		configurator.makeConfig(nferols,strperfrl,nrus,nbus,options.output)
+		output = args[0]
+		if configurator.evbns == 'evb':    output+='_evb'
+		if configurator.evbns == 'gevb2g': output+='_gevb2g'
+		if configurator.ptprot == 'udapl': output+='_udapl'
+		if configurator.ptprot == 'ibv':   output+='_ibv'
+		if configurator.operation_mode == 'efed_slink_gtpe':  output+='_efeds'
+		if configurator.operation_mode == 'frl_gtpe_trigger': output+='_gtpe'
+		if configurator.operation_mode == 'frl_autotrigger':  output+='_frlAT'
+		output+='.xml'
+
+		configurator.makeConfig(nferols,strperfrl,nrus,nbus,output)
 
 		exit(0)
 

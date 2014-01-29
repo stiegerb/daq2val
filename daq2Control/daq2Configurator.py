@@ -41,7 +41,6 @@ FEROL_OPERATION_MODES = {'ferol_emulator'  :('FEROL_EMULATOR_MODE', None),
                          'frl_gtpe_trigger':('FRL_EMULATOR_MODE',  'FRL_GTPE_TRIGGER_MODE'),
                          'efed_slink_gtpe' :('SLINK_MODE',         'FRL_GTPE_TRIGGER_MODE')}
 
-
 ######################################################################
 class daq2Configurator(object):
 	'''
@@ -79,6 +78,7 @@ class daq2Configurator(object):
 		self.eFED_crate_counter = 0
 		self.eFED_app_instance  = 0
 
+	## Ferol to RU distribution
 	def fedIdsForRUIndex(self, index):
 		"""Returns the fed ids mapped to a given RU"""
 		ferolindices = split_list(range(self.nferols), self.nrus)[index]
@@ -87,12 +87,45 @@ class daq2Configurator(object):
 			return fedids
 		if self.streams_per_ferol == 1: ## take only every second fedid
 			return fedids[::2]
-
 	def fedIdsForFEROLIndex(self, index):
 		"""Returns the fed ids mapped to a given FEROL"""
 		return FEDIDS[2*index], FEDIDS[2*index+1]
 	def getAllFedIds(self):
-		return reduce(lambda x,y:x+y, [self.fedIdsForRUIndex(n) for n in range(self.nrus)])
+		fedrange = [FEDIDS[n] for n in range(2*self.nferols)]
+		allfedids = fedrange if self.streams_per_ferol==2 else fedrange[::2]
+		return allfedids
+		# return reduce(lambda x,y:x+y, [self.fedIdsForRUIndex(n) for n in range(self.nrus)])
+
+	## FED/slice distribution:
+	def makeFEDConfiguration(self):
+		fedid0 = FEDIDS[0]
+		## FED to eFED slot distribution:
+		fed_to_efedslot = {}
+		for n,fed in enumerate(FEDIDS):
+			if fed >  fedid0+23: break
+			if fed <  fedid0+8:                      fed_to_efedslot[fed] = 2*(n+1)
+			if fed >= fedid0+8  and fed < fedid0+16: fed_to_efedslot[fed] = 2*(n+1)-16
+			if fed >= fedid0+16 and fed < fedid0+24: fed_to_efedslot[fed] = 2*(n+1)-32
+
+		## FED to eFED/FMM slice distribution
+		allfedids = self.getAllFedIds()
+		FEDs = []
+		FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids if fed <  fedid0+8 ]
+		FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids if fed >= fedid0+8  and fed < fedid0+16]
+		FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids if fed >= fedid0+16 and fed < fedid0+24]
+
+		if self.verbose>0: print 70*'-'
+		if self.verbose>0:
+			print ' FED | Slice | eFED slot'
+			for fed,slice,efed_slot in FEDs:
+				print ' %3d | %d     | %2d' %(fed,slice,efed_slot)
+		self.FEDConfiguration = FEDs
+		efeds = []
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 0])
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 1])
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 2])
+		self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
+		self.nSlices = len(self.eFEDs)
 
 	def makeSkeleton(self):
 		fragmentname = 'skeleton.xml'
@@ -142,6 +175,7 @@ class daq2Configurator(object):
 	def getFerolSourceIp(self, index):
 		rack_to_host = {1:19,2:28,3:37}
 		return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.ferolRack], (index+1))
+		## TODO Automatize retrieving of basename and datanet name, see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
 
 	def addI2OProtocol(self):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
@@ -161,7 +195,16 @@ class daq2Configurator(object):
 			prot.append(Element(QN(i2ons, 'target').text, {'class':'%s::BU'%self.evbns , 'instance':"%d"%n, "tid":"%d"%(bu_starting_tid+2*n)}))
 
 		self.config.append(prot)
-	def addGTPe(self, partitionId=3, enableMask='0x8'):
+	def addGTPe(self):
+		bitmask = '0b'
+		if self.useEFEDs:
+			bitmask += self.nSlices*'1'
+			partitionId = 3
+		else:
+			bitmask += '1000'
+			partitionId = 0
+
+		enableMask = str(hex(int(bitmask,2))) ## convert '0b1000' into '0x8' etc.
 		index = 0
 		fragmentname = 'GTPe.xml'
 		GTPE = elementFromFile(self.fragmentdir+fragmentname)
@@ -171,6 +214,8 @@ class daq2Configurator(object):
 		prop.find(QN(gtpens, 'daqPartitionId').text).text         = str(partitionId)
 		prop.find(QN(gtpens, 'detPartitionEnableMask').text).text = str(enableMask)
 		prop.find(QN(gtpens, 'triggerRate').text).text            = str(100.)
+		if self.verbose>0: print 70*'-'
+		if self.verbose>0: print 'GTPe partitionId %d, enableMask %s (%s)' %(partitionId,enableMask,bitmask)
 
 		self.config.append(GTPE)
 
@@ -207,7 +252,8 @@ class daq2Configurator(object):
 		if self.verbose>0: print "ferol %2d, streaming to RU%d, fedids %3d/%3d"% (slotNumber, ruindex, fedId0, fedId1)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', 'RU%d_FRL_PORT'%ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED1', '60600')
-
+		if self.streams_per_ferol==1 and slotNumber%2==0: ## route every second one to port 60600 if there is only one stream per RU
+			self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', '60600')
 		try:
 			self.setPropertyInApp(ferol, classname, 'OperationMode',  FEROL_OPERATION_MODES[self.operation_mode][0])
 			if FEROL_OPERATION_MODES[self.operation_mode][1] is not None:
@@ -223,6 +269,7 @@ class daq2Configurator(object):
 
 		return ferol
 	def addFerolControllers(self, nferols, streams_per_ferol=1):
+		if self.verbose>0: print 70*'-'
 		for n in xrange(nferols):
 			fedids = self.fedIdsForFEROLIndex(n)
 			self.config.append(self.makeFerolController(slotNumber=n+1, fedId0=fedids[0], fedId1=fedids[1], sourceIp=self.getFerolSourceIp(n), nStreams=streams_per_ferol))
@@ -249,25 +296,9 @@ class daq2Configurator(object):
 		self.eFED_crate_counter += 1
 		return eFED_context
 	def addEFEDs(self):
-		allfedids = self.getAllFedIds()
-		fed_to_slot = {}
-		for n,fed in enumerate(FEDIDS):
-			if fed > 923: break
-			if fed <  908:               fed_to_slot[fed] = 2*(n+1)
-			if fed >= 908 and fed < 916: fed_to_slot[fed] = 2*(n+1)-16
-			if fed >= 916 and fed < 924: fed_to_slot[fed] = 2*(n+1)-32
-
-		efeds = []
-		efeds.append([(fed, fed_to_slot[fed]) for fed in allfedids if fed <  908])
-		efeds.append([(fed, fed_to_slot[fed]) for fed in allfedids if fed >= 908 and fed < 916])
-		efeds.append([(fed, fed_to_slot[fed]) for fed in allfedids if fed >= 916 and fed < 924])
-
-		if self.verbose>0: print 'eFED configuration (fedid, slot)'
-		for fed_group in efeds:
+		for fed_group in self.eFEDs:
 			if len(fed_group) == 0: continue
-			if self.verbose>0: print fed_group
 			self.config.append(self.makeEFED(fed_group))
-
 
 	def addFMM(self, cards):
 		fragmentname = 'FMM_context.xml'
@@ -281,31 +312,26 @@ class daq2Configurator(object):
 		for n,(geoslot, inputmask, inputlabels, outputlabels, label) in enumerate(cards):
 			cmm_card = deepcopy(fmm_card_fragment)
 			cmm_card.attrib[QN(self.soapencns, 'position').text] = '[%d]'%n
-			cmm_card.find('geoslot').text         = str(geoslot)
-			cmm_card.find('inputEnableMask').text = str(inputmask)
-			cmm_card.find('inputLabels').text     = str(inputlabels)
-			cmm_card.find('outputLabels').text    = str(outputlabels)
-			cmm_card.find('label').text           = str(label)
+			cmm_card.find(QN(fmmns,'geoslot').text).text         = str(geoslot)
+			cmm_card.find(QN(fmmns,'inputEnableMask').text).text = str(inputmask)
+			cmm_card.find(QN(fmmns,'inputLabels').text).text     = str(inputlabels)
+			cmm_card.find(QN(fmmns,'outputLabels').text).text    = str(outputlabels)
+			cmm_card.find(QN(fmmns,'label').text).text           = str(label)
 			fmm_config.append(cmm_card)
 		self.config.append(FMM_context)
-	def createFMMCards(self, ncards=3):
-		allfedids = self.getAllFedIds()
-		feds_per_card = split_list(allfedids, ncards)
+	def createFMMCards(self):
+		if self.verbose>0: print 70*'-'
 		inputlabel_template = ("N/C;"+9*"%s;N/C;"+"%s") if self.streams_per_ferol == 1 else ("N/C;"+19*"%s;")[:-1]
-
 		geoslots = [5,7,9]
 		labels   = ['CSC_EFED', 'ECAL_EFED', 'TRACKER_EFED']
-		if ncards > 3:
-			raise RuntimeError("Can't handle more than 3 FMM cards at this point. Add more geoslots and labels in 'createFMMCards' method.")
 
 		cards = []
-		for n in range(ncards):
+		for n,fed_group in enumerate(self.eFEDs):
 			## Construct input label and mask
-			feds = feds_per_card[n]
-			filler = tuple((10-len(feds))*['N/C'])      if self.streams_per_ferol == 1 else tuple((19-len(feds))*['N/C'])
+			feds = [fed for fed,_ in fed_group]
+			filler = tuple((10-len(feds))*['N/C']) if self.streams_per_ferol == 1 else tuple((19-len(feds))*['N/C'])
 			inputlabel = inputlabel_template%(tuple([str(fed) for fed in feds]) + filler)
 			# print inputlabel
-
 			bitmask = '0b'
 			for item in reversed(inputlabel.split(';')):
 				if item == 'N/C': bitmask += '0'
@@ -317,6 +343,7 @@ class daq2Configurator(object):
 			geoslot     = geoslots[n]
 			label       = labels[n]
 			cards.append([geoslot, inputmask, inputlabel, outputlabel, label])
+			if self.verbose>0: print ' %d %-14s %-4s (%s)  %s   %s' % (geoslot, label, inputmask, bitmask, inputlabel, outputlabel)
 
 		# inputlabels      = ["N/C;900;N/C;902;N/C;904;N/C;906;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C",
 		#                     "N/C;908;N/C;910;N/C;912;N/C;914;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C",
@@ -485,6 +512,8 @@ class daq2Configurator(object):
 		self.nferols           = nferols
 		self.streams_per_ferol = streams_per_ferol
 
+		self.makeFEDConfiguration()
+
 		##
 		self.makeSkeleton()
 		self.addI2OProtocol()
@@ -492,11 +521,11 @@ class daq2Configurator(object):
 		##
 		if self.useGTPe:
 			if self.useEFEDs:
-				self.addGTPe(partitionId=0, enableMask='0x7')
+				self.addGTPe()
 				self.addEFEDs()
 				self.addFMM(cards=self.createFMMCards())
 			else:
-				self.addGTPe(partitionId=3, enableMask='0x8')
+				self.addGTPe()
 				self.addFMM(cards=self.createEmptyFMMCard())
 
 		##
@@ -506,5 +535,6 @@ class daq2Configurator(object):
 		self.addBUs(nbus=nbus)
 
 		self.writeConfig(destination)
+		if self.verbose>0: print 70*'-'
 
 
