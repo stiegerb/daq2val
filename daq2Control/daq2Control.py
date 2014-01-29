@@ -60,8 +60,10 @@ class daq2Control(object):
 			printWarningWithWait("Failed to specify rate for GTPe. Setting it to 100 kHz.", waittime=0, instance=self)
 			self.options.useRate = 100
 
-		self._runDir    = self._testDir + '/' + self._platform + '/'
-		self._runDir   += self.config.testCaseShort
+		self._runDir  = self._testDir + '/' + self._platform + '/'
+		if len(self._testType)>0: self._runDir += (self._testType + '/')
+		self._runDir += (time.strftime('%d%H%M%S') + '/')
+
 		if self.options.outputDir:
 			if self.options.outputDir.endswith('/'): self.options.outputDir = self.options.outputDir[:-1]
 			if self.options.outputTag:
