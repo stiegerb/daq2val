@@ -31,7 +31,7 @@
 			<dropAtSuperFragmentDelivery xsi:type="xsd:boolean">false</dropAtSuperFragmentDelivery>
 			<!-- Input configuration e.g. PSP -->
 			<inputStreamPoolSize xsi:type="xsd:double">1400000</inputStreamPoolSize>
-			<maxClients xsi:type="xsd:unsignedInt">10</maxClients>
+			<maxClients xsi:type="xsd:unsignedInt">20</maxClients>
 			<ioQueueSize xsi:type="xsd:unsignedInt">64</ioQueueSize>
 			<eventQueueSize xsi:type="xsd:unsignedInt">64</eventQueueSize>
 			<maxInputReceiveBuffers xsi:type="xsd:unsignedInt">8</maxInputReceiveBuffers>
