@@ -279,7 +279,7 @@ class daq2Config(object):
 						if app.attrib['class'] == 'ferol::FerolController':
 							prop = app.find(QN(self.ferolns,'properties').text)
 							ho.__class__ = FEROL ## Make it a FEROL
-							ho.setStreams(prop.find(QN(self.ferolns, 'enableStream0').text).text, prop.find(QN(self.ferolns, 'enableStream0').text).text)
+							ho.setStreams(prop.find(QN(self.ferolns, 'enableStream0').text).text, prop.find(QN(self.ferolns, 'enableStream1').text).text)
 							if ho.enableStream0:
 								self.nStreams += 1
 								maxsizes.append(int(prop.find(QN(self.ferolns, 'Event_Length_Max_bytes_FED0').text).text))
