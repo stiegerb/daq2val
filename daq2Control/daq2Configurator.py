@@ -35,7 +35,7 @@ def split_list(alist, wanted_parts=1):
 	return [ alist[i*length // wanted_parts: (i+1)*length // wanted_parts] for i in range(wanted_parts) ]
 
 ######################################################################
-FEDIDS    = [900 + n for n in range(32)]
+FEDIDS    = [900 + n for n in range(64)]
 FEROL_OPERATION_MODES = {'ferol_emulator'  :('FEROL_EMULATOR_MODE', None),
                          'frl_autotrigger' :('FRL_EMULATOR_MODE',  'FRL_AUTO_TRIGGER_MODE'),
                          'frl_gtpe_trigger':('FRL_EMULATOR_MODE',  'FRL_GTPE_TRIGGER_MODE'),
@@ -174,7 +174,10 @@ class daq2Configurator(object):
 
 	def getFerolSourceIp(self, index):
 		rack_to_host = {1:19,2:28,3:37}
-		return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.ferolRack], (index+1))
+		if index < 16:
+			return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.ferolRack], (index+1))
+		if index >= 16: ## in case crate 3 is used together with the other crates
+			return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
 		## TODO Automatize retrieving of basename and datanet name, see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
 
 	def addI2OProtocol(self):
@@ -223,7 +226,10 @@ class daq2Configurator(object):
 		fragmentname = 'FerolController.xml'
 		ferol = elementFromFile(self.fragmentdir+fragmentname)
 		classname = 'ferol::FerolController'
-		self.setPropertyInApp(ferol, classname, 'slotNumber',      slotNumber)
+		physSlot = slotNumber
+		if physSlot > 16:
+			physSlot -= 16 ## restart physical slot number for crate 3 if used together with the other crates
+		self.setPropertyInApp(ferol, classname, 'slotNumber',      physSlot)
 		self.setPropertyInApp(ferol, classname, 'expectedFedId_0', fedId0)
 		self.setPropertyInApp(ferol, classname, 'expectedFedId_1', fedId1)
 		self.setPropertyInApp(ferol, classname, 'SourceIP',        sourceIp)
