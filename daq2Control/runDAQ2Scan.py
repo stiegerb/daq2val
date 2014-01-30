@@ -87,14 +87,20 @@ WARNING: Your maximum size for scanning doesn't seem to
 
 	#####################################
 	## Test event building first
+	retries = 0
 	if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
-		## Retry once
-		if options.verbose > 0: printWarningWithWait('Test failed, will stop everything and try again.', waittime=0, instance=d2c)
-		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
-		d2c.start(options.minSize, float(options.relRMS)*options.minSize, rate=options.useRate)
+		while(retries < options.retries):
+			if options.verbose > 0: printWarningWithWait('Test failed, will stop everything and try again.', waittime=0, instance=d2c)
+			utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+			d2c.start(options.minSize, float(options.relRMS)*options.minSize, rate=options.useRate)
 
-		## Check again
-		if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
+			## Check again
+			if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
+				retries += 1
+				continue
+			else:
+				break
+		else:
 			## Give up
 			if options.verbose > 0: printError('Test failed, built less than 1000 events! Giving up.', instance=d2c)
 			utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
@@ -122,7 +128,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 					exit(0)
 
 		if options.verbose > 0: print separator
-		if options.verbose > 0: print "Building events at fragment size %d for %d seconds..." % (step, options.duration)
+		if options.verbose > 0: print "%s >> Building events at fragment size %d for %d seconds..." % (d2c.config.testCase, step, options.duration)
 		if options.useIfstat:
 			## Get throughput directly from RU using ifstat script ## NOT REALLY TESTED YET
 			d2c.getResultsFromIfstat(options.duration)

@@ -122,7 +122,14 @@ class daq2Config(object):
 		if len(self.GTPe) > 0:
 			self.useGTPe = True
 
+		self.setTestCase()
 		if self.verbose>1: self.printHosts()
+
+	def setTestCase(self):
+		if len(self.FEROLs) > 0: config = '%ds%dfx%dx%d' % (self.nStreams, len(self.FEROLs), len(self.RUs), len(self.BUs))
+		else              : config = '%dx%dx%d'     % (len(self.eFEROLs), len(self.RUs), len(self.BUs))
+		self.testCase = config
+
 
 	def fillFromSymbolMap(self, symbolMap):
 		"""Adds the hostname and ports from a symbol map for each host"""
@@ -139,17 +146,9 @@ class daq2Config(object):
 		if out==None: out = stdout
 		separator = 70*'-'
 		out.write(prepend+separator+'\n')
-		## Count enabled FEROL streams:
-		streams = 0
-		for host in self.FEROLs:
-			if host.enableStream0: streams += 1
-			if host.enableStream1: streams += 1
-
-		if len(self.FEROLs) > 0: config = '%ds%dfx%dx%d' % (streams, len(self.FEROLs), len(self.RUs), len(self.BUs))
-		else              : config = '%dx%dx%d'     % (len(self.eFEROLs), len(self.RUs), len(self.BUs))
 		builder = 'EvB' if self.useEvB else 'gevb2g'
 		ptprotocol = 'IBV' if self.useIBV else 'UDAPL'
-		out.write('%s%s configuration with %s/%s\n' % (prepend, config, builder,ptprotocol))
+		out.write('%s%s configuration with %s/%s\n' % (prepend, self.testCase, builder,ptprotocol))
 		out.write(prepend+separator+'\n')
 		for host in self.hosts:
 			out.write(prepend+'%-20s at %25s:%-5d (SOAP) :%-5d (LAUNCHER), Applications:' % (host.name, host.host, host.port, host.lport))
@@ -218,8 +217,6 @@ class daq2Config(object):
 	def readXDAQConfigTemplate(self, configFile):
 		if not os.path.exists(configFile):
 			raise IOError('File '+configFile+' not found')
-		self.testCase      = os.path.dirname(configFile[configFile.find('cases/')+6:])
-		self.testCaseShort = os.path.dirname(configFile).split('/')[-1]
 
 		## Check <i2o:protocol> element for evb: or gevb2g: tags to determine which of the two we're dealing with here:
 		i2o_namespace = 'http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30'
