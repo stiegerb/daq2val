@@ -128,7 +128,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 					exit(0)
 
 		if options.verbose > 0: print separator
-		if options.verbose > 0: print "%s >> Building events at fragment size %d for %d seconds..." % (d2c.config.testCase, step, options.duration)
+		if options.verbose > 0: print "Building events at fragment size %d for %d seconds... %s" % (step, options.duration, d2c.config.configfile)
 		if options.useIfstat:
 			## Get throughput directly from RU using ifstat script ## NOT REALLY TESTED YET
 			d2c.getResultsFromIfstat(options.duration)

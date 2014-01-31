@@ -256,6 +256,7 @@ class daq2Configurator(object):
 		## Distribute the streams to the RUs and their endpoints
 		ruindex = (slotNumber-1)/((self.nferols)//self.nrus) ## split them up evenly, e.g. 8 ferols on 4 rus: 0,0,1,1,2,2,3,3
 		if self.verbose>0: print "ferol %2d, streaming to RU%d, fedids %3d/%3d"% (slotNumber, ruindex, fedId0, fedId1)
+		self.setPropertyInApp(ferol, classname, 'DestinationIP', 'RU%d_FRL_HOST_NAME'%ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', 'RU%d_FRL_PORT'%ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED1', '60600')
 		if self.streams_per_ferol==1 and slotNumber%2==0: ## route every second one to port 60600 if there is only one stream per RU

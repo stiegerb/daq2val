@@ -433,7 +433,7 @@ class daq2Control(object):
 	def checkConfigured(self):
 		if self.options.verbose > 0: print separator
 		## Check everything is 'Configured' or 'Ready'
-		to_be_checked = [(self.config.RUs[1:] + self.config.FEROLs, 'Configured'), ([self.config.RUs[0]] + self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.FMM + self.config.GTPe, 'Ready')]
+		to_be_checked = [(self.config.FEROLs, 'Configured'), (self.config.RUs + self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.FMM + self.config.GTPe, 'Ready')]
 		if not self.config.useEvB:
 			to_be_checked = [(self.config.FEROLs, 'Configured')]
 
