@@ -226,6 +226,7 @@ class daq2Control(object):
 		## Set Runnumber here:
 		if number==0:
 			number = time.strftime('%d%H%M')
+			if number[0] == '0': number = number[1:]
 
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting run number", number
