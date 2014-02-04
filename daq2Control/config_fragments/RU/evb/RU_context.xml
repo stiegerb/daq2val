@@ -40,7 +40,7 @@
 	</xc:Application>
 	<xc:Module>$XDAQ_ROOT/lib/libtcpla.so</xc:Module>
 	<xc:Module>$XDAQ_ROOT/lib/libptfrl.so</xc:Module>
-	<xc:Application class="xmem::probe::Application" id="21" instance="0" network="local" />
+	<xc:Application class="xmem::probe::Application" id="61" instance="0" network="local" />
 	<xc:Module>$XDAQ_ROOT/lib/libxmemprobe.so</xc:Module>
 	<xc:Module>$XDAQ_ROOT/lib/libevb.so</xc:Module>
 	<xc:Module>/usr/lib64/libdat2.so</xc:Module>
