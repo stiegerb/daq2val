@@ -11,5 +11,6 @@
 		<sendPoolName xsi:type="xsd:string">sudapl</sendPoolName>
 		<recvPoolName xsi:type="xsd:string">rudapl</recvPoolName>
 		<sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout>
+		<useRelay xsi:type="xsd:boolean">true</useRelay>
 	</properties>
 </xc:Application>

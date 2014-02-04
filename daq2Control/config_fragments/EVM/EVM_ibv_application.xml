@@ -11,5 +11,6 @@
 		<maxMessageSize xsi:type="xsd:unsignedInt">262000</maxMessageSize>
 		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
 		<sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout>
+		<useRelay xsi:type="xsd:boolean">true</useRelay>
 	</properties>
 </xc:Application>

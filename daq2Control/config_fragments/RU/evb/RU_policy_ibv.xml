@@ -5,6 +5,7 @@
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="6" />
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-receiver-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1" />
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1" />
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::relayworkloop" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="0" />
 
 	<pol:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:RU%d_FRL_PORT/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="9" />
 	<pol:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:60600/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="13" />

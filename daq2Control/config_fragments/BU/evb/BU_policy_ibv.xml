@@ -11,6 +11,7 @@
 	<pol:element pattern="urn:toolbox-task-workloop:http-(.+)/waiting" package="numa" type="thread" mempolicy="onnode" memnode="1" cpunodes="1" />
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops/polling" type="thread" package="numa" mempolicy="onnode" memnode="1"  affinity="10" />
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread" package="numa" mempolicy="onnode" memnode="1"  affinity="12" />
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::relayworkloop" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="13" />
 	<pol:element pattern="urn:toolbox-mem-allocator:CommittedHeapAllocator" type="alloc" package="numa" mempolicy="onnode" node="1" />
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-receiver-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1" />
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1" />
