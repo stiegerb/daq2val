@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	parser.add_option("--enablePauseFrame",  default=False, action="store_true",             dest="enablePauseFrame",  help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'true'")
 
 	parser.add_option("-m", "--ferolMode",   default='', action="store", type="string", dest="ferolMode",   help="Set ferol operation mode, can be either 'ferol_emulator', 'frl_autotrigger', 'frl_gtpe_trigger', or 'efed_slink_gtpe'")
-	parser.add_option("-r", "--ferolRack",   default=1,  action="store", type='int',    dest="ferolRack",   help="Which ferol rack to use (1,2, or 3) [default: %default]")
+	parser.add_option("-r", "--ferolRack",   default=1,  action="store", type='int',    dest="ferolRack",   help="Which ferol rack to use (1,2, or 3) [default: %default]. Choose 0 to use all three racks.")
 
 	parser.add_option("--fragmentDir",       default='', action="store", type="string", dest="fragmentDir", help="Use config fragments from a directory other than the default")
 	parser.add_option("-v", "--verbose",     default=1,  action="store", type='int',    dest="verbose",     help="Set the verbose level, [default: %default (semi-quiet)]")
