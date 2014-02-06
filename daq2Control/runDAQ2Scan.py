@@ -143,7 +143,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 		if options.verbose > 0: print "Done"
 
 		## Dump FEROL infospace
-		d2c.saveFEROLInfoSpaces()
+		# d2c.saveFEROLInfoSpaces()
 
 	## For FEROLs, and when changing the size on the fly, get results at the very end
 	if len(d2c.config.FEROLs) > 0 and not d2c.config.useEvB and not options.stopRestart: d2c.getResults()

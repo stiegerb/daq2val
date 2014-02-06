@@ -525,7 +525,7 @@ class daq2Control(object):
 			os.makedirs(newdir)
 			if len(glob.glob(self._outputDir+'*.csv')) > 0:
 				subprocess.check_call(['mv'] + glob.glob(self._outputDir+'*.csv') + [newdir])
-			if os.path.exists(self._outputDir+'infospaces'): ## UNTESTED
+			if os.path.exists(self._outputDir+'infospaces'):
 				subprocess.check_call(['mv', self._outputDir+'infospaces', newdir])
 
 		try:

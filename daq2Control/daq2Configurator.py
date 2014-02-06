@@ -185,6 +185,8 @@ class daq2Configurator(object):
 			if index < 16:
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.ferolRack], (index+1))
 			if index >= 16: ## in case crate 3 is used together with the other crates
+				if self.ferolRack == 2:
+					return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
 		## TODO Automatize retrieving of basename and datanet name, see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
 
@@ -520,6 +522,9 @@ class daq2Configurator(object):
 				for line in lines:
 					newfile.write(line)
 		subprocess.call(['mv', '-f', destination+'temp', destination])
+		if self.verbose>0: print 70*'-'
+		if self.verbose>0: print ' Wrote config to %s' % destination
+
 
 	def makeConfig(self, nferols=8, streams_per_ferol=2, nrus=1, nbus=2, destination='configuration.template.xml'):
 		self.nrus              = nrus

@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import os
 from daq2Configurator import daq2Configurator
 from daq2Utils import getConfig, printWarningWithWait, printError
 
@@ -50,6 +51,9 @@ if __name__ == "__main__":
 		configurator.disablePauseFrame = options.disablePauseFrame ## in case both are true, they will be enabled
 		configurator.setCWND           = options.setCWND ## -1 doesn't do anything
 		configurator.ferolRack         = options.ferolRack
+		if options.ferolRack not in [0, 1, 2, 3]:
+			printError("Unknown ferolRack: %d" %(options.ferolRack))
+			exit(-1)
 
 		if options.useEFEDs: options.useGTPe = True ## need GTPe for eFEDs
 		configurator.useGTPe           = options.useGTPe
@@ -70,18 +74,32 @@ if __name__ == "__main__":
 			if options.useEFEDs:  ## automatically use efed_slink_gtpe mode when running with GTPe/EFEDs
 				configurator.operation_mode = 'efed_slink_gtpe'
 
+		## Construct output name
 		output = args[0]
-		if configurator.evbns == 'evb':    output+='_evb'
-		if configurator.evbns == 'gevb2g': output+='_gevb2g'
-		if configurator.ptprot == 'udapl': output+='_udapl'
-		if configurator.ptprot == 'ibv':   output+='_ibv'
-		if configurator.operation_mode == 'efed_slink_gtpe':  output+='_efeds'
-		if configurator.operation_mode == 'frl_gtpe_trigger': output+='_gtpe'
-		if configurator.operation_mode == 'frl_autotrigger':  output+='_frlAT'
+		if configurator.evbns == 'evb':    output += '_evb'
+		if configurator.evbns == 'gevb2g': output += '_gevb2g'
+		if configurator.ptprot == 'udapl': output += '_udapl'
+		if configurator.ptprot == 'ibv':   output += '_ibv'
+		if configurator.operation_mode == 'efed_slink_gtpe':  output += '_efeds'
+		if configurator.operation_mode == 'frl_gtpe_trigger': output += '_gtpe'
+		if configurator.operation_mode == 'frl_autotrigger':  output += '_frlAT'
+		output += {0:'', 1:'_COL', 2:'_COL2', 3:'_COL3'}[options.ferolRack]
 		output+='.xml'
 
 		if len(options.output)>0:
-			output = options.output
+			name, ext = os.path.splitext(options.output)
+			if not os.path.dirname(name) == '':
+				try:
+					os.makedirs(os.path.dirname(name))
+				except OSError as e:
+					if not 'File exists' in str(e):
+						raise e
+
+			if ext == '.xml':
+				# Take exactly what's given in the option
+				output = options.output
+			elif ext == '':
+				output = os.path.join(name, output)
 
 		configurator.makeConfig(nferols,strperfrl,nrus,nbus,output)
 
