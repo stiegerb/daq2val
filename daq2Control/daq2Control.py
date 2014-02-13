@@ -319,24 +319,8 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring XDAQ processes"
 		if not utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry)):
-			if self.__RETRY_COUNTER < self.options.retries:
-				self.__RETRY_COUNTER += 1
-				## Stop and restart the processes
-				if self.options.verbose > 0: print separator
-				if self.options.verbose > 0: print "Stopping and restarting XDAQ processes"
-				utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-				if self.options.verbose > 0: print separator
-				if self.options.verbose > 0: print "Restarting XDAQ processes"
-				for h in self.config.hosts:
-					utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
-				if self.options.verbose > 0: print separator
-				sleep(2, self.options.verbose, self.options.dry)
-
-				## Try again to send the command file
-				if not utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry)):
-					raise RuntimeError('Failed to send command file to all hosts')
-			else:
-				raise RuntimeError('Failed to send command file to all hosts')
+			self.retry("Failed to send command file to all hosts")
+			return
 		sleep(2, self.options.verbose, self.options.dry)
 
 		## Set the fragment size, rms, and rate
@@ -397,6 +381,7 @@ class daq2Control(object):
 				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
+					return
 
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
@@ -419,6 +404,7 @@ class daq2Control(object):
 				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
+					return
 
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
@@ -470,6 +456,7 @@ class daq2Control(object):
 
 			if not self.checkEnabled():
 				self.retry('Failed to enable all FEROLs and RUs.')
+				return
 
 
 			## Enable GTPe:
@@ -496,11 +483,12 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		return True
 	def retry(self, message):
-		print " -- retry", self.__RETRY_COUNTER+1, "of", self.options.retries
 		if self.__RETRY_COUNTER < self.options.retries:
+			print " -- retry", self.__RETRY_COUNTER+1, "of", self.options.retries
 			self.__RETRY_COUNTER += 1
 			printWarningWithWait(message+' ... retrying', waittime=0, instance=self)
 			utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
+			sleep(10, self.options.verbose, self.options.dry)
 			self.start(fragSize=self.currentFragSize, fragSizeRMS=self.currentFragSizeRMS, rate=self.currentRate)
 		else:
 			printError(message, instance=self)
