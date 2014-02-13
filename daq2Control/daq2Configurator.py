@@ -79,6 +79,11 @@ class daq2Configurator(object):
 		self.eFED_app_instance  = 0
 
 	## Ferol to RU distribution
+	def ruIndexForFerolIndex(self, index):
+		## split them up evenly, e.g. 8 ferols on 4 rus: 0,0,1,1,2,2,3,3
+		ruindex = (index)/((self.nferols)//self.nrus)
+		return ruindex
+
 	def fedIdsForRUIndex(self, index):
 		"""Returns the fed ids mapped to a given RU"""
 		ferolindices = split_list(range(self.nferols), self.nrus)[index]
@@ -90,6 +95,8 @@ class daq2Configurator(object):
 	def fedIdsForFEROLIndex(self, index):
 		"""Returns the fed ids mapped to a given FEROL"""
 		return FEDIDS[2*index], FEDIDS[2*index+1]
+	def slotNumberForFEROLIndex(self, index):
+		return (index%16)+1
 	def getAllFedIds(self):
 		fedrange = [FEDIDS[n] for n in range(2*self.nferols)]
 		allfedids = fedrange if self.streams_per_ferol==2 else fedrange[::2]
@@ -240,16 +247,18 @@ class daq2Configurator(object):
 
 		self.config.append(GTPE)
 
-	def makeFerolController(self, slotNumber, fedId0, fedId1, sourceIp, nStreams=1):
+	def makeFerolController(self, index, nStreams=1):
 		fragmentname = 'FerolController.xml'
 		ferol = elementFromFile(self.fragmentdir+fragmentname)
 		classname = 'ferol::FerolController'
-		physSlot = slotNumber
-		if physSlot > 16:
-			physSlot -= 16 ## restart physical slot number for crate 3 if used together with the other crates
+
+		fedids   = self.fedIdsForFEROLIndex(index)
+		physSlot = self.slotNumberForFEROLIndex(index)
+		sourceIp = self.getFerolSourceIp(index)
+
 		self.setPropertyInApp(ferol, classname, 'slotNumber',      physSlot)
-		self.setPropertyInApp(ferol, classname, 'expectedFedId_0', fedId0)
-		self.setPropertyInApp(ferol, classname, 'expectedFedId_1', fedId1)
+		self.setPropertyInApp(ferol, classname, 'expectedFedId_0', fedids[0])
+		self.setPropertyInApp(ferol, classname, 'expectedFedId_1', fedids[1])
 		self.setPropertyInApp(ferol, classname, 'SourceIP',        sourceIp)
 
 		if nStreams == 1:
@@ -272,12 +281,14 @@ class daq2Configurator(object):
 		if self.setCWND >= 0:      self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', self.setCWND)
 
 		## Distribute the streams to the RUs and their endpoints
-		ruindex = (slotNumber-1)/((self.nferols)//self.nrus) ## split them up evenly, e.g. 8 ferols on 4 rus: 0,0,1,1,2,2,3,3
-		if self.verbose>0: print "ferol %2d, streaming to RU%d, fedids %3d/%3d"% (slotNumber, ruindex, fedId0, fedId1)
+
+		ruindex = self.ruIndexForFerolIndex(index)
+
+		if self.verbose>0: print "ferol %2d, streaming to RU%d, fedids %3d/%3d"% (index+1, ruindex, fedids[0], fedids[1])
 		self.setPropertyInApp(ferol, classname, 'DestinationIP', 'RU%d_FRL_HOST_NAME'%ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', 'RU%d_FRL_PORT'%ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED1', '60600')
-		if self.streams_per_ferol==1 and slotNumber%2==0: ## route every second one to port 60600 if there is only one stream per RU
+		if self.streams_per_ferol==1 and (index+1)%2==0: ## route every second one to port 60600 if there is only one stream per RU
 			self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', '60600')
 		try:
 			self.setPropertyInApp(ferol, classname, 'OperationMode',  FEROL_OPERATION_MODES[self.operation_mode][0])
@@ -290,14 +301,13 @@ class daq2Configurator(object):
 			raise RuntimeError('Unknown ferol operation mode')
 
 
-		ferol.set('url', ferol.get('url')%(slotNumber-1, slotNumber-1))
+		ferol.set('url', ferol.get('url')%(index, index))
 
 		return ferol
 	def addFerolControllers(self, nferols, streams_per_ferol=1):
 		if self.verbose>0: print 70*'-'
 		for n in xrange(nferols):
-			fedids = self.fedIdsForFEROLIndex(n)
-			self.config.append(self.makeFerolController(slotNumber=n+1, fedId0=fedids[0], fedId1=fedids[1], sourceIp=self.getFerolSourceIp(n), nStreams=streams_per_ferol))
+			self.config.append(self.makeFerolController(index=n, nStreams=streams_per_ferol))
 
 	def makeEFED(self, feds):
 		startid = 50
@@ -539,6 +549,9 @@ class daq2Configurator(object):
 		self.nbus              = nbus
 		self.nferols           = nferols
 		self.streams_per_ferol = streams_per_ferol
+
+		if self.nferols%self.nrus > 0:
+			printError('RU mapping will go wrong if number of ferols are not divisible by number of RUs. (Working on it)')
 
 		self.makeFEDConfiguration()
 
