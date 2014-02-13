@@ -178,14 +178,24 @@ class daq2Configurator(object):
 			if index < 16:
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
 			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
 			if index >= 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-31))
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-31))
+		elif self.ferolRack == 1:
+			if index < 16:
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
+			if index >= 16 and index < 32:
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
+			if index >= 32:
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-31))
+		elif self.ferolRack == 2:
+			if index < 16:
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index+1))
+			if index >= 16 and index < 32:
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
 		else:
 			if index < 16:
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.ferolRack], (index+1))
-			if index >= 16: ## in case crate 3 is used together with the other crates
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
 		## TODO Automatize retrieving of basename and datanet name, see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
 
 	def addI2OProtocol(self):
