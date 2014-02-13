@@ -7,13 +7,13 @@
       <ns1:element mempolicy="onnode" node="1" package="numa" pattern="urn:toolbox-mem-allocator-ibv-receiver-mlx4_0:ibvla" type="alloc"/>
       <ns1:element affinity="0" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::relayworkloop" type="thread"/>
       <ns1:element mempolicy="onnode" node="1" package="numa" pattern="urn:pt-ibv-rlist-relayqueue:alloc" type="alloc"/>
-      <ns1:element affinity="9" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-psp/RU0_FRL_HOST_NAME:RU0_FRL_PORT/polling" type="thread"/>
-      <ns1:element affinity="13" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-psp/RU0_FRL_HOST_NAME:60600/polling" type="thread"/>
+      <ns1:element affinity="9" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:RU%d_FRL_PORT/polling" type="thread"/>
+      <ns1:element affinity="13" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:60600/polling" type="thread"/>
       <ns1:element affinity="14" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt-frl-CopyWorker-1-0" type="thread"/>
       <ns1:element affinity="12" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt-frl-CopyWorker-1-1" type="thread"/>
       <ns1:element affinity="30" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt-frl-CopyWorker-1-2" type="thread"/>
       <ns1:element affinity="28" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt-frl-CopyWorker-1-3" type="thread"/>
-      <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:tcpla-PublicServicePoint-rlist/RU0_FRL_HOST_NAME" type="alloc"/>
+      <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:tcpla-PublicServicePoint-rlist/RU%d_FRL_HOST_NAME" type="alloc"/>
       <ns1:element affinity="1" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-acceptor-dispatcher(.+)" type="thread"/>
       <ns1:element affinity="1" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-connector-dispatcher(.+)" type="thread"/>
       <ns1:element affinity="1" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-ia(.+)" type="thread"/>
