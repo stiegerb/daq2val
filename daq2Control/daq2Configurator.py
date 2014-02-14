@@ -8,6 +8,14 @@ from xml.etree.ElementTree import QName as QN
 from xml.parsers.expat import ExpatError
 
 from daq2Utils import printError
+from daq2FEDConfiguration import FEDIDS, FEDConfiguration
+
+
+FEROL_OPERATION_MODES = {'ferol_emulator'  :('FEROL_EMULATOR_MODE', None),
+                         'frl_autotrigger' :('FRL_EMULATOR_MODE',  'FRL_AUTO_TRIGGER_MODE'),
+                         'frl_gtpe_trigger':('FRL_EMULATOR_MODE',  'FRL_GTPE_TRIGGER_MODE'),
+                         'efed_slink_gtpe' :('SLINK_MODE',         'FRL_GTPE_TRIGGER_MODE')}
+
 
 ######################################################################
 def elementFromFile(filename):
@@ -34,12 +42,7 @@ def split_list(alist, wanted_parts=1):
 	length = len(alist)
 	return [ alist[i*length // wanted_parts: (i+1)*length // wanted_parts] for i in range(wanted_parts) ]
 
-######################################################################
-FEDIDS    = [900 + n for n in range(96)]
-FEROL_OPERATION_MODES = {'ferol_emulator'  :('FEROL_EMULATOR_MODE', None),
-                         'frl_autotrigger' :('FRL_EMULATOR_MODE',  'FRL_AUTO_TRIGGER_MODE'),
-                         'frl_gtpe_trigger':('FRL_EMULATOR_MODE',  'FRL_GTPE_TRIGGER_MODE'),
-                         'efed_slink_gtpe' :('SLINK_MODE',         'FRL_GTPE_TRIGGER_MODE')}
+
 
 ######################################################################
 class daq2Configurator(object):
@@ -97,11 +100,11 @@ class daq2Configurator(object):
 		return FEDIDS[2*index], FEDIDS[2*index+1]
 	def slotNumberForFEROLIndex(self, index):
 		return (index%16)+1
+
 	def getAllFedIds(self):
 		fedrange = [FEDIDS[n] for n in range(2*self.nferols)]
 		allfedids = fedrange if self.streams_per_ferol==2 else fedrange[::2]
 		return allfedids
-		# return reduce(lambda x,y:x+y, [self.fedIdsForRUIndex(n) for n in range(self.nrus)])
 
 	## FED/slice distribution:
 	def makeFEDConfiguration(self):
