@@ -8,7 +8,7 @@ from xml.etree.ElementTree import QName as QN
 from xml.parsers.expat import ExpatError
 
 from daq2Utils import printError
-from daq2FEDConfiguration import FEDIDS, FEDConfiguration
+from daq2FEDConfiguration import daq2FEDConfiguration, FRLNode, RUNode
 
 
 FEROL_OPERATION_MODES = {'ferol_emulator'  :('FEROL_EMULATOR_MODE', None),
@@ -81,61 +81,6 @@ class daq2Configurator(object):
 		self.eFED_crate_counter = 0
 		self.eFED_app_instance  = 0
 
-	## Ferol to RU distribution
-	def ruIndexForFerolIndex(self, index):
-		## split them up evenly, e.g. 8 ferols on 4 rus: 0,0,1,1,2,2,3,3
-		ruindex = (index)/((self.nferols)//self.nrus)
-		return ruindex
-
-	def fedIdsForRUIndex(self, index):
-		"""Returns the fed ids mapped to a given RU"""
-		ferolindices = split_list(range(self.nferols), self.nrus)[index]
-		fedids = [fed for pair in map(self.fedIdsForFEROLIndex, ferolindices) for fed in pair] ## all fedids for this RU
-		if self.streams_per_ferol == 2: ## take all fedids
-			return fedids
-		if self.streams_per_ferol == 1: ## take only every second fedid
-			return fedids[::2]
-	def fedIdsForFEROLIndex(self, index):
-		"""Returns the fed ids mapped to a given FEROL"""
-		return FEDIDS[2*index], FEDIDS[2*index+1]
-	def slotNumberForFEROLIndex(self, index):
-		return (index%16)+1
-
-	def getAllFedIds(self):
-		fedrange = [FEDIDS[n] for n in range(2*self.nferols)]
-		allfedids = fedrange if self.streams_per_ferol==2 else fedrange[::2]
-		return allfedids
-
-	## FED/slice distribution:
-	def makeFEDConfiguration(self):
-		fedid0 = FEDIDS[0]
-		## FED to eFED slot distribution:
-		fed_to_efedslot = {}
-		for n,fed in enumerate(FEDIDS):
-			if fed >  fedid0+23: break
-			if fed <  fedid0+8:                      fed_to_efedslot[fed] = 2*(n+1)
-			if fed >= fedid0+8  and fed < fedid0+16: fed_to_efedslot[fed] = 2*(n+1)-16
-			if fed >= fedid0+16 and fed < fedid0+24: fed_to_efedslot[fed] = 2*(n+1)-32
-
-		## FED to eFED/FMM slice distribution
-		allfedids = self.getAllFedIds()
-		FEDs = []
-		FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids if fed <  fedid0+8 ]
-		FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids if fed >= fedid0+8  and fed < fedid0+16]
-		FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids if fed >= fedid0+16 and fed < fedid0+24]
-
-		if self.verbose>1: print 70*'-'
-		if self.verbose>1:
-			print ' FED | Slice | eFED slot'
-			for fed,slice,efed_slot in FEDs:
-				print ' %3d | %d     | %2d' %(fed,slice,efed_slot)
-		self.FEDConfiguration = FEDs
-		efeds = []
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 0])
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 1])
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 2])
-		self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
-		self.nSlices = len(self.eFEDs)
 
 	def makeSkeleton(self):
 		fragmentname = 'skeleton.xml'
@@ -182,32 +127,6 @@ class daq2Configurator(object):
 		else:
 			raise RuntimeError('Application %s not found in context %s.'%(classname, context.attrib['url']))
 
-	def getFerolSourceIp(self, index):
-		rack_to_host = {1:19,2:28,3:37}
-		if self.ferolRack == 0:
-			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
-			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
-			if index >= 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-31))
-		elif self.ferolRack == 1:
-			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
-			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
-			if index >= 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-31))
-		elif self.ferolRack == 2:
-			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index+1))
-			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
-		else:
-			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.ferolRack], (index+1))
-		## TODO Automatize retrieving of basename and datanet name, see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
-
 	def addI2OProtocol(self):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
 		prot = Element(QN(i2ons, 'protocol').text)
@@ -250,31 +169,34 @@ class daq2Configurator(object):
 
 		self.config.append(GTPE)
 
-	def makeFerolController(self, index, nStreams=1):
+	def makeFerolController(self, frl):
 		fragmentname = 'FerolController.xml'
 		ferol = elementFromFile(self.fragmentdir+fragmentname)
 		classname = 'ferol::FerolController'
 
-		fedids   = self.fedIdsForFEROLIndex(index)
-		physSlot = self.slotNumberForFEROLIndex(index)
-		sourceIp = self.getFerolSourceIp(index)
+		fedids   = frl.fedIds
+		physSlot = frl.slotNumber
+		sourceIp = frl.sourceIp
 
 		self.setPropertyInApp(ferol, classname, 'slotNumber',      physSlot)
 		self.setPropertyInApp(ferol, classname, 'expectedFedId_0', fedids[0])
-		self.setPropertyInApp(ferol, classname, 'expectedFedId_1', fedids[1])
+		try:
+			self.setPropertyInApp(ferol, classname, 'expectedFedId_1', fedids[1])
+		except IndexError:
+			pass
 		self.setPropertyInApp(ferol, classname, 'SourceIP',        sourceIp)
 
-		if nStreams == 1:
+		if frl.nstreams == 1:
 			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 135000)
 			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 135000)
-		if nStreams == 2:
+		if frl.nstreams == 2:
 			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 62500)
 			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 62500)
 
-		if nStreams == 1:
+		if frl.nstreams == 1:
 			self.setPropertyInApp(ferol, classname, 'enableStream0', 'true')
 			self.setPropertyInApp(ferol, classname, 'enableStream1', 'false')
-		if nStreams == 2:
+		if frl.nstreams == 2:
 			self.setPropertyInApp(ferol, classname, 'enableStream0', 'true')
 			self.setPropertyInApp(ferol, classname, 'enableStream1', 'true')
 
@@ -285,13 +207,13 @@ class daq2Configurator(object):
 
 		## Distribute the streams to the RUs and their endpoints
 
-		ruindex = self.ruIndexForFerolIndex(index)
+		ruindex = frl.ruindex
 
-		if self.verbose>0: print "ferol %2d, streaming to RU%d, fedids %3d/%3d"% (index+1, ruindex, fedids[0], fedids[1])
+		# if self.verbose>0: print "ferol %2d, streaming to RU%d, fedids %3d/%3d"% (frl.index+1, ruindex, fedids[0], fedids[1])
 		self.setPropertyInApp(ferol, classname, 'DestinationIP', 'RU%d_FRL_HOST_NAME'%ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', 'RU%d_FRL_PORT'%ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED1', '60600')
-		if self.streams_per_ferol==1 and (index+1)%2==0: ## route every second one to port 60600 if there is only one stream per RU
+		if self.streams_per_ferol==1 and (frl.index+1)%2==0: ## route every second one to port 60600 if there is only one stream per RU
 			self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', '60600')
 		try:
 			self.setPropertyInApp(ferol, classname, 'OperationMode',  FEROL_OPERATION_MODES[self.operation_mode][0])
@@ -304,13 +226,12 @@ class daq2Configurator(object):
 			raise RuntimeError('Unknown ferol operation mode')
 
 
-		ferol.set('url', ferol.get('url')%(index, index))
+		ferol.set('url', ferol.get('url')%(frl.index, frl.index))
 
 		return ferol
 	def addFerolControllers(self, nferols, streams_per_ferol=1):
-		if self.verbose>0: print 70*'-'
-		for n in xrange(nferols):
-			self.config.append(self.makeFerolController(index=n, nStreams=streams_per_ferol))
+		for frl in self.FEDConfig.frls:
+			self.config.append(self.makeFerolController(frl))
 
 	def makeEFED(self, feds):
 		startid = 50
@@ -401,7 +322,7 @@ class daq2Configurator(object):
 		label       = "CSC_EFED"
 		return [[geoslot, inputmask, inputlabel, outputlabel, label]]
 
-	def makeRU(self, index):
+	def makeRU(self, ru):
 		fragmentname = 'RU/%s/RU_context.xml'%self.evbns
 		ru_context = elementFromFile(self.fragmentdir+fragmentname)
 
@@ -409,9 +330,9 @@ class daq2Configurator(object):
 		addFragmentFromFile(target=ru_context, filename=self.fragmentdir+'/RU/%s/RU_policy_%s.xml'%(self.evbns,self.ptprot), index=0)
 		polns = "http://xdaq.web.cern.ch/xdaq/xsd/2013/XDAQPolicy-10"
 		for element in ru_context.findall(QN(polns,"policy").text+'/'+QN(polns,"element").text):
-			if 'RU%d' in element.get('pattern'): element.set('pattern',element.get('pattern').replace('RU%d', 'RU%d'%(index)))
+			if 'RU%d' in element.get('pattern'): element.set('pattern',element.get('pattern').replace('RU%d', 'RU%d'%(ru.index)))
 		## Add builder network endpoint
-		ru_context.insert(3,Element(QN(self.xdaqns, 'Endpoint').text, {'protocol':'%s'%self.ptprot , 'service':"i2o", "hostname":"RU%d_I2O_HOST_NAME"%(index), "port":"RU%d_I2O_PORT"%(index), "network":"infini"}))
+		ru_context.insert(3,Element(QN(self.xdaqns, 'Endpoint').text, {'protocol':'%s'%self.ptprot , 'service':"i2o", "hostname":"RU%d_I2O_HOST_NAME"%(ru.index), "port":"RU%d_I2O_PORT"%(ru.index), "network":"infini"}))
 		## Add builder network pt application
 		addFragmentFromFile(target=ru_context, filename=self.fragmentdir+'/RU/%s/RU_%s_application.xml'%(self.evbns,self.ptprot), index=4) ## add after the two endpoints
 		## Add corresponding module
@@ -424,11 +345,11 @@ class daq2Configurator(object):
 		frl_routing_element = ru_context.find(QN(self.xdaqns,'Application').text +'/'+ QN(pt_frl_ns,'properties').text +'/'+ QN(pt_frl_ns,'frlRouting').text)
 		frl_routing_element.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(self.nferols*self.streams_per_ferol/self.nrus)
 		item_element = elementFromFile(self.fragmentdir+'/RU/RU_frl_routing.xml')
-		classname_to_add = "%s::EVM"%self.evbns if index == 0 and self.evbns == 'evb' else "%s::RU"%self.evbns
+		classname_to_add = "%s::EVM"%self.evbns if ru.index == 0 and self.evbns == 'evb' else "%s::RU"%self.evbns
 		item_element.find(QN(pt_frl_ns,'className').text).text = classname_to_add
-		item_element.find(QN(pt_frl_ns,'instance').text).text = "%d"%index
+		item_element.find(QN(pt_frl_ns,'instance').text).text = "%d"%ru.index
 
-		feds_to_add = self.fedIdsForRUIndex(index)
+		feds_to_add = ru.getFedIds()
 		for n,fed in enumerate(feds_to_add):
 			item_to_add = deepcopy(item_element)
 			item_to_add.attrib[QN(self.soapencns, 'position').text] = '[%d]'%n
@@ -437,14 +358,14 @@ class daq2Configurator(object):
 
 		## RU application
 		ru_app = elementFromFile(filename=self.fragmentdir+'/RU/%s/RU_application.xml'%self.evbns)
-		if self.evbns == 'evb' and index == 0: ## make the first one an EVM in case of EvB
+		if self.evbns == 'evb' and ru.index == 0: ## make the first one an EVM in case of EvB
 			ru_app = elementFromFile(filename=self.fragmentdir+'/RU/evb/RU_application_EVM.xml')
 		ru_context.insert(7,ru_app)
-		ru_app.set('instance',str(index))
+		ru_app.set('instance',str(ru.index))
 
 		## In case of EvB, add expected fedids
 		if self.evbns == 'evb':
-			ruevbappns = self.xdaqappns%'evb::RU' if index>0 else self.xdaqappns%'evb::EVM'
+			ruevbappns = self.xdaqappns%'evb::RU' if ru.index>0 else self.xdaqappns%'evb::EVM'
 			fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+QN(ruevbappns, 'fedSourceIds').text)
 			fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(self.nferols*self.streams_per_ferol/self.nrus)
 			item_element = fedSourceIds.find(QN(ruevbappns,'item').text)
@@ -458,15 +379,15 @@ class daq2Configurator(object):
 		## Set instance and url
 		for app in ru_context.findall(QN(self.xdaqns, 'Endpoint').text):
 			if 'RU%d' in app.attrib['hostname']:
-				app.set('hostname', app.get('hostname')%index)
+				app.set('hostname', app.get('hostname')%ru.index)
 			if 'RU%d' in app.attrib['port']:
-				app.set('port', app.get('port')%index)
-		ru_context.set('url', ru_context.get('url')%(index, index))
+				app.set('port', app.get('port')%ru.index)
+		ru_context.set('url', ru_context.get('url')%(ru.index, ru.index))
 
 		return ru_context
 	def addRUs(self, nrus):
-		for n in xrange(nrus):
-			self.config.append(self.makeRU(n))
+		for ru in self.FEDConfig.rus:
+			self.config.append(self.makeRU(ru))
 	def makeEVM(self):
 		index = 0
 		fragmentname = 'EVM/EVM_context.xml'
@@ -553,10 +474,7 @@ class daq2Configurator(object):
 		self.nferols           = nferols
 		self.streams_per_ferol = streams_per_ferol
 
-		if self.nferols%self.nrus > 0:
-			printError('RU mapping will go wrong if number of ferols are not divisible by number of RUs. (Working on it)')
-
-		self.makeFEDConfiguration()
+		self.FEDConfig = daq2FEDConfiguration(nstreams=nferols*streams_per_ferol, nfrls=nferols, nrus=nrus, ferolRack=self.ferolRack, verbose=self.verbose)
 
 		##
 		self.makeSkeleton()

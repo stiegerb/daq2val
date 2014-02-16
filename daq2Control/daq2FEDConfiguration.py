@@ -8,6 +8,10 @@ def fedIdGenerator(maxstreams, startid=600):
 	for fedid in xrange(startid, startid+maxstreams):
 		yield fedid
 
+def split_list(alist, wanted_parts=1):
+	length = len(alist)
+	return [ alist[i*length // wanted_parts: (i+1)*length // wanted_parts] for i in range(wanted_parts) ]
+
 ######################################################################
 class FRLNode(object):
 	## Static member for fedid generator:
@@ -73,7 +77,6 @@ class FRLNode(object):
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.rack], (index+1))
 		## TODO Automatize retrieving of basename and datanet name, see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
 
-
 ######################################################################
 class RUNode(object):
 	def __init__(self, index):
@@ -87,7 +90,7 @@ class RUNode(object):
 		return [fed for frl in self.frls for fed in frl.fedIds]
 
 ######################################################################
-class FEDConfiguration(object):
+class daq2FEDConfiguration(object):
 	"""Helper class to distribute FEDs to RUs"""
 	def __init__(self, nstreams, nfrls, nrus, ferolRack, verbose=0):
 		self.nstreams = nstreams
@@ -101,28 +104,39 @@ class FEDConfiguration(object):
 		self.frls = []
 		self.rus  = []
 
+		self.frl_index_to_ru_index = {}
+
+		self.makeFRLtoRUAssignments()
 		self.makeFEDConfiguration()
-		for frl in self.frls: print frl
+
+		if verbose>0:
+			print 70*'-'
+			for frl in self.frls: print frl
 
 	def assignFRLToRU(self, index, frl):
-		ru = self.ruForFRLIndex(index)
+		try:
+			ru = self.rus[self.frl_index_to_ru_index[index]]
+		except KeyError:
+			printError("Missing RU assignment: could not find RU for FRL with index %d"%index, self)
 		ru.addFRL(frl)
 		frl.ruindex = ru.index
 
 	def makeFEDConfiguration(self):
+		## Add the RUs
 		for index in range(self.nrus):
 			ru = RUNode(index)
 			self.rus.append(ru)
 
+		## Add the ferols, assigning each to a RU
 		for index in range(self.nfrls):
 			frl = FRLNode(index=index, rack=self.ferolRack, nstreams=self.strpfrl)
 			self.assignFRLToRU(index, frl)
 			self.frls.append(frl)
 
-		fedid0 = FEDIDS[0]
+		fedid0 = FEDID0
 		## FED to eFED slot distribution:
 		fed_to_efedslot = {}
-		for n,fed in enumerate(FEDIDS):
+		for n,fed in enumerate(self.getAllFedIds()):
 			if fed >  fedid0+23: break
 			if fed <  fedid0+8:                      fed_to_efedslot[fed] = 2*(n+1)
 			if fed >= fedid0+8  and fed < fedid0+16: fed_to_efedslot[fed] = 2*(n+1)-16
@@ -148,10 +162,12 @@ class FEDConfiguration(object):
 		self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
 		self.nSlices = len(self.eFEDs)
 
-	def ruForFRLIndex(self, index):
-		## split them up evenly, e.g. 8 ferols on 4 rus: 0,0,1,1,2,2,3,3
-		ruindex = (index)/((self.nfrls)//self.nrus)
-		return self.rus[ruindex]
+	def makeFRLtoRUAssignments(self):
+		frl_bunching = split_list(range(self.nfrls), self.nrus)
+		self.frl_index_to_ru_index = {}
+		for ru_index,bunch in enumerate(frl_bunching):
+			for frl_index in bunch:
+				self.frl_index_to_ru_index[frl_index] = ru_index
 
 	def getAllFedIds(self):
 		return [fed for frl in self.frls for fed in frl.fedIds]

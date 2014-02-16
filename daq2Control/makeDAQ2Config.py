@@ -44,7 +44,7 @@ if __name__ == "__main__":
 			options.fragmentDir = '/nfshome0/stiegerb/Workspace/daq2val/daq2Control/config_fragments/'
 		configurator = daq2Configurator(options.fragmentDir, verbose=options.verbose)
 
-		configurator.evbns             = 'evb' if options.useEvB and not options.useGevb2g else 'gevb2g'
+		configurator.evbns             = 'gevb2g' if options.useGevb2g and not options.useEvB else 'evb'
 		configurator.ptprot            = 'ibv' if options.useIBV and not options.useUDAPL  else 'udapl'
 
 		configurator.enablePauseFrame  = options.enablePauseFrame
