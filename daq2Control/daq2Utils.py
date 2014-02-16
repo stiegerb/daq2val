@@ -205,7 +205,7 @@ def writeItem(host, port, classname, instance, item, data, offset=0, verbose=0, 
 	body = '<xdaq:WriteItem xmlns:xdaq="urn:xdaq-soap:3.0" offset="%s"  item="%s" data="%s"/>' % (str(offset), item, str(data))
 	cmd = SOAPEnvelope % body
 	cmd = cmd.replace('\"','\\\"') ## need to escape the quotes when passing as argument
-	return sendCmdToApp(host, port, classname, str(instance), cmd)
+	return sendCmdToApp(host, port, classname, str(instance), cmd, verbose=verbose, dry=dry)
 def tryWebPing(host, port, verbose=0, dry=False):
 	if dry:
 		print '%-18s %25s:%-5d' % ('webPing', host, port)
