@@ -27,8 +27,8 @@
 			<Event_Length_bytes_FED1 xsi:type="xsd:unsignedInt">2048</Event_Length_bytes_FED1>
 			<Event_Length_Stdev_bytes_FED0 xsi:type="xsd:unsignedInt">0</Event_Length_Stdev_bytes_FED0>
 			<Event_Length_Stdev_bytes_FED1 xsi:type="xsd:unsignedInt">0</Event_Length_Stdev_bytes_FED1>
-			<Event_Length_Max_bytes_FED0 xsi:type="xsd:unsignedInt">16000</Event_Length_Max_bytes_FED0>
-			<Event_Length_Max_bytes_FED1 xsi:type="xsd:unsignedInt">16000</Event_Length_Max_bytes_FED1>
+			<Event_Length_Max_bytes_FED0 xsi:type="xsd:unsignedInt">65536</Event_Length_Max_bytes_FED0>
+			<Event_Length_Max_bytes_FED1 xsi:type="xsd:unsignedInt">65536</Event_Length_Max_bytes_FED1>
 			<Event_Delay_ns_FED0 xsi:type="xsd:unsignedInt">20</Event_Delay_ns_FED0>
 			<Event_Delay_ns_FED1 xsi:type="xsd:unsignedInt">20</Event_Delay_ns_FED1>
 			<Event_Delay_Stdev_ns_FED0 xsi:type="xsd:unsignedInt">0</Event_Delay_Stdev_ns_FED0>
