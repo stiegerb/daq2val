@@ -161,7 +161,9 @@ def printTable(filename):
 		(sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize)
 
 	print "--------------------------------------------------------------------------------------"
-def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=True, nologx=False, logy=False, tag='', subtag='', legends=[], makePNGs=True, rate=100):
+def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000),
+	              oname='', frag=True, nologx=False, logy=False,
+	              tag='', subtag='', legends=[], makePNGs=True, rate=100, drawRateLine=True):
 	from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TLatex, TPave
 	from operator import itemgetter
 
@@ -299,12 +301,13 @@ def makeMultiPlot(filelist, rangey=(0,5500), rangex=(250,17000), oname='', frag=
 	# if args.daq1:
 	# 	daq1_graph.Draw("PL")
 
-	for n,streams_per_ru in enumerate(configs):
-		func = getRateGraph(streams_per_ru, frag=frag, rate=rate, xmax=rangex[1])
-		func.SetLineColor(colors[n])
-		func.SetLineWidth(1)
-		func.DrawCopy("same")
-		leg.AddEntry(func, '%.0f kHz (%d streams)'% (rate, streams_per_ru), 'l')
+	if drawRateLine:
+		for n,streams_per_ru in enumerate(configs):
+			func = getRateGraph(streams_per_ru, frag=frag, rate=rate, xmax=rangex[1])
+			func.SetLineColor(colors[n])
+			func.SetLineWidth(1)
+			func.DrawCopy("same")
+			leg.AddEntry(func, '%.0f kHz (%d streams)'% (rate, streams_per_ru), 'l')
 
 	leg.Draw()
 
@@ -371,6 +374,7 @@ def addPlottingOptions(parser):
 	parser.add_argument("--outdir",            default="",         action="store",  type=str,   dest="outdir",            help="Output directory for the plots")
 	parser.add_argument('--legend',            default=[],         action="append", type=str,   dest="legend", nargs='*', help='Give a list of custom legend entries to be used')
 	parser.add_argument("-r", "--rate",        default="100",      action="store",  type=float, dest="rate",              help="Rate in kHz to be displayed on the plot: [default: %(default)s kHz]")
+	parser.add_argument("--noRateLine",        default=False,      action="store_true",         dest="noRateLine",        help="Do not draw the rate line")
 	parser.add_argument("-q", "--quiet",       default=False,      action="store_true",         dest="quiet",             help="Do not print the tables")
 
 	parser.add_argument("--miny",   default="0",     action="store", type=float, dest="miny",   help="Y axis range, minimum")
@@ -420,7 +424,14 @@ if __name__ == "__main__":
 		if args.outdir: args.outputName = args.outdir + '/' + args.outputName
 		legends=[]
 		if len(args.legend)>0: legends=args.legend[0]
-		makeMultiPlot(filelist, rangey=(args.miny, args.maxy), rangex=(args.minx, args.maxx), tag=args.tag, subtag=args.subtag, legends=legends, frag=True, oname=args.outputName, nologx=args.nologx, logy=args.logy, rate=args.rate)
+		drawRateLine = True if not args.noRateLine else False
+		makeMultiPlot(filelist, rangey=(args.miny, args.maxy),
+			                    rangex=(args.minx, args.maxx),
+			                    tag=args.tag, subtag=args.subtag,
+			                    legends=legends, frag=True,
+			                    oname=args.outputName,
+			                    nologx=args.nologx, logy=args.logy,
+			                    rate=args.rate, drawRateLine=drawRateLine)
 		exit(0)
 
 	parser.print_help()
