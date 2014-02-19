@@ -148,7 +148,7 @@ class daq2Configurator(object):
 	def addGTPe(self):
 		bitmask = '0b'
 		if self.useEFEDs:
-			bitmask += self.nSlices*'1'
+			bitmask += self.FEDConfig.nSlices*'1'
 			partitionId = 3
 		else:
 			bitmask += '1000'
@@ -255,7 +255,7 @@ class daq2Configurator(object):
 		self.eFED_crate_counter += 1
 		return eFED_context
 	def addEFEDs(self):
-		for fed_group in self.eFEDs:
+		for fed_group in self.FEDConfig.eFEDs:
 			if len(fed_group) == 0: continue
 			self.config.append(self.makeEFED(fed_group))
 
@@ -285,7 +285,7 @@ class daq2Configurator(object):
 		labels   = ['CSC_EFED', 'ECAL_EFED', 'TRACKER_EFED']
 
 		cards = []
-		for n,fed_group in enumerate(self.eFEDs):
+		for n,fed_group in enumerate(self.FEDConfig.eFEDs):
 			## Construct input label and mask
 			feds = [fed for fed,_ in fed_group]
 			filler = tuple((10-len(feds))*['N/C']) if self.streams_per_ferol == 1 else tuple((19-len(feds))*['N/C'])
