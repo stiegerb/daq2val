@@ -526,6 +526,8 @@ class daq2Control(object):
 			outfile.write('## Testcase: %s\n' % self.config.testCase)
 			if self.options.useLogNormal: outfile.write('## useLogNormal = True, RMS = %5.2f\n' % float(self.options.relRMS) )
 			outfile.write('## %s\n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
+			hashtag = utils.getGitHashTag()
+			outfile.write('## Git Hashtag: %s (%s)\n' % (hashtag[:7], hashtag))
 			outfile.write('\n##\n')
 			self.config.printHosts(out=outfile, prepend='## ')
 			outfile.write('\n\n')

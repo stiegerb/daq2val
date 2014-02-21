@@ -448,6 +448,14 @@ def getConfig(string=""):
 
 	return nstreams, nrus, nbus, rms, strperfrl
 
+def getGitHashTag():
+	"""Returns the git hash of the current commit in the scripts repository"""
+	gitwd = os.path.dirname(os.path.realpath(__file__)) ## this will be /nfshome0/.../daq2val/daq2Control/
+	cmd = r"git log --pretty=format:'%H' -n 1"
+	call = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, cwd=gitwd)
+	out,err = call.communicate()
+	return out
+
 
 ##########################################
 ## From Petr's FEROL.py ##################
