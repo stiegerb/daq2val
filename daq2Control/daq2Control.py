@@ -445,7 +445,7 @@ class daq2Control(object):
 
 			## Enable FEROLs
 			self.sendCmdToFEROLs('Enable')
-			sleep(3, self.options.verbose, self.options.dry)
+			sleep(5, self.options.verbose, self.options.dry)
 
 			## Enable FMM:
 			if self.config.useGTPe:
@@ -455,8 +455,11 @@ class daq2Control(object):
 			self.sendCmdToEFEDs('Enable')
 
 			if not self.checkEnabled():
-				self.retry('Failed to enable all FEROLs and RUs.')
-				return
+				if self.options.verbose > 0: print "Waiting a bit longer..."
+				sleep(10, self.options.verbose, self.options.dry)
+				if not self.checkEnabled():
+					self.retry('Failed to enable all FEROLs and RUs.')
+					return
 
 
 			## Enable GTPe:
