@@ -19,8 +19,8 @@ if __name__ == "__main__":
 	parser.usage = usage
 	parser.add_option("--useEvB",            default=False, action="store_true",             dest="useEvB",            help="Use EvB for event building (instead of gevb2g (default))")
 	parser.add_option("--useGevb2g",         default=False, action="store_true",             dest="useGevb2g",         help="Use gevb2g for event building (instead of EvB)")
-	parser.add_option("--useIBV",            default=False, action="store_true",             dest="useIBV",            help="Use IBV protocol for builder network peer transport")
-	parser.add_option("--useUDAPL",          default=False, action="store_true",             dest="useUDAPL",          help="Use UDAPL protocol for builder network peer transport (default)")
+	parser.add_option("--useIBV",            default=False, action="store_true",             dest="useIBV",            help="Use IBV protocol for builder network peer transport (default)")
+	parser.add_option("--useUDAPL",          default=False, action="store_true",             dest="useUDAPL",          help="Use UDAPL protocol for builder network peer transport")
 	parser.add_option("--useGTPe",           default=False, action="store_true",             dest="useGTPe",           help="Use the GTPe for triggering at a certain rate. Implies 'frl_gtpe_trigger' or 'efed_slink_gtpe' for --ferolMode")
 	parser.add_option("--useEFEDs",          default=False, action="store_true",             dest="useEFEDs",          help="Use the FED emulators to generate events. Implies --useGTPe and 'efed_slink_gtpe' for --ferolMode")
 
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 		configurator = daq2Configurator(options.fragmentDir, verbose=options.verbose)
 
 		configurator.evbns             = 'gevb2g' if options.useGevb2g and not options.useEvB else 'evb'
-		configurator.ptprot            = 'ibv' if options.useIBV and not options.useUDAPL  else 'udapl'
+		configurator.ptprot            = 'udapl'  if options.useUDAPL  and not options.useIBV else 'ibv'
 
 		configurator.enablePauseFrame  = options.enablePauseFrame
 		configurator.disablePauseFrame = options.disablePauseFrame ## in case both are true, they will be enabled
