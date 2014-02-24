@@ -22,7 +22,9 @@
 			<TCP_DESTINATION_PORT_FED1 xsi:type="xsd:unsignedInt">RU0_FRL_PORT</TCP_DESTINATION_PORT_FED1>
 
 			<!-- Default Settings (untouched by Configurator) -->
-			<N_Descriptors_FRL xsi:type="xsd:unsignedInt">32</N_Descriptors_FRL>
+			<N_Descriptors_FRL xsi:type="xsd:unsignedInt">8192</N_Descriptors_FRL>
+			<Seed_FED0 xsi:type="xsd:unsignedInt">12345</Seed_FED0>
+			<Seed_FED1 xsi:type="xsd:unsignedInt">23456</Seed_FED1>
 			<Event_Length_bytes_FED0 xsi:type="xsd:unsignedInt">2048</Event_Length_bytes_FED0>
 			<Event_Length_bytes_FED1 xsi:type="xsd:unsignedInt">2048</Event_Length_bytes_FED1>
 			<Event_Length_Stdev_bytes_FED0 xsi:type="xsd:unsignedInt">0</Event_Length_Stdev_bytes_FED0>

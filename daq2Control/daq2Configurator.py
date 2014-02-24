@@ -1,4 +1,5 @@
 import subprocess, re
+import time
 from copy import deepcopy
 
 from xml.etree import ElementTree
@@ -200,18 +201,19 @@ class daq2Configurator(object):
 			self.setPropertyInApp(ferol, classname, 'enableStream0', 'true')
 			self.setPropertyInApp(ferol, classname, 'enableStream1', 'true')
 
+		if self.setSeed:
+			seed = int(time.time()*10000)%100000
+			self.setPropertyInApp(ferol, classname, 'Seed_FED0', seed)
+			self.setPropertyInApp(ferol, classname, 'Seed_FED1', seed+1)
+
 		if self.disablePauseFrame: self.setPropertyInApp(ferol, classname, 'ENA_PAUSE_FRAME', 'false')
 		if self.enablePauseFrame:  self.setPropertyInApp(ferol, classname, 'ENA_PAUSE_FRAME', 'true')
 		if self.setCWND >= 0:      self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', self.setCWND)
 		if self.setCWND >= 0:      self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', self.setCWND)
 
-		## Distribute the streams to the RUs and their endpoints
-
-		ruindex = frl.ruindex
-
 		# if self.verbose>0: print "ferol %2d, streaming to RU%d, fedids %3d/%3d"% (frl.index+1, ruindex, fedids[0], fedids[1])
-		self.setPropertyInApp(ferol, classname, 'DestinationIP', 'RU%d_FRL_HOST_NAME'%ruindex)
-		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', 'RU%d_FRL_PORT'%ruindex)
+		self.setPropertyInApp(ferol, classname, 'DestinationIP', 'RU%d_FRL_HOST_NAME'%frl.ruindex)
+		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', 'RU%d_FRL_PORT'%frl.ruindex)
 		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED1', '60600')
 		if self.streams_per_ferol==1 and (frl.index+1)%2==0: ## route every second one to port 60600 if there is only one stream per RU
 			self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0', '60600')

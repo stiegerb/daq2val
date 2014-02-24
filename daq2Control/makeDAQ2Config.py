@@ -25,6 +25,7 @@ if __name__ == "__main__":
 	parser.add_option("--useEFEDs",          default=False, action="store_true",             dest="useEFEDs",          help="Use the FED emulators to generate events. Implies --useGTPe and 'efed_slink_gtpe' for --ferolMode")
 
 	parser.add_option("--setCWND",           default=-1,    action="store",      type='int', dest="setCWND",           help="Set the TCP_CWND_FEDX parameter in the FEROL config [default: take from config fragment]")
+	parser.add_option("--setSeed",           default=False, action="store_true",             dest="setSeed",           help="Set a unique seed for the random number generators in each FRL")
 	parser.add_option("--disablePauseFrame", default=False, action="store_true",             dest="disablePauseFrame", help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'false' [default: take from config fragment]")
 	parser.add_option("--enablePauseFrame",  default=False, action="store_true",             dest="enablePauseFrame",  help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'true'")
 
@@ -50,6 +51,7 @@ if __name__ == "__main__":
 		configurator.enablePauseFrame  = options.enablePauseFrame
 		configurator.disablePauseFrame = options.disablePauseFrame ## in case both are true, they will be enabled
 		configurator.setCWND           = options.setCWND ## -1 doesn't do anything
+		configurator.setSeed           = options.setSeed ## -1 doesn't do anything
 		configurator.ferolRack         = options.ferolRack
 		if options.ferolRack not in [0, 1, 2, 3]:
 			printError("Unknown ferolRack: %d" %(options.ferolRack))
