@@ -343,7 +343,7 @@ class daq2Configurator(object):
 		## Add frl routing
 		pt_frl_ns = self.xdaqappns%"pt::frl::Application"
 		frl_routing_element = ru_context.find(QN(self.xdaqns,'Application').text +'/'+ QN(pt_frl_ns,'properties').text +'/'+ QN(pt_frl_ns,'frlRouting').text)
-		frl_routing_element.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(self.nferols*self.streams_per_ferol/self.nrus)
+		frl_routing_element.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(len(ru.frls))
 		item_element = elementFromFile(self.fragmentdir+'/RU/RU_frl_routing.xml')
 		classname_to_add = "%s::EVM"%self.evbns if ru.index == 0 and self.evbns == 'evb' else "%s::RU"%self.evbns
 		item_element.find(QN(pt_frl_ns,'className').text).text = classname_to_add
@@ -367,7 +367,7 @@ class daq2Configurator(object):
 		if self.evbns == 'evb':
 			ruevbappns = self.xdaqappns%'evb::RU' if ru.index>0 else self.xdaqappns%'evb::EVM'
 			fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+QN(ruevbappns, 'fedSourceIds').text)
-			fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(self.nferols*self.streams_per_ferol/self.nrus)
+			fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(len(ru.frls))
 			item_element = fedSourceIds.find(QN(ruevbappns,'item').text)
 			fedSourceIds.remove(item_element)
 			for n,fed in enumerate(feds_to_add):
