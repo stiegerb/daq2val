@@ -133,8 +133,10 @@ WARNING: Your maximum size for scanning doesn't seem to
 			## Get throughput directly from RU using ifstat script ## NOT REALLY TESTED YET
 			d2c.getResultsFromIfstat(options.duration)
 		elif d2c.config.useEvB:
-			## Get results ala testRubuilder script every 5 seconds
-			d2c.getResultsEvB(options.duration, interval=5)
+			if options.sizeFromBU:
+				d2c.getResultsFromBU(options.duration, interval=5)
+			else:
+				d2c.getResultsEvB(options.duration, interval=5)
 		else:
 			## Wait for the full duration and get results at the end
 			sleep(options.duration, options.verbose, options.dry)
@@ -142,8 +144,8 @@ WARNING: Your maximum size for scanning doesn't seem to
 			if len(d2c.config.eFEROLs) > 0 or options.stopRestart: d2c.getResults()
 		if options.verbose > 0: print "Done"
 
-		## Dump FEROL infospace
-		# d2c.saveFEROLInfoSpaces()
+		# Dump FEROL infospace
+		if options.storeInfoSpaces: d2c.saveFEROLInfoSpaces()
 
 	## For FEROLs, and when changing the size on the fly, get results at the very end
 	if len(d2c.config.FEROLs) > 0 and not d2c.config.useEvB and not options.stopRestart: d2c.getResults()

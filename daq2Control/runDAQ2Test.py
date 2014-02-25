@@ -29,12 +29,15 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 		d2c.getResultsFromIfstat(options.duration)
 	elif d2c.config.useEvB:
 		## Get results ala testRubuilder script every 5 seconds
-		d2c.getResultsEvB(options.duration, interval=5)
+		if options.sizeFromBU:
+			d2c.getResultsFromBU(options.duration, interval=5)
+		else:
+			d2c.getResultsEvB(options.duration, interval=5)
 	else:
 		## Wait for the full duration, then get all the results at once
 		sleep(options.duration,options.verbose,options.dry)
 		d2c.getResults()
-	d2c.saveFEROLInfoSpaces()
+	if options.storeInfoSpaces: d2c.saveFEROLInfoSpaces()
 	if options.waitBeforeStop: raw_input("Press Enter to stop the XDAQs...")
 
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
@@ -47,28 +50,89 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 ## main
 def addOptions(parser):
 	## Common options:
-	parser.add_option("-d", "--duration", default=120,   action="store", type="int",   dest="duration",  help="Duration of a single step in seconds, [default: %default s]")
-	parser.add_option("--useRate",        default=0,     action="store", type="float", dest="useRate",   help="Event rate in kHz, [default is maximum rate]")
-	parser.add_option("--testTime",       default=10,    action="store", type="int", dest="testTime",    help="Time for which event building is tested before starting, [default is %default]")
-	parser.add_option("--dropAtRU",       default=False, action="store_true",        dest="dropAtRU",    help="Run with dropping the fragments at the RU without building. (Use with --useIfstat to get throughput)")
-	parser.add_option("--useIfstat",      default=False, action="store_true",        dest="useIfstat",   help="Instead of getting the number of built events from the BU, use ifstat script on the RU to determine throughput")
-	parser.add_option("--retries",        default=10,    action="store", type="int", dest="retries",     help="Number of retries when things go wrong.")
+	parser.add_option("-d", "--duration", default=120, action="store",
+	                  type="int", dest="duration",
+	                  help="Duration of a single step in seconds,\
+	                        [default: %default s]")
+	parser.add_option("--useRate", default=0, action="store",
+	                  type="float", dest="useRate",
+	                  help="Event rate in kHz, [default is maximum rate]")
+	parser.add_option("--testTime", default=10, action="store",
+	                  type="int", dest="testTime",
+	                  help="Time for which event building is tested before\
+	                        starting, [default is %default]")
+	parser.add_option("--dropAtRU", default=False, action="store_true",
+		              dest="dropAtRU",
+		              help="Run with dropping the fragments at the RU\
+		                    without building. (Use with --useIfstat to get\
+		                    throughput)")
+	parser.add_option("--useIfstat", default=False, action="store_true",
+		              dest="useIfstat",
+		              help="Instead of getting the number of\
+		                    built events from the BU, use ifstat \
+		                    script on the RU to determine throughput.\
+		                    This uses ssh, so be sure to have a\
+		                    kerberos token (kinit).")
+	parser.add_option("--sizeFromBU", default=False, action="store_true",
+		              dest="sizeFromBU",
+		              help="For calculating the throughput, get the event\
+		                    size from the BU.")
+	parser.add_option("--retries", default=10, action="store", type="int",
+		              dest="retries",
+		              help="Number of retries when things go wrong.")
 
-	parser.add_option("--sizeProfile",    default='flat',action="store", type='string', dest="sizeProfile",    help="Use different sizes for different streams, can be either 'flat', 'spike', 'sawtooth', or 'doublespike'")
-	parser.add_option("--profilePerFRL",  default=False, action="store_true",           dest="profilePerFRL",  help="Apply the chosen size profile per FEROL instead of over all FEROLs")
+	parser.add_option("--sizeProfile", default='flat',action="store",
+					  type='string', dest="sizeProfile",
+		              help="Use different sizes for different streams, can\
+		                    be either 'flat', 'spike', 'sawtooth', or\
+		                    'doublespike'")
+	parser.add_option("--profilePerFRL", default=False, action="store_true",
+		              dest="profilePerFRL",
+		              help="Apply the chosen size profile per FEROL instead\
+		                    of over all FEROLs")
 
-	parser.add_option("-m", "--symbolMap", default='', action="store", type="string", dest="symbolMap", help="Use a symbolmap different from the one set in the environment")
-	parser.add_option("-o", "--outputDir", default='', action="store", type="string", dest="outputDir", help="Where to store the output. Default is in test/cases/[e]FEROLs/EvB[gevb2g]/casename")
-	parser.add_option("-t", "--outputTag", default='', action="store", type="string", dest="outputTag", help="Attach a tag after the standard output dir")
+	parser.add_option("-m", "--symbolMap", default='', action="store",
+					  type="string", dest="symbolMap",
+					  help="Use a symbolmap different from the one set in\
+					        the environment")
+	parser.add_option("-o", "--outputDir", default='', action="store",
+					  type="string", dest="outputDir",
+					  help="Where to store the output. Default is in\
+					        test/cases/[e]FEROLs/EvB[gevb2g]/casename")
+	parser.add_option("-t", "--outputTag", default='', action="store",
+		              type="string", dest="outputTag",
+		              help="Attach a tag after the standard output dir")
 
 	## Debugging options:
-	parser.add_option("--dry",                  default=False, action="store_true",        dest="dry",            help="Just print the commands without sending anything")
-	parser.add_option("-w", "--waitBeforeStop", default=False, action="store_true",        dest="waitBeforeStop", help="For for key press before stopping the event building")
-	parser.add_option("-v", "--verbose",        default=1,     action="store", type='int', dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
+	parser.add_option("--dry", default=False, action="store_true", dest="dry",
+		              help="Just print the commands without sending anything")
+	parser.add_option("--storeInfoSpaces", default=False, action="store_true",
+		              dest="storeInfoSpaces",
+		              help="Dump the FEROL infospaces.")
+	parser.add_option("-w", "--waitBeforeStop", default=False,
+		              action="store_true", dest="waitBeforeStop",
+		              help="Wait for key press before stopping the event\
+		                    building")
+	parser.add_option("-v", "--verbose", default=1, action="store", type='int',
+		              dest="verbose",
+		              help="Set the verbose level, [default: %default\
+		                    (semi-quiet)]")
 
-	parser.add_option("--setCWND",           default=-1,    action="store",      type='int', dest="setCWND",           help="Set the TCP_CWND_FEDX parameter in the FEROL config, overriding the configuration file [default: %default]")
-	parser.add_option("--disablePauseFrame", default=False, action="store_true",             dest="disablePauseFrame", help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'false', overriding the configuration file")
-	parser.add_option("--enablePauseFrame",  default=False, action="store_true",             dest="enablePauseFrame",  help="Set the ENA_PAUSE_FRAME parameter in the FEROL config to 'true', overriding the configuration file")
+	parser.add_option("--setCWND", default=-1, action="store", type='int',
+		              dest="setCWND",
+		              help="Set the TCP_CWND_FEDX parameter in the FEROL\
+		                    config, overriding the configuration file\
+		                    [default: %default]")
+	parser.add_option("--disablePauseFrame", default=False, action="store_true",
+		              dest="disablePauseFrame",
+		              help="Set the ENA_PAUSE_FRAME parameter in the FEROL\
+		                    config to 'false', overriding the configuration\
+		                    file")
+	parser.add_option("--enablePauseFrame", default=False, action="store_true",
+		              dest="enablePauseFrame",
+		              help="Set the ENA_PAUSE_FRAME parameter in the FEROL\
+		                    config to 'true', overriding the configuration\
+		                    file")
 
 def setCurrentSizeFromArgs(d2c, args, options):
 	if len(args) > 1: ## if given, set also fragsize and relRMS

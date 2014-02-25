@@ -519,9 +519,10 @@ class daq2Control(object):
 			if os.path.exists(self._outputDir+'infospaces'):
 				subprocess.check_call(['mv', self._outputDir+'infospaces', newdir])
 
-		try:
-			os.makedirs(self._outputDir + "infospaces")
-		except OSError: pass ## dir exists already
+		if self.options.storeInfoSpaces:
+			try:
+				os.makedirs(self._outputDir + "infospaces")
+			except OSError: pass ## dir exists already
 
 
 		## Prepare output file:
@@ -746,7 +747,45 @@ class daq2Control(object):
 				outfile.write('\n')
 
 		else:
-			print "getResultsEvB() only works when running with the EvB, try getResults()"
+			printError("getResultsEvB() only works when running with the EvB, try getResults()", instance=self)
+			return
+	def getResultsFromBU(self, duration, interval=5):
+		"""Get the eventRate and eventSize parameter from the BUs and
+		calculate the average throughput per RU in MB/s every interval
+		time for a total duration."""
+		if self.options.dry: return
+		if self.config.useEvB:
+			sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
+			ratesamples = []
+			starttime = time.time()
+			stdout.write('RU throughput samples (MB/s): ')
+			while(time.time() < starttime+duration):
+				time.sleep(interval)
+				sizes = []
+				rates = []
+				for bu in self.config.BUs:
+					instance = next((inst for classn,inst in bu.applications if classn=='evb::BU'))
+					sizes.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventSize', 'xsd:unsignedInt')))
+					rates.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventRate', 'xsd:unsignedInt')))
+				av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
+				av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
+				sample = av_size*av_rate/len(self.config.RUs) ## average throughput per RU
+				ratesamples.append(sample)
+				if self.options.verbose > 0:
+					stdout.write("%7.2f " % (sample/1e6))
+					stdout.flush()
+			print '\n'
+
+			with open(self._outputDir+'/server.csv', 'a') as outfile:
+				if self.options.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
+				outfile.write(str(sufragsize))
+				for rate in ratesamples:
+					outfile.write(', ')
+					outfile.write(str(rate))
+				outfile.write('\n')
+
+		else:
+			printError("getResultsFromBU() only works when running with the EvB, try getResults()", instance=self)
 			return
 	def getResults(self):
 		"""Download results for each BU, concatenate them, and store them in server.csv. Only works for the gevb2g!"""
@@ -766,7 +805,7 @@ class daq2Control(object):
 						outfile.write(infile.read())
 						outfile.write('\n')
 		else:
-			print "getResults() only works when running with the gevb2g, try getResultsEvB()"
+			printError("getResults() only works when running with the gevb2g, try getResultsEvB()", instance=self)
 			return
 	def getResultsFromIfstat(self, duration, delay=2):
 		throughput = utils.getIfStatThroughput(self.config.RUs[0].host, duration, delay=delay, verbose=self.options.verbose, interface='p2p1', dry=self.options.dry)
