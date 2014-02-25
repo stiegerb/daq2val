@@ -445,7 +445,7 @@ class daq2Control(object):
 
 			## Enable FEROLs
 			self.sendCmdToFEROLs('Enable')
-			sleep(5, self.options.verbose, self.options.dry)
+			sleep(10, self.options.verbose, self.options.dry)
 
 			## Enable FMM:
 			if self.config.useGTPe:
@@ -719,6 +719,43 @@ class daq2Control(object):
 
 		return
 
+	def getThroughputFromRU(self):
+		"""Get event rate from RU and multiply by the current fragment size.
+		Note that this assumes that the size that's set in the generator
+		is the actual fragment size.
+		"""
+		# Correct mean for truncation effects
+		if self.options.relRMS > 0:
+			from logNormalTest import averageFractionSize
+			LOWERLIMIT, UPPERLIMIT = 24, 65000 ## TODO: Should take these from the config
+			fragsize = averageFractionSize(self.currentFragSize,
+				                           self.currentFragSizeRMS,
+				                           LOWERLIMIT, UPPERLIMIT)
+		else:
+			fragsize = self.currentFragSize
+
+		sufragsize = self.config.nStreams/len(self.config.RUs) * fragsize
+		# sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
+		rurate = int(utils.getParam(self.config.RUs[0].host,
+		         self.config.RUs[0].port, 'evb::EVM', str(0),
+		         'eventRate', 'xsd:unsignedInt'))
+		throughput = rurate*sufragsize/len(self.config.RUs)
+		return throughput
+
+	def getThroughputFromBU(self):
+		"""Get the average event rate and size from the BUs
+		and multiply them to get throughput.
+		"""
+		sizes, rates = [],[]
+		for bu in self.config.BUs:
+			instance = next((inst for classn,inst in bu.applications if classn=='evb::BU'))
+			sizes.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventSize', 'xsd:unsignedInt')))
+			rates.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventRate', 'xsd:unsignedInt')))
+		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
+		av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
+		throughput = av_size*av_rate/len(self.config.RUs) ## average throughput per RU
+		return throughput
+
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
 		This will get the parameter RATE from the BU after an interval time for
@@ -728,13 +765,14 @@ class daq2Control(object):
 			sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
 			ratesamples = []
 			starttime = time.time()
-			stdout.write('Rate samples: ')
+			stdout.write('RU throughput samples (in MB/s for RU(BU)):\n')
 			while(time.time() < starttime+duration):
 				time.sleep(interval)
-				sample = int(utils.getParam(self.config.RUs[0].host, self.config.RUs[0].port, 'evb::EVM', str(0), 'eventRate', 'xsd:unsignedInt'))
-				ratesamples.append(sample)
+				sampleru = self.getThroughputFromRU()
+				samplebu = self.getThroughputFromBU()
+				ratesamples.append(sampleru)
 				if self.options.verbose > 0:
-					stdout.write(str(sample)+' ')
+					stdout.write("%7.2f (%7.2f) " % (sampleru/1e6, samplebu/1e6))
 					stdout.flush()
 			print '\n'
 
@@ -748,44 +786,6 @@ class daq2Control(object):
 
 		else:
 			printError("getResultsEvB() only works when running with the EvB, try getResults()", instance=self)
-			return
-	def getResultsFromBU(self, duration, interval=5):
-		"""Get the eventRate and eventSize parameter from the BUs and
-		calculate the average throughput per RU in MB/s every interval
-		time for a total duration."""
-		if self.options.dry: return
-		if self.config.useEvB:
-			sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
-			ratesamples = []
-			starttime = time.time()
-			stdout.write('RU throughput samples (MB/s): ')
-			while(time.time() < starttime+duration):
-				time.sleep(interval)
-				sizes = []
-				rates = []
-				for bu in self.config.BUs:
-					instance = next((inst for classn,inst in bu.applications if classn=='evb::BU'))
-					sizes.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventSize', 'xsd:unsignedInt')))
-					rates.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventRate', 'xsd:unsignedInt')))
-				av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
-				av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
-				sample = av_size*av_rate/len(self.config.RUs) ## average throughput per RU
-				ratesamples.append(sample)
-				if self.options.verbose > 0:
-					stdout.write("%7.2f " % (sample/1e6))
-					stdout.flush()
-			print '\n'
-
-			with open(self._outputDir+'/server.csv', 'a') as outfile:
-				if self.options.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
-				outfile.write(str(sufragsize))
-				for rate in ratesamples:
-					outfile.write(', ')
-					outfile.write(str(rate))
-				outfile.write('\n')
-
-		else:
-			printError("getResultsFromBU() only works when running with the EvB, try getResults()", instance=self)
 			return
 	def getResults(self):
 		"""Download results for each BU, concatenate them, and store them in server.csv. Only works for the gevb2g!"""
