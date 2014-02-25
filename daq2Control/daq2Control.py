@@ -723,6 +723,7 @@ class daq2Control(object):
 		"""Get event rate from RU and multiply by the current fragment size.
 		Note that this assumes that the size that's set in the generator
 		is the actual fragment size.
+		Unit is MB/s.
 		"""
 		# Correct mean for truncation effects
 		if self.options.relRMS > 0:
@@ -739,22 +740,24 @@ class daq2Control(object):
 		rurate = int(utils.getParam(self.config.RUs[0].host,
 		         self.config.RUs[0].port, 'evb::EVM', str(0),
 		         'eventRate', 'xsd:unsignedInt'))
-		throughput = rurate*sufragsize/len(self.config.RUs)
-		return throughput
-
+		throughput = rurate*sufragsize/(len(self.config.RUs)*1e6)
+		return throughput, rurate, sufragsize
 	def getThroughputFromBU(self):
 		"""Get the average event rate and size from the BUs
 		and multiply them to get throughput.
+		Unit is MB/s.
 		"""
 		sizes, rates = [],[]
 		for bu in self.config.BUs:
 			instance = next((inst for classn,inst in bu.applications if classn=='evb::BU'))
-			sizes.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventSize', 'xsd:unsignedInt')))
-			rates.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance), 'eventRate', 'xsd:unsignedInt')))
+			sizes.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance),
+				                            'eventSize', 'xsd:unsignedInt')))
+			rates.append(int(utils.getParam(bu.host, bu.port, 'evb::BU', str(instance),
+				                            'eventRate', 'xsd:unsignedInt')))
 		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
 		av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
-		throughput = av_size*av_rate/len(self.config.RUs) ## average throughput per RU
-		return throughput
+		throughput = av_size*av_rate/(len(self.config.RUs)*1e6)
+		return throughput, av_rate, av_size
 
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
@@ -765,14 +768,20 @@ class daq2Control(object):
 			sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
 			ratesamples = []
 			starttime = time.time()
-			stdout.write('RU throughput samples (in MB/s for RU(BU)):\n')
+			if   self.options.verbose>3:
+				stdout.write('RU samples (throughput (MB/s), rate (ev/s), size (b) for RU(BU)):\n')
+			elif self.options.verbose>1:
+				stdout.write('RU throughput samples (in MB/s for RU(BU)):\n')
 			while(time.time() < starttime+duration):
 				time.sleep(interval)
-				sampleru = self.getThroughputFromRU()
-				samplebu = self.getThroughputFromBU()
-				ratesamples.append(sampleru)
+				tpru, rateru, sizeru = self.getThroughputFromRU()
+				tpbu, ratebu, sizebu = self.getThroughputFromBU()
+				ratesamples.append(tpru)
 				if self.options.verbose > 0:
-					stdout.write("%7.2f (%7.2f) " % (sampleru/1e6, samplebu/1e6))
+					if   self.options.verbose>3: stdout.write("%7.2f, %d, %d (%7.2f, %d, %d) "
+						                       % (tpru, rateru, sizeru, tpbu, ratebu, sizebu))
+					elif self.options.verbose>1: stdout.write("%7.2f (%7.2f) " % (tpru, tpbu))
+					elif self.options.verbose>0: stdout.write("%7.2f " % tpru)
 					stdout.flush()
 			print '\n'
 
@@ -781,11 +790,12 @@ class daq2Control(object):
 				outfile.write(str(sufragsize))
 				for rate in ratesamples:
 					outfile.write(', ')
-					outfile.write(str(rate))
+					outfile.write('%7.2f'%rate)
 				outfile.write('\n')
 
 		else:
-			printError("getResultsEvB() only works when running with the EvB, try getResults()", instance=self)
+			printError("getResultsEvB() only works when running with the EvB, try getResults()",
+				       instance=self)
 			return
 	def getResults(self):
 		"""Download results for each BU, concatenate them, and store them in server.csv. Only works for the gevb2g!"""
