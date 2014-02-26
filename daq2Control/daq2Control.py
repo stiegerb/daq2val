@@ -21,6 +21,7 @@ separator = 70*'-'
 from daq2Config import daq2Config, host, FEROL
 from daq2SymbolMap import daq2SymbolMap
 from daq2Utils import printError, printWarningWithWait, sleep
+from logNormalTest import averageFractionSize
 import daq2Utils as utils
 
 ######################################################################
@@ -245,6 +246,16 @@ class daq2Control(object):
 			utils.setParam(h.host, h.port, self.config.namespace+'EVM',     str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
 		for n,h in enumerate(self.config.BUs):
 			utils.setParam(h.host, h.port, self.config.namespace+'BU',      str(n), 'runNumber', 'unsignedInt', number, verbose=self.options.verbose, dry=self.options.dry)
+	def setCurrentSize(self, size, rms, rate):
+		self.currentFragSize    = size
+		self.currentFragSizeRMS = rms
+		self.currentRate        = rate
+		try:
+			self.currentCorrFragSize = averageFractionSize(size, rms,
+				                                           24, 65000) ## TODO: Get these from the config
+		except ZeroDivisionError:
+			self.currentCorrFragSize = size
+
 
 	## Control methods
 	def setup(self):
@@ -283,9 +294,7 @@ class daq2Control(object):
 		"""Start all XDAQ processes, set configuration for fragSize and start running
 			onlyPrepare=True will stop before configuring and enabling
 		"""
-		self.currentFragSize    = fragSize
-		self.currentFragSizeRMS = fragSizeRMS
-		self.currentRate        = rate
+		self.setCurrentSize(fragSize, fragSizeRMS, rate)
 
 		## Start the xdaq processes from the launchers
 		if self.options.verbose > 0: print separator
@@ -540,9 +549,7 @@ class daq2Control(object):
 	def setSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting fragment size to %5d bytes +- %-5d at %s kHz rate" % (fragSize, fragSizeRMS, str(rate))
-		self.currentFragSize    = fragSize
-		self.currentFragSizeRMS = fragSizeRMS
-		self.currentRate        = rate
+		self.setCurrentSize(fragSize, fragSizeRMS, rate)
 
 		## In case of eFED:
 		if len(self.config.eFEDs) > 0:
@@ -654,9 +661,7 @@ class daq2Control(object):
 
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Changing fragment size to %5d bytes +- %5d at %s rate" % (fragSize, fragSizeRMS, str(rate))
-		self.currentFragSize    = fragSize
-		self.currentFragSizeRMS = fragSizeRMS
-		self.currentRate        = rate
+		self.setCurrentSize(fragSize, fragSizeRMS, rate)
 
 		## Pause GTPe
 		if self.config.useGTPe:
@@ -719,30 +724,7 @@ class daq2Control(object):
 
 		return
 
-	def getThroughputFromRU(self):
-		"""Get event rate from RU and multiply by the current fragment size.
-		Note that this assumes that the size that's set in the generator
-		is the actual fragment size.
-		Unit is MB/s.
-		"""
-		# Correct mean for truncation effects
-		if self.options.relRMS > 0:
-			from logNormalTest import averageFractionSize
-			LOWERLIMIT, UPPERLIMIT = 24, 65000 ## TODO: Should take these from the config
-			fragsize = averageFractionSize(self.currentFragSize,
-				                           self.currentFragSizeRMS,
-				                           LOWERLIMIT, UPPERLIMIT)
-		else:
-			fragsize = self.currentFragSize
-
-		sufragsize = self.config.nStreams/len(self.config.RUs) * fragsize
-		# sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
-		rurate = int(utils.getParam(self.config.RUs[0].host,
-		         self.config.RUs[0].port, 'evb::EVM', str(0),
-		         'eventRate', 'xsd:unsignedInt'))
-		throughput = rurate*sufragsize/(len(self.config.RUs)*1e6)
-		return throughput, rurate, sufragsize
-	def getThroughputFromBU(self):
+	def getSizeRateFromBU(self):
 		"""Get the average event rate and size from the BUs
 		and multiply them to get throughput.
 		Unit is MB/s.
@@ -756,8 +738,7 @@ class daq2Control(object):
 				                            'eventRate', 'xsd:unsignedInt')))
 		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
 		av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
-		throughput = av_size*av_rate/(len(self.config.RUs)*1e6)
-		return throughput, av_rate, av_size
+		return av_size, av_rate
 
 	def getResultsEvB(self, duration, interval=5):
 		"""Python implementation of testRubuilder.pl script
@@ -765,33 +746,37 @@ class daq2Control(object):
 		a total duration."""
 		if self.options.dry: return
 		if self.config.useEvB:
-			sufragsize = self.config.nStreams/len(self.config.RUs) * self.currentFragSize
+			sufragsize = self.config.nStreams/len(self.config.RUs) \
+			              * self.currentFragSize
 			ratesamples = []
+			bu_sizes = []
 			starttime = time.time()
-			if   self.options.verbose>3:
-				stdout.write('RU samples (throughput (MB/s), rate (ev/s), size (b) for RU(BU)):\n')
-			elif self.options.verbose>1:
-				stdout.write('RU throughput samples (in MB/s for RU(BU)):\n')
+			if self.options.verbose>1:
+				stdout.write('Rate samples (ev/s @ RU (MB/s @ RU)):\n')
 			while(time.time() < starttime+duration):
 				time.sleep(interval)
-				tpru, rateru, sizeru = self.getThroughputFromRU()
-				tpbu, ratebu, sizebu = self.getThroughputFromBU()
-				tp = tpru if not self.options.sizeFromBU else tpbu
-				ratesamples.append(tp)
+				ru_rate = int(utils.getParam(self.config.RUs[0].host, self.config.RUs[0].port,
+				                            'evb::EVM', str(0), 'eventRate', 'xsd:unsignedInt'))
+
+				bu_size, bu_rate = self.getSizeRateFromBU()
+				bu_sizes.append(bu_size)
+				bu_tp = bu_size*bu_rate/(len(self.config.RUs)*1e6)
+
+				ratesamples.append(ru_rate)
 				if self.options.verbose > 0:
-					if   self.options.verbose>3: stdout.write("%7.2f, %d, %d (%7.2f, %d, %d) "
-						                       % (tpru, rateru, sizeru, tpbu, ratebu, sizebu))
-					elif self.options.verbose>1: stdout.write("%7.2f (%7.2f) " % (tpru, tpbu))
-					elif self.options.verbose>0: stdout.write("%7.2f " % tp)
+					if self.options.verbose>1: stdout.write("%d (%7.2f) " % (ru_rate, bu_tp))
 					stdout.flush()
-			print '\n'
+					pass
+
+			bu_av_size = sum(bu_sizes)/len(bu_sizes)
 
 			with open(self._outputDir+'/server.csv', 'a') as outfile:
 				if self.options.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
-				outfile.write(str(sufragsize))
+				outfile.write("%d, "%sufragsize)
+				outfile.write("%d: "%bu_av_size)
 				for rate in ratesamples:
 					outfile.write(', ')
-					outfile.write('%7.2f'%rate)
+					outfile.write('%d'%rate)
 				outfile.write('\n')
 
 		else:
