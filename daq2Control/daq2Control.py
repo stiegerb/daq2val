@@ -776,12 +776,13 @@ class daq2Control(object):
 				time.sleep(interval)
 				tpru, rateru, sizeru = self.getThroughputFromRU()
 				tpbu, ratebu, sizebu = self.getThroughputFromBU()
-				ratesamples.append(tpru)
+				tp = tpru if not self.options.sizeFromBU else tpbu
+				ratesamples.append(tp)
 				if self.options.verbose > 0:
 					if   self.options.verbose>3: stdout.write("%7.2f, %d, %d (%7.2f, %d, %d) "
 						                       % (tpru, rateru, sizeru, tpbu, ratebu, sizebu))
 					elif self.options.verbose>1: stdout.write("%7.2f (%7.2f) " % (tpru, tpbu))
-					elif self.options.verbose>0: stdout.write("%7.2f " % tpru)
+					elif self.options.verbose>0: stdout.write("%7.2f " % tp)
 					stdout.flush()
 			print '\n'
 

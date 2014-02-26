@@ -133,10 +133,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 			## Get throughput directly from RU using ifstat script ## NOT REALLY TESTED YET
 			d2c.getResultsFromIfstat(options.duration)
 		elif d2c.config.useEvB:
-			if options.sizeFromBU:
-				d2c.getResultsFromBU(options.duration, interval=5)
-			else:
-				d2c.getResultsEvB(options.duration, interval=5)
+			d2c.getResultsEvB(options.duration, interval=5)
 		else:
 			## Wait for the full duration and get results at the end
 			sleep(options.duration, options.verbose, options.dry)

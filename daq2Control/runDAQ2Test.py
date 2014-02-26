@@ -29,10 +29,7 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 		d2c.getResultsFromIfstat(options.duration)
 	elif d2c.config.useEvB:
 		## Get results ala testRubuilder script every 5 seconds
-		if options.sizeFromBU:
-			d2c.getResultsFromBU(options.duration, interval=5)
-		else:
-			d2c.getResultsEvB(options.duration, interval=5)
+		d2c.getResultsEvB(options.duration, interval=5)
 	else:
 		## Wait for the full duration, then get all the results at once
 		sleep(options.duration,options.verbose,options.dry)
