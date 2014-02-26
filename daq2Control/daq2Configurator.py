@@ -343,15 +343,15 @@ class daq2Configurator(object):
 		ru_context.insert(5,module)
 
 		## Add frl routing
+		feds_to_add = ru.getFedIds()
 		pt_frl_ns = self.xdaqappns%"pt::frl::Application"
 		frl_routing_element = ru_context.find(QN(self.xdaqns,'Application').text +'/'+ QN(pt_frl_ns,'properties').text +'/'+ QN(pt_frl_ns,'frlRouting').text)
-		frl_routing_element.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(len(ru.frls))
+		frl_routing_element.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(len(feds_to_add))
 		item_element = elementFromFile(self.fragmentdir+'/RU/RU_frl_routing.xml')
 		classname_to_add = "%s::EVM"%self.evbns if ru.index == 0 and self.evbns == 'evb' else "%s::RU"%self.evbns
 		item_element.find(QN(pt_frl_ns,'className').text).text = classname_to_add
 		item_element.find(QN(pt_frl_ns,'instance').text).text = "%d"%ru.index
 
-		feds_to_add = ru.getFedIds()
 		for n,fed in enumerate(feds_to_add):
 			item_to_add = deepcopy(item_element)
 			item_to_add.attrib[QN(self.soapencns, 'position').text] = '[%d]'%n
@@ -369,7 +369,7 @@ class daq2Configurator(object):
 		if self.evbns == 'evb':
 			ruevbappns = self.xdaqappns%'evb::RU' if ru.index>0 else self.xdaqappns%'evb::EVM'
 			fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+QN(ruevbappns, 'fedSourceIds').text)
-			fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(len(ru.frls))
+			fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = "xsd:ur-type[%d]"%(len(feds_to_add))
 			item_element = fedSourceIds.find(QN(ruevbappns,'item').text)
 			fedSourceIds.remove(item_element)
 			for n,fed in enumerate(feds_to_add):
