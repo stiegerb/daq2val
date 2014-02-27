@@ -166,7 +166,7 @@ class daq2Plotter(object):
 			## Calculate fragment and super fragment sizes
 			fragsize    = eventsize/nstreams
 			sufragsize  = eventsize/nrus
-			if rms is not None and rms != 0.0:
+			if not self.args.sizeFromBU and rms is not None and rms != 0.0:
 				fragsize = averageFractionSize(eventsize/nstreams, rms*eventsize/nstreams, LOWERLIMIT, UPPERLIMIT)
 				sufragsize = fragsize*nstreams/nrus
 
