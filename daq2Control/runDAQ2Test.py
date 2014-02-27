@@ -70,10 +70,6 @@ def addOptions(parser):
 		                    script on the RU to determine throughput.\
 		                    This uses ssh, so be sure to have a\
 		                    kerberos token (kinit).")
-	parser.add_option("--sizeFromBU", default=False, action="store_true",
-		              dest="sizeFromBU",
-		              help="For calculating the throughput, get the event\
-		                    size from the BU.")
 	parser.add_option("--retries", default=10, action="store", type="int",
 		              dest="retries",
 		              help="Number of retries when things go wrong.")
