@@ -764,19 +764,25 @@ class daq2Control(object):
 
 				ratesamples.append(ru_rate)
 				if self.options.verbose > 0:
-					if self.options.verbose>1: stdout.write("%d (%7.2f) " % (ru_rate, bu_tp))
-					stdout.flush()
+					if self.options.verbose>1:
+						stdout.write("%d (%7.2f) " % (ru_rate, bu_tp))
+						stdout.flush()
 					pass
+			if self.options.verbose>1:
+				stdout.write("\n")
 
-			bu_av_size = sum(bu_sizes)/len(bu_sizes)
+			bu_av_size = sum(bu_sizes)/len(bu_sizes) # Event size
+			bu_sufrag_size = bu_av_size/len(self.config.RUs)
 
 			with open(self._outputDir+'/server.csv', 'a') as outfile:
 				if self.options.verbose > 0: print 'Saving output to', self._outputDir+'server.csv'
 				outfile.write("%d, "%sufragsize)
-				outfile.write("%d: "%bu_av_size)
-				for rate in ratesamples:
-					outfile.write(', ')
-					outfile.write('%d'%rate)
+				outfile.write("%d: "%bu_sufrag_size)
+				for n,rate in enumerate(ratesamples):
+					if n < (len(ratesamples)-1):
+						outfile.write('%d, '%rate)
+					if n == len(ratesamples)-1:
+						outfile.write('%d'%rate)
 				outfile.write('\n')
 
 		else:
