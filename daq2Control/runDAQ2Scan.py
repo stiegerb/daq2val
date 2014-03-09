@@ -116,16 +116,18 @@ WARNING: Your maximum size for scanning doesn't seem to
 
 		## Test whether the GTPe did start up properly (does not make sense when changing size on the fly):
 		if d2c.config.useGTPe and options.stopRestart:
-			if not testBuilding(d2c, minevents=10, waittime=5, verbose=0, dry=options.dry):
-				## Retry once
-				if options.verbose > 0: printWarningWithWait('GTPe does not seem to be running, will stop and restart.', waittime=0, instance=d2c)
-				d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
+			if not testBuilding(d2c, minevents=5000, waittime=5, verbose=0, dry=options.dry):
+				d2c.retry('GTPe does not seem to be running, will stop and restart.')
 
-				## Check again
-				if not testBuilding(d2c, minevents=10, waittime=5, verbose=0, dry=options.dry):
-					## Give up
-					if options.verbose > 0: printError('Failed to start event building.', d2c)
-					exit(0)
+				# ## Retry once
+				# if options.verbose > 0: printWarningWithWait('GTPe does not seem to be running, will stop and restart.', waittime=0, instance=d2c)
+				# d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
+
+				# ## Check again
+				# if not testBuilding(d2c, minevents=5000, waittime=5, verbose=0, dry=options.dry):
+				# 	## Give up
+				# 	if options.verbose > 0: printError('Failed to start event building.', d2c)
+				# 	exit(0)
 
 		if options.verbose > 0: print separator
 		if options.verbose > 0: print "Building events at fragment size %d for %d seconds... %s" % (step, options.duration, d2c.config.configfile)
