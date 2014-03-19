@@ -72,6 +72,11 @@ class FRLNode(object):
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index+1))
 			if index >= 16 and index < 32:
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
+		elif self.rack == 13:
+			if index < 16:
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
+			if index >= 16 and index < 32:
+				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
 		else:
 			if index < 16:
 				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.rack], (index+1))

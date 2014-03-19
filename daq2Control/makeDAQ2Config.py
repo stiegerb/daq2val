@@ -53,7 +53,7 @@ if __name__ == "__main__":
 		configurator.setCWND           = options.setCWND ## -1 doesn't do anything
 		configurator.setSeed           = options.setSeed ## -1 doesn't do anything
 		configurator.ferolRack         = options.ferolRack
-		if options.ferolRack not in [0, 1, 2, 3]:
+		if options.ferolRack not in [0, 1, 2, 3, 13]:
 			printError("Unknown ferolRack: %d" %(options.ferolRack))
 			exit(-1)
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 		if configurator.operation_mode == 'efed_slink_gtpe':  output += '_efeds'
 		if configurator.operation_mode == 'frl_gtpe_trigger': output += '_gtpe'
 		if configurator.operation_mode == 'frl_autotrigger':  output += '_frlAT'
-		output += {0:'', 1:'_COL', 2:'_COL2', 3:'_COL3'}[options.ferolRack]
+		output += {0:'', 1:'_COL', 2:'_COL2', 3:'_COL3', 13:'_COL13'}[options.ferolRack]
 		output+='.xml'
 
 		if len(options.output)>0:
