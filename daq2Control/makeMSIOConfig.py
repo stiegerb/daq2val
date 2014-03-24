@@ -40,10 +40,16 @@ def main(options, args):
 	configurator = daq2MSIOConfigurator(options.fragmentDir,
 		                                verbose=options.verbose)
 
-	configurator.evbns = 'msio' ## 'msio' or 'gevb'
+	configurator.evbns = 'msio'
+	if options.useGevb2g: configurator.evbns = 'gevb2g'
 
 	## Construct output name
 	output = args[0]
+	if not options.useGevb2g:
+		output += '_msio'
+	else:
+		output += '_gevb2g'
+	output+='_ibv'
 	output+='.xml'
 
 	if len(options.output)>0:
@@ -73,6 +79,8 @@ if __name__ == "__main__":
 	e.g. 4x2
 
 	Examples:
+	%prog --useGevb2g 4x4
+	%prog 2x4 --fragmentDir fragments/ -o 2x4_special.xml
 	"""
 	parser = OptionParser()
 	parser.usage = usage
