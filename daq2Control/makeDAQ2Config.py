@@ -63,6 +63,7 @@ def addConfiguratorOption(parser):
 		              type='int', dest="ferolRack",
 		              help=("Which ferol rack to use (1,2, or 3) [default: "
 		              	    "%default]. Choose 0 to use all three racks."))
+
 	parser.add_option("--fragmentDir", default='', action="store",
 		              type="string", dest="fragmentDir",
 		              help=("Use config fragments from a directory other than "
