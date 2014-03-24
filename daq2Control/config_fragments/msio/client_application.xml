@@ -1,0 +1,16 @@
+<xc:Application class="Client" id="10" instance="0" network="fdr" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+	<properties xmlns="urn:xdaq-application:Client" xsi:type="soapenc:Struct">
+		<maxFrameSize xsi:type="xsd:unsignedLong">0x40000</maxFrameSize>
+		<committedPoolSize xsi:type="xsd:unsignedLong">84000000</committedPoolSize>
+		<numberOfSamples xsi:type="xsd:unsignedLong">50</numberOfSamples>
+		<sampleTime xsi:type="xsd:string">PT5S</sampleTime>
+		<StdDev xsi:type="xsd:unsignedLong">0</StdDev>
+		<currentSize xsi:type="xsd:unsignedLong">128</currentSize>
+		<MinFragmentSize xsi:type="xsd:unsignedLong">32</MinFragmentSize>
+		<MaxFragmentSize xsi:type="xsd:unsignedLong">262000</MaxFragmentSize>
+		<randomDestination xsi:type="xsd:boolean">true</randomDestination>
+		<fixedSize xsi:type="xsd:boolean">true</fixedSize>
+		<createPool xsi:type="xsd:boolean">false</createPool>
+		<poolName xsi:type="xsd:string">sibv</poolName>
+	</properties>
+</xc:Application>

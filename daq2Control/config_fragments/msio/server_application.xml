@@ -1,0 +1,7 @@
+<xc:Application class="Server" id="11" instance="0" network="fdr" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<properties xmlns="urn:xdaq=application:Server" xsi:type="soapenc:Struct">
+		<currentSize xsi:type="xsd:unsignedLong">0</currentSize>
+		<numberOfSamples xsi:type="xsd:unsignedLong">50</numberOfSamples>
+		<sampleTime xsi:type="xsd:string">PT5S</sampleTime>
+	</properties>
+</xc:Application>

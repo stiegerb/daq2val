@@ -1,0 +1,6 @@
+<xc:Context url="http://BU%d_SOAP_HOST_NAME:BU%d_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<xc:Endpoint protocol="ibv" service="i2o" hostname="BU%d_I2O_HOST_NAME" port="BU%d_I2O_PORT" network="fdr"/>
+	<xc:Application class="xmem::probe::Application" id="21" instance="0" network="local">
+	</xc:Application>
+	<xc:Module>/opt/xdaq/lib/libxmemprobe.so</xc:Module>
+</xc:Context>
