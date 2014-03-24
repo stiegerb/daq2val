@@ -88,7 +88,6 @@ class daq2Configurator(object):
 		self.eFED_crate_counter = 0
 		self.eFED_app_instance  = 0
 
-
 	def makeSkeleton(self):
 		fragmentname = 'skeleton.xml'
 		self.config = elementFromFile(self.fragmentdir+fragmentname)
@@ -255,10 +254,14 @@ class daq2Configurator(object):
 			self.setPropertyInApp(ferol, classname, 'enableStream0', 'true')
 			self.setPropertyInApp(ferol, classname, 'enableStream1', 'true')
 
-		if self.setSeed:
+		if self.setCorrelatedSeed:
+			self.setPropertyInApp(ferol, classname, 'Seed_FED0', 12345)
+			self.setPropertyInApp(ferol, classname, 'Seed_FED1', 23456)
+		else:
 			seed = int(time.time()*10000)%100000
 			self.setPropertyInApp(ferol, classname, 'Seed_FED0', seed)
 			self.setPropertyInApp(ferol, classname, 'Seed_FED1', seed+1)
+
 
 		if self.disablePauseFrame: self.setPropertyInApp(ferol, classname,
 			                          'ENA_PAUSE_FRAME', 'false')

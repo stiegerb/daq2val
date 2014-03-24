@@ -20,64 +20,69 @@ if __name__ == "__main__":
 	parser.usage = usage
 	parser.add_option("--useEvB", default=False, action="store_true",
 		              dest="useEvB",
-		              help="Use EvB for event building (instead of gevb2g\
-		              	    (default))")
+		              help=("Use EvB for event building (instead of gevb2g "
+		              		"(default))"))
 	parser.add_option("--useGevb2g", default=False, action="store_true",
 		              dest="useGevb2g",
 		              help="Use gevb2g for event building (instead of EvB)")
 	parser.add_option("--useIBV", default=False, action="store_true",
 		              dest="useIBV",
-		              help=("Use IBV protocol for builder network peer"
+		              help=("Use IBV protocol for builder network peer "
 		              		"transport (default)"))
 	parser.add_option("--useUDAPL", default=False, action="store_true",
 		              dest="useUDAPL",
-		              help="Use UDAPL protocol for builder network peer\
-		                    transport")
+		              help=("Use UDAPL protocol for builder network peer "
+		              		"transport"))
 	parser.add_option("--useGTPe", default=False, action="store_true",
 		              dest="useGTPe",
-		              help="Use the GTPe for triggering at a certain rate.\
-		                    Implies 'frl_gtpe_trigger' or 'efed_slink_gtpe'\
-		                    for --ferolMode")
+		              help=("Use the GTPe for triggering at a certain rate. "
+		              		"Implies 'frl_gtpe_trigger' or 'efed_slink_gtpe' "
+		              		"for --ferolMode"))
 	parser.add_option("--useEFEDs", default=False, action="store_true",
 		              dest="useEFEDs",
-		              help="Use the FED emulators to generate events. Implies\
-		                    --useGTPe and 'efed_slink_gtpe' for --ferolMode")
+		              help=("Use the FED emulators to generate events. "
+		              	    "Implies --useGTPe and 'efed_slink_gtpe' for "
+		              	    "--ferolMode"))
 
 	parser.add_option("--setCWND", default=-1, action="store", type='int',
 		              dest="setCWND",
-		              help="Set the TCP_CWND_FEDX parameter in the FEROL\
-		                    config [default: take from config fragment]")
-	parser.add_option("--setSeed", default=False, action="store_true",
-		              dest="setSeed",
-		              help="Set a unique seed for the random number generators\
-		                    in each FRL")
-	parser.add_option("--disablePauseFrame", default=False, action="store_true",
-		              dest="disablePauseFrame",
-		              help="Set the ENA_PAUSE_FRAME parameter in the FEROL\
-		                    config to 'false' [default: take from config\
-		                    fragment]")
-	parser.add_option("--enablePauseFrame", default=False, action="store_true",
-		              dest="enablePauseFrame",
-		              help=("Set the ENA_PAUSE_FRAME parameter in the FEROL"
+		              help=("Set the TCP_CWND_FEDX parameter in the FEROL "
+		              		"config [default: take from config fragment]"))
+	# parser.add_option("--setSeed", default=False, action="store_true",
+	# 	              dest="setSeed",
+	# 	              help=("Set a unique seed for the random number "
+	# 	              	    "generators in each FRL"))
+	parser.add_option("--setCorrelatedSeed", default=False,
+		              action="store_true", dest="setCorrelatedSeed",
+		              help=("Set the same random number generator seed for "
+		              	    "each FRL"))
+	parser.add_option("--disablePauseFrame", default=False,
+		              action="store_true", dest="disablePauseFrame",
+		              help=("Set the ENA_PAUSE_FRAME parameter in the FEROL "
+		              		"config to 'false' [default: take from config "
+		              		"fragment]"))
+	parser.add_option("--enablePauseFrame", default=False,
+		              action="store_true", dest="enablePauseFrame",
+		              help=("Set the ENA_PAUSE_FRAME parameter in the FEROL "
 		              		"config to 'true'"))
 
 	parser.add_option("-m", "--ferolMode", default='', action="store",
 		              type="string", dest="ferolMode",
-		              help=("Set ferol\operation mode, can be either"
-		              		"'ferol_emulator', 'frl_autotrigger',"
+		              help=("Set ferol\operation mode, can be either "
+		              		"'ferol_emulator', 'frl_autotrigger', "
 		              		"'frl_gtpe_trigger', or 'efed_slink_gtpe'"))
 	parser.add_option("-r", "--ferolRack", default=1, action="store",
 		              type='int', dest="ferolRack",
-		              help="Which ferol rack to use (1,2, or 3) [default:\
-		                    %default]. Choose 0 to use all three racks.")
+		              help=("Which ferol rack to use (1,2, or 3) [default: "
+		              	    "%default]. Choose 0 to use all three racks."))
 	parser.add_option("--fragmentDir", default='', action="store",
 		              type="string", dest="fragmentDir",
-		              help="Use config fragments from a directory other than\
-		                    the default")
+		              help=("Use config fragments from a directory other than "
+		                    "the default"))
 	parser.add_option("-v", "--verbose", default=1, action="store",
 		              type='int', dest="verbose",
-		              help="Set the verbose level, [default: %default\
-		                    (semi-quiet)]")
+		              help=("Set the verbose level, [default: %default "
+		              		"(semi-quiet)]"))
 	parser.add_option("-o", "--output", default='', action="store",
 		              type='string', dest="output",
 		              help="Where to put the output file")
@@ -102,7 +107,8 @@ if __name__ == "__main__":
 		configurator.enablePauseFrame = options.enablePauseFrame
 		configurator.disablePauseFrame = options.disablePauseFrame
 		configurator.setCWND = options.setCWND ## -1 doesn't do anything
-		configurator.setSeed = options.setSeed ## -1 doesn't do anything
+		# configurator.setSeed = options.setSeed
+		configurator.setCorrelatedSeed = options.setCorrelatedSeed
 		configurator.ferolRack = options.ferolRack
 		if options.ferolRack not in [0, 1, 2, 3, 13]:
 			printError("Unknown ferolRack: %d" %(options.ferolRack))
@@ -147,6 +153,8 @@ if __name__ == "__main__":
 			output += '_gtpe'
 		if configurator.operation_mode == 'frl_autotrigger':
 			output += '_frlAT'
+		if configurator.setCorrelatedSeed:
+			output += '_corr'
 		output += ({0:'', 1:'_COL', 2:'_COL2', 3:'_COL3',
 			        13:'_COL13'}[options.ferolRack])
 		output+='.xml'
