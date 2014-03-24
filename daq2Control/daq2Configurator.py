@@ -1,4 +1,5 @@
-import subprocess, re
+import subprocess
+import re
 import time
 from copy import deepcopy
 
@@ -193,35 +194,6 @@ class daq2Configurator(object):
 				                   'tid':'%d'%(bu_starting_tid+2*n)}))
 
 		self.config.append(prot)
-	def addGTPe(self):
-		bitmask = '0b'
-		if self.useEFEDs:
-			bitmask += self.FEDConfig.nSlices*'1'
-			partitionId = 3
-		else:
-			bitmask += '1000'
-			partitionId = 0
-
-		## convert '0b1000' into '0x8' etc.
-		enableMask = str(hex(int(bitmask,2)))
-		index = 0
-		fragmentname = 'GTPe.xml'
-		GTPE = elementFromFile(self.fragmentdir+fragmentname)
-
-		gtpens = self.xdaqappns%'d2s::GTPeController'
-		prop = GTPE.find(QN(self.xdaqns, 'Application').text+'/'+
-			             QN(gtpens, 'properties').text)
-		prop.find(QN(gtpens, 'daqPartitionId').text).text = str(partitionId)
-		prop.find(QN(gtpens, 'detPartitionEnableMask').text).text = (
-			                                                str(enableMask))
-		prop.find(QN(gtpens, 'triggerRate').text).text            = str(100.)
-		if self.verbose>0: print 70*'-'
-		if self.verbose>0:
-			print ('GTPe partitionId %d, enableMask %s (%s)'%
-					   (partitionId,enableMask,bitmask))
-
-		self.config.append(GTPE)
-
 	def makeFerolController(self, frl):
 		fragmentname = 'FerolController.xml'
 		ferol = elementFromFile(self.fragmentdir+fragmentname)
@@ -334,6 +306,34 @@ class daq2Configurator(object):
 			if len(fed_group) == 0: continue
 			self.config.append(self.makeEFED(fed_group))
 
+	def addGTPe(self):
+		bitmask = '0b'
+		if self.useEFEDs:
+			bitmask += self.FEDConfig.nSlices*'1'
+			partitionId = 3
+		else:
+			bitmask += '1000'
+			partitionId = 0
+
+		## convert '0b1000' into '0x8' etc.
+		enableMask = str(hex(int(bitmask,2)))
+		index = 0
+		fragmentname = 'GTPe.xml'
+		GTPE = elementFromFile(self.fragmentdir+fragmentname)
+
+		gtpens = self.xdaqappns%'d2s::GTPeController'
+		prop = GTPE.find(QN(self.xdaqns, 'Application').text+'/'+
+			             QN(gtpens, 'properties').text)
+		prop.find(QN(gtpens, 'daqPartitionId').text).text = str(partitionId)
+		prop.find(QN(gtpens, 'detPartitionEnableMask').text).text = (
+			                                                str(enableMask))
+		prop.find(QN(gtpens, 'triggerRate').text).text            = str(100.)
+		if self.verbose>0: print 70*'-'
+		if self.verbose>0:
+			print ('GTPe partitionId %d, enableMask %s (%s)'%
+					   (partitionId,enableMask,bitmask))
+
+		self.config.append(GTPE)
 	def addFMM(self, cards):
 		fragmentname = 'FMM_context.xml'
 		FMM_context = elementFromFile(self.fragmentdir+fragmentname)
@@ -614,7 +614,6 @@ class daq2Configurator(object):
 		subprocess.call(['mv', '-f', destination+'temp', destination])
 		if self.verbose>0: print 70*'-'
 		if self.verbose>0: print ' Wrote config to %s' % destination
-
 
 	def makeConfig(self, nferols=8, streams_per_ferol=2, nrus=1, nbus=2,
 		           destination='configuration.template.xml'):

@@ -8,7 +8,7 @@
 			<resourceQueueSize xsi:type="xsd:unsignedLong">65536</resourceQueueSize>
 			<shipFrameSize xsi:type="xsd:unsignedLong">16384</shipFrameSize>
 			<triggerGather xsi:type="xsd:unsignedLong">16384</triggerGather>
-			<triggerClassName xsi:type="xsd:string">unknwon</triggerClassName>
+			<triggerClassName xsi:type="xsd:string">unknown</triggerClassName>
 			<triggerClassInstance xsi:type="xsd:unsignedLong">0</triggerClassInstance>
 			<poolName xsi:type="xsd:string">sudapl</poolName>
 			<createPool xsi:type="xsd:boolean">false</createPool>
