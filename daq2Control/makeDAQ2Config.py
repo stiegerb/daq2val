@@ -5,19 +5,7 @@ from daq2Utils import getConfig, printWarningWithWait, printError
 
 MAXNEFEDS = 16
 
-if __name__ == "__main__":
-	from optparse import OptionParser
-	usage = """
-	%prog [options] topology
-	where topology is in the format of nStreams x nFerols x nRUs x nBUs,
-	e.g. 16s8fx1x4
-
-	Examples:
-	%prog --useIBV --useEvB 24s12fx2x4 -o 24s12fx2x4_evb_ibv.xml
-	%prog --setCWND 135000 --disablePauseFrame 32s16fx2x4
-	"""
-	parser = OptionParser()
-	parser.usage = usage
+def addConfiguratorOption(parser):
 	parser.add_option("--useEvB", default=False, action="store_true",
 		              dest="useEvB",
 		              help=("Use EvB for event building (instead of gevb2g "
@@ -87,98 +75,118 @@ if __name__ == "__main__":
 		              type='string', dest="output",
 		              help="Where to put the output file")
 
+def main(options, args):
+	nstreams, nrus, nbus, _, strperfrl = getConfig(args[0])
+	nferols = nstreams//strperfrl
+
+	if len(options.fragmentDir) == 0:
+		options.fragmentDir = ('/nfshome0/stiegerb/Workspace/'
+		                       'daq2val/daq2Control/config_fragments/')
+	configurator = daq2Configurator(options.fragmentDir,
+		                            verbose=options.verbose)
+
+	configurator.evbns = ('gevb2g' if options.useGevb2g and not
+			                          options.useEvB else 'evb')
+	configurator.ptprot = ('udapl' if options.useUDAPL  and not
+			                          options.useIBV else 'ibv')
+
+	## in case both are true, they will be enabled
+	configurator.enablePauseFrame = options.enablePauseFrame
+	configurator.disablePauseFrame = options.disablePauseFrame
+	configurator.setCWND = options.setCWND ## -1 doesn't do anything
+	# configurator.setSeed = options.setSeed
+	configurator.setCorrelatedSeed = options.setCorrelatedSeed
+	configurator.ferolRack = options.ferolRack
+	if options.ferolRack not in [0, 1, 2, 3, 13]:
+		printError("Unknown ferolRack: %d" %(options.ferolRack))
+		exit(-1)
+
+	if options.useEFEDs: options.useGTPe = True ## need GTPe for eFEDs
+	configurator.useGTPe           = options.useGTPe
+	configurator.useEFEDs          = options.useEFEDs
+
+	## Some checks:
+	if configurator.evbns == 'evb' and nbus < 4:
+		printWarningWithWait(("Are you sure you want to run with only"
+			                  "%d BUs and the EvB?"%nbus), waittime=3)
+	if configurator.evbns == 'gevb2g'and nbus > 3:
+		printWarningWithWait(("Are you sure you want to run with"
+			                  "%d BUs and the gevb2g?"%nbus), waittime=3)
+	if options.useEFEDs and nstreams > MAXNEFEDS:
+		printError(("There are more streams (%d) than eFEDs available"
+			        "(%d)!" %(nstreams, MAXNEFEDS)))
+		exit(-1)
+
+	configurator.operation_mode = (
+		             options.ferolMode if len(options.ferolMode)>0 else
+		             'ferol_emulator')
+	## automatically use frl_gtpe_trigger mode when running with GTPe
+	if options.useGTPe and options.ferolMode == '':
+		configurator.operation_mode = 'frl_gtpe_trigger'
+		if options.useEFEDs:
+		    ## automatically use efed_slink_gtpe mode when running
+		    ## with GTPe/EFEDs
+			configurator.operation_mode = 'efed_slink_gtpe'
+
+	## Construct output name
+	output = args[0]
+	if configurator.evbns == 'evb':    output += '_evb'
+	if configurator.evbns == 'gevb2g': output += '_gevb2g'
+	if configurator.ptprot == 'udapl': output += '_udapl'
+	if configurator.ptprot == 'ibv':   output += '_ibv'
+	if configurator.operation_mode == 'efed_slink_gtpe':
+		output += '_efeds'
+	if configurator.operation_mode == 'frl_gtpe_trigger':
+		output += '_gtpe'
+	if configurator.operation_mode == 'frl_autotrigger':
+		output += '_frlAT'
+	if configurator.setCorrelatedSeed:
+		output += '_corr'
+	output += ({0:'', 1:'_COL', 2:'_COL2', 3:'_COL3',
+		        13:'_COL13'}[options.ferolRack])
+	output+='.xml'
+
+	if len(options.output)>0:
+		name, ext = os.path.splitext(options.output)
+		if not os.path.dirname(name) == '':
+			try:
+				os.makedirs(os.path.dirname(name))
+			except OSError as e:
+				if not 'File exists' in str(e):
+					raise e
+
+		if ext == '.xml':
+			# Take exactly what's given in the option
+			output = options.output
+		elif ext == '':
+			output = os.path.join(name, output)
+
+	configurator.makeConfig(nferols,strperfrl,nrus,nbus,output)
+
+	return True
+
+if __name__ == "__main__":
+	from optparse import OptionParser
+	usage = """
+	%prog [options] topology
+	where topology is in the format of nStreams x nFerols x nRUs x nBUs,
+	e.g. 16s8fx1x4
+
+	Examples:
+	%prog --useUDAPL --useGevb2g 24s12fx2x4 -o 24s12fx2x4_custom.xml
+	%prog --setCWND 135000 --disablePauseFrame 32s16fx2x4
+	"""
+	parser = OptionParser()
+	parser.usage = usage
+	addConfiguratorOption(parser)
 	(options, args) = parser.parse_args()
+
 	if len(args) > 0:
-		nstreams, nrus, nbus, _, strperfrl = getConfig(args[0])
-		nferols = nstreams//strperfrl
-
-		if len(options.fragmentDir) == 0:
-			options.fragmentDir = ('/nfshome0/stiegerb/Workspace/'
-			                       'daq2val/daq2Control/config_fragments/')
-		configurator = daq2Configurator(options.fragmentDir,
-			                            verbose=options.verbose)
-
-		configurator.evbns = ('gevb2g' if options.useGevb2g and not
-				                          options.useEvB else 'evb')
-		configurator.ptprot = ('udapl' if options.useUDAPL  and not
-				                          options.useIBV else 'ibv')
-
-		## in case both are true, they will be enabled
-		configurator.enablePauseFrame = options.enablePauseFrame
-		configurator.disablePauseFrame = options.disablePauseFrame
-		configurator.setCWND = options.setCWND ## -1 doesn't do anything
-		# configurator.setSeed = options.setSeed
-		configurator.setCorrelatedSeed = options.setCorrelatedSeed
-		configurator.ferolRack = options.ferolRack
-		if options.ferolRack not in [0, 1, 2, 3, 13]:
-			printError("Unknown ferolRack: %d" %(options.ferolRack))
-			exit(-1)
-
-		if options.useEFEDs: options.useGTPe = True ## need GTPe for eFEDs
-		configurator.useGTPe           = options.useGTPe
-		configurator.useEFEDs          = options.useEFEDs
-
-		## Some checks:
-		if configurator.evbns == 'evb' and nbus < 4:
-			printWarningWithWait(("Are you sure you want to run with only"
-				                  "%d BUs and the EvB?"%nbus), waittime=3)
-		if configurator.evbns == 'gevb2g'and nbus > 3:
-			printWarningWithWait(("Are you sure you want to run with"
-				                  "%d BUs and the gevb2g?"%nbus), waittime=3)
-		if options.useEFEDs and nstreams > MAXNEFEDS:
-			printError(("There are more streams (%d) than eFEDs available"
-				        "(%d)!" %(nstreams, MAXNEFEDS)))
-			exit(-1)
-
-		configurator.operation_mode = (
-			             options.ferolMode if len(options.ferolMode)>0 else
-			             'ferol_emulator')
-		## automatically use frl_gtpe_trigger mode when running with GTPe
-		if options.useGTPe and options.ferolMode == '':
-			configurator.operation_mode = 'frl_gtpe_trigger'
-			if options.useEFEDs:
-			    ## automatically use efed_slink_gtpe mode when running
-			    ## with GTPe/EFEDs
-				configurator.operation_mode = 'efed_slink_gtpe'
-
-		## Construct output name
-		output = args[0]
-		if configurator.evbns == 'evb':    output += '_evb'
-		if configurator.evbns == 'gevb2g': output += '_gevb2g'
-		if configurator.ptprot == 'udapl': output += '_udapl'
-		if configurator.ptprot == 'ibv':   output += '_ibv'
-		if configurator.operation_mode == 'efed_slink_gtpe':
-			output += '_efeds'
-		if configurator.operation_mode == 'frl_gtpe_trigger':
-			output += '_gtpe'
-		if configurator.operation_mode == 'frl_autotrigger':
-			output += '_frlAT'
-		if configurator.setCorrelatedSeed:
-			output += '_corr'
-		output += ({0:'', 1:'_COL', 2:'_COL2', 3:'_COL3',
-			        13:'_COL13'}[options.ferolRack])
-		output+='.xml'
-
-		if len(options.output)>0:
-			name, ext = os.path.splitext(options.output)
-			if not os.path.dirname(name) == '':
-				try:
-					os.makedirs(os.path.dirname(name))
-				except OSError as e:
-					if not 'File exists' in str(e):
-						raise e
-
-			if ext == '.xml':
-				# Take exactly what's given in the option
-				output = options.output
-			elif ext == '':
-				output = os.path.join(name, output)
-
-		configurator.makeConfig(nferols,strperfrl,nrus,nbus,output)
-
-		exit(0)
+		if main(options, args):
+			exit(0)
+		else:
+			printError("Something went wrong.")
 
 	parser.print_help()
 	exit(-1)
-
 
