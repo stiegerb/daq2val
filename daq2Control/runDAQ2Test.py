@@ -17,7 +17,7 @@ def runTest(configfile, fragSize, options, relRMS=0.0):
 	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 	d2c.start(fragSize, relRMS*fragSize, rate=options.useRate)
 
-	if not options.dropAtRU and not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
+	if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
 		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
 		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
 		exit(-1)
@@ -58,11 +58,11 @@ def addOptions(parser):
 	                  type="int", dest="testTime",
 	                  help="Time for which event building is tested before\
 	                        starting, [default is %default]")
-	parser.add_option("--dropAtRU", default=False, action="store_true",
-		              dest="dropAtRU",
-		              help="Run with dropping the fragments at the RU\
-		                    without building. (Use with --useIfstat to get\
-		                    throughput)")
+	# parser.add_option("--dropAtRU", default=False, action="store_true",
+	# 	              dest="dropAtRU",
+	# 	              help="Run with dropping the fragments at the RU\
+	# 	                    without building. (Use with --useIfstat to get\
+	# 	                    throughput)")
 	parser.add_option("--useIfstat", default=False, action="store_true",
 		              dest="useIfstat",
 		              help="Instead of getting the number of\
