@@ -378,10 +378,10 @@ WARNING: TCP_CWND_FEDX for FEROLs seems to be set
  Is set to: %d in config. Expected value: %d
 """
 			cwnd = cwnd_set.pop()
-			if self.nStreams == len(self.FEROLs) and cwnd not in [135000]:
-				printWarningWithWait(message%(cwnd, 135000), instance=self, waittime=2)
-			if self.nStreams == 2*len(self.FEROLs) and cwnd not in [62500]:
-				printWarningWithWait(message%(cwnd, 62500), instance=self, waittime=2)
+			if self.nStreams == len(self.FEROLs) and cwnd not in [80000]:
+				printWarningWithWait(message%(cwnd, 80000), instance=self, waittime=2)
+			if self.nStreams == 2*len(self.FEROLs) and cwnd not in [80000]:
+				printWarningWithWait(message%(cwnd, 80000), instance=self, waittime=2)
 
 
 	def writeConfig(self, destination):
