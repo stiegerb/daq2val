@@ -12,8 +12,8 @@
 			<enableStream1 xsi:type="xsd:boolean">true</enableStream1>
 			<OperationMode xsi:type="xsd:string">FEROL_EMULATOR_MODE</OperationMode>
 			<FrlTriggerMode xsi:type="xsd:string">FRL_AUTOTRIGGER_MODE</FrlTriggerMode>
-			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">62500</TCP_CWND_FED0>
-			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">62500</TCP_CWND_FED1>
+			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">80000</TCP_CWND_FED0>
+			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">80000</TCP_CWND_FED1>
 			<ENA_PAUSE_FRAME xsi:type="xsd:boolean">true</ENA_PAUSE_FRAME>
 
 			<!-- Settings for groups of FEROLs -->
