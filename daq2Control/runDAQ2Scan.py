@@ -2,17 +2,20 @@
 import daq2Utils as utils
 from daq2Control import daq2Control, separator
 from daq2SymbolMap import daq2SymbolMap
-from daq2Utils import sleep, printError, printWarningWithWait, testBuilding, SIZE_LIMIT_TABLE
+from daq2Utils import sleep, printError, printWarningWithWait
+from daq2Utils import testBuilding, SIZE_LIMIT_TABLE
 
 def getListOfSizes(maxSize, minSize=256, short=False):
 	stepsize = 256
-	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192] ## multiples of stepsize up to 8192
+	## multiples of stepsize up to 8192
+	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192]
 	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
-	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 20480, 24576, 28672, 32500]
+	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360,
+	#              16384, 20480, 24576, 28672, 32500]
 	# if short: allsteps = [1024, 16000]
-	if short: allsteps = [256, 512, 1024, 1535, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 12288, 14336, 16000, 20480, 24576, 28672, 32500]
-	# if short: allsteps = [256, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 14336, 16384, 20480, 24576, 28672, 32500]
-	# if short: allsteps = [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768]
+	if short:
+		allsteps = [256, 512, 1024, 1535, 2048, 3072, 4096, 5120, 6144, 7168,
+		            8192, 12288, 14336, 16000, 20480, 24576, 28672, 32500]
 
 	steps = []
 	for step in allsteps:
@@ -21,31 +24,32 @@ def getListOfSizes(maxSize, minSize=256, short=False):
 	print ' Will scan over the following sizes:', steps
 	return steps
 
-if __name__ == "__main__":
-	from optparse import OptionParser
-	from runDAQ2Test import addOptions, testBuilding
-	usage = """
-	%prog [options] config.xml relRMS
+def addScanningOptions(parser):
+	parser.add_option("--maxSize", default=32768, action="store", type="int",
+		               dest="maxSize",
+		               help=("Maximum fragment size of a scan in bytes, "
+		               	     "[default: %default]"))
+	parser.add_option("--minSize", default=256, action="store", type="int",
+		               dest="minSize",
+		               help=("Minimum fragment size of a scan in bytes, "
+		               	     "[default: %default]"))
+	parser.add_option("--short", default=False, action="store_true",
+		               dest="short",
+		               help=("Run a short scan with only a few points"))
+	parser.add_option("--stopRestart", default=False, action="store_true",
+		               dest="stopRestart",
+		               help=("Stop XDAQ processes after each step and "
+		               	     "restart instead of changing the size on the "
+		               	     "fly. [default: %default]"))
 
-	Examples:
-	%prog config.xml
-	%prog --short --maxSize 8192 --duration 300 --useRate 100 config.xml 0.0
-	"""
-	parser = OptionParser(usage=usage)
-	addOptions(parser)
-	parser.add_option("--maxSize",     default=32768, action="store", type="int", dest="maxSize",     help="Maximum fragment size of a scan in bytes, [default: %default]")
-	parser.add_option("--minSize",     default=256,   action="store", type="int", dest="minSize",     help="Minimum fragment size of a scan in bytes, [default: %default]")
-	parser.add_option("--short",       default=False, action="store_true",        dest="short",       help="Run a short scan with only a few points")
-	parser.add_option("--stopRestart", default=False, action="store_true",        dest="stopRestart", help="Stop XDAQ processes after each step and restart instead of changing the size on the fly. [default: %default]")
-
-	(options, args) = parser.parse_args()
-
+def runScan(options, args):
 	if options.useRate == 0: options.useRate = 'max'
 
 	#####################################
 	## Check input parameters
 	if len(args) < 1:
-		print "Not enough arguments: need to specify at least a configuration file."
+		print ("Not enough arguments: need to specify at least a "
+		       "configuration file.")
 		exit(-1)
 
 	configfile = args[0]
@@ -69,7 +73,8 @@ if __name__ == "__main__":
 
 	#####################################
 	## Get the scanning steps
-	steps = getListOfSizes(options.maxSize, minSize=options.minSize, short=options.short)
+	steps = getListOfSizes(options.maxSize, minSize=options.minSize,
+		                   short=options.short)
 
 	#####################################
 	## Check maxSize from table and merging case:
@@ -80,74 +85,98 @@ WARNING: Your maximum size for scanning doesn't seem to
          make sense. Please consider!
  Is set to: %d. Expected to scan only until: %d
  		(i.e. use option --maxSize %d)
-		""" % (steps[-1], SIZE_LIMIT_TABLE[mergingby][1], SIZE_LIMIT_TABLE[mergingby][1])
+		""" % (steps[-1], SIZE_LIMIT_TABLE[mergingby][1],
+			              SIZE_LIMIT_TABLE[mergingby][1])
 		printWarningWithWait(message, waitfunc=sleep, waittime=2)
 
-	d2c.start(options.minSize, float(options.relRMS)*options.minSize, rate=options.useRate)
+	d2c.start(options.minSize,
+		      float(options.relRMS)*options.minSize,
+		      rate=options.useRate)
 
 	#####################################
 	## Test event building first
 	retries = 0
-	if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
+	if not testBuilding(d2c, 1000, options.testTime,
+		                verbose=options.verbose,
+		                dry=options.dry):
 		while(retries < options.retries):
-			if options.verbose > 0: printWarningWithWait('Test failed, will stop everything and try again.', waittime=0, instance=d2c)
-			utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
-			d2c.start(options.minSize, float(options.relRMS)*options.minSize, rate=options.useRate)
+			if options.verbose > 0:
+				printWarningWithWait(('Test failed, will stop everything '
+									  'and try again.'),
+				                     waittime=0, instance=d2c)
+			utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose,
+				            dry=options.dry)
+			d2c.start(options.minSize,
+				      float(options.relRMS)*options.minSize,
+				      rate=options.useRate)
 
 			## Check again
-			if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
+			if not testBuilding(d2c, 1000, options.testTime,
+				                verbose=options.verbose,
+				                dry=options.dry):
 				retries += 1
 				continue
 			else:
 				break
 		else:
 			## Give up
-			if options.verbose > 0: printError('Test failed, built less than 1000 events! Giving up.', instance=d2c)
-			utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+			if options.verbose > 0:
+				printError(('Test failed, built less than 1000 events! '
+					        'Giving up.'), instance=d2c)
+			utils.stopXDAQs(d2c.symbolMap,
+				            verbose=options.verbose,
+				            dry=options.dry)
 			exit(0)
 	## Everything ok
-	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
+	if options.verbose > 0:
+		print ('Test successful (built more than 1000 events in each BU), '
+			   'continuing...')
 
 	#####################################
 	## Start the scanning
 	for step in steps:
 		d2c.reset() ## reset retry counter
-		d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
+		d2c.changeSize(step,
+			           float(options.relRMS)*step,
+			           rate=options.useRate)
 
-		## Test whether the GTPe did start up properly (does not make sense when changing size on the fly):
+		## Test whether the GTPe did start up properly (does not make sense
+		## when changing size on the fly):
 		if d2c.config.useGTPe and options.stopRestart:
-			if not testBuilding(d2c, minevents=5000, waittime=5, verbose=0, dry=options.dry):
-				d2c.retry('GTPe does not seem to be running, will stop and restart.')
+			if not testBuilding(d2c, minevents=5000, waittime=5,
+				                verbose=0, dry=options.dry):
+				d2c.retry('GTPe does not seem to be running, will stop and '
+					      'restart.')
 
-				# ## Retry once
-				# if options.verbose > 0: printWarningWithWait('GTPe does not seem to be running, will stop and restart.', waittime=0, instance=d2c)
-				# d2c.changeSize(step, float(options.relRMS)*step, rate=options.useRate)
-
-				# ## Check again
-				# if not testBuilding(d2c, minevents=5000, waittime=5, verbose=0, dry=options.dry):
-				# 	## Give up
-				# 	if options.verbose > 0: printError('Failed to start event building.', d2c)
-				# 	exit(0)
-
-		if options.verbose > 0: print separator
-		if options.verbose > 0: print "Building events at fragment size %d for %d seconds... %s" % (step, options.duration, d2c.config.configfile)
+		if options.verbose > 0:
+			print separator
+			print ("Building events at fragment size %d for %d seconds... "
+				   "%s" % (step, options.duration,
+				   	       d2c.config.configfile))
 		if options.useIfstat:
-			## Get throughput directly from RU using ifstat script ## NOT REALLY TESTED YET
+			## NOT REALLY TESTED YET
+			## Get throughput directly from RU using ifstat script
 			d2c.getResultsFromIfstat(options.duration)
 		elif d2c.config.useEvB:
 			d2c.getResultsEvB(options.duration, interval=5)
 		else:
 			## Wait for the full duration and get results at the end
 			sleep(options.duration, options.verbose, options.dry)
-			## For eFEROLs, or when stopping and restarting after each step, get results after each step
-			if len(d2c.config.eFEROLs) > 0 or options.stopRestart: d2c.getResults()
+			## For eFEROLs, or when stopping and restarting after each step,
+			## get results after each step
+			if len(d2c.config.eFEROLs) > 0 or options.stopRestart:
+				d2c.getResults()
 		if options.verbose > 0: print "Done"
 
 		# Dump FEROL infospace
 		if options.storeInfoSpaces: d2c.saveFEROLInfoSpaces()
 
-	## For FEROLs, and when changing the size on the fly, get results at the very end
-	if len(d2c.config.FEROLs) > 0 and not d2c.config.useEvB and not options.stopRestart: d2c.getResults()
+	## For FEROLs, and when changing the size on the fly,
+	## get results at the very end
+	if (len(d2c.config.FEROLs) > 0 and not
+		         d2c.config.useEvB and not
+		         options.stopRestart):
+		d2c.getResults()
 
 	#####################################
 	## Pause GTPe and stop everything
@@ -155,5 +184,26 @@ WARNING: Your maximum size for scanning doesn't seem to
 	print separator
 	print ' DONE '
 	print separator
+	return True
+
+if __name__ == "__main__":
+	from optparse import OptionParser
+	from runDAQ2Test import addOptions, testBuilding
+	usage = """
+	%prog [options] config.xml relRMS
+
+	Examples:
+	%prog config.xml
+	%prog --short --maxSize 8192 --duration 300 --useRate 100 config.xml 0.0
+	"""
+	parser = OptionParser(usage=usage)
+	addOptions(parser)
+
+	(options, args) = parser.parse_args()
+
+	if not runScan(options, args):
+		parser.print_help()
+		exit(-1)
+
 	exit(0)
 
