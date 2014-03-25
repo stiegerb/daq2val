@@ -103,16 +103,42 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 	sleep(waittime, verbose, dry)
 	if dry: return True
 	eventCounter = []
-	for n,bu in enumerate(d2c.config.BUs):
-		if d2c.config.useEvB: nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'nbEventsBuilt', 'xsd:unsignedInt',  verbose=verbose, dry=dry)
-		else:                 nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU', str(n), 'eventCounter',  'xsd:unsignedLong', verbose=verbose, dry=dry)
+	events = []
+	if not d2c.config.useMSIO:
+		for n,bu in enumerate(d2c.config.BUs):
+			if d2c.config.useEvB:
+				nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU',
+					             str(n), 'nbEventsBuilt', 'xsd:unsignedInt',
+					             verbose=verbose, dry=dry)
+			else:
+				nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU',
+					             str(n), 'eventCounter',  'xsd:unsignedLong',
+					             verbose=verbose, dry=dry)
+			events.append((bu.name, nEvts))
+	else: ## mstreamio
+		for n,ru in enumerate(d2c.config.RUs):
+			nEvts = getParam(ru.host, ru.port, 'Client',
+				             str(n), 'counter',  'xsd:unsignedLong',
+				             verbose=verbose, dry=dry)
+			events.append((ru.name, nEvts))
+		for n,bu in enumerate(d2c.config.BUs):
+			nEvts = getParam(bu.host, bu.port, 'Server',
+				             str(n), 'counter',  'xsd:unsignedLong',
+				             verbose=verbose, dry=dry)
+			events.append((bu.name, nEvts))
+
+	for name,nEvts in events:
 		try:
 			eventCounter.append(int(nEvts))
 		except ValueError:
-			printError('Error getting number of events built. Message was:\n%s'%nEvts)
+			printError('Error getting number of events built.'
+				       'Message was:\n%s'%nEvts)
 			return False
-		if verbose > 1: print bu.name, 'number of events built: ', int(nEvts)
-	print separator
+		if verbose > 1:
+			print name, 'number of events built: ', int(nEvts)
+
+	if verbose > 1: print separator
+
 
 	totEvents = 0
 	for evtCount in eventCounter:

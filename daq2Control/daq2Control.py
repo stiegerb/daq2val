@@ -310,19 +310,8 @@ class daq2Control(object):
 			if self.options.verbose > 0: print 'Waiting 5 seconds and checking again...'
 			sleep(5, self.options.verbose, self.options.dry)
 			if not self.webPingXDAQ():
-				## Stop and restart the processes
-				if self.options.verbose > 0: print separator
-				if self.options.verbose > 0: print "Stopping and restarting XDAQ processes"
-				utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-				if self.options.verbose > 0: print separator
-				if self.options.verbose > 0: print "Restarting XDAQ processes"
-				for h in self.config.hosts:
-					utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
-				sleep(2, self.options.verbose, self.options.dry)
-
-				## Check one last time before giving up
-				if not self.webPingXDAQ():
-					raise RuntimeError('Not all hosts ready!')
+				self.retry('Not all hosts ready!')
+				return
 
 		## Send the configuration file to each host
 		if self.options.verbose > 0: print separator
@@ -339,7 +328,8 @@ class daq2Control(object):
 		if onlyPrepare: return
 
 		## Configure and enable:
-		self.configure()
+		if not self.config.useMSIO:
+			self.configure()
 		self.enable()
 	def stop(self):
 		if self.options.verbose > 0: print separator
@@ -424,7 +414,7 @@ class daq2Control(object):
 
 
 
-		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
+		printWarningWithWait("daq2Control::Configure ==> Doing nothing.", waittime=1, instance=self)
 		return
 	def checkConfigured(self):
 		if self.options.verbose > 0: print separator
@@ -479,7 +469,22 @@ class daq2Control(object):
 			sleep(2, self.options.verbose, self.options.dry)
 			return
 
-		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
+		## In case of mstreamio configurations:
+		if self.config.useMSIO:
+			if self.options.verbose > 0: print separator
+			for n,bu in enumerate(self.config.BUs):
+				utils.sendSimpleCmdToApp(bu.host, bu.port, 'Server', str(n),
+					                     'start',
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+			for n,ru in enumerate(self.config.RUs):
+				utils.sendSimpleCmdToApp(ru.host, ru.port, 'Client', str(n),
+					                     'start',
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+			return
+
+		printWarningWithWait("daq2Control::Enable ==> Doing nothing.", waittime=1, instance=self)
 		return
 	def checkEnabled(self):
 		if self.options.verbose > 0: print separator
@@ -651,6 +656,22 @@ class daq2Control(object):
 				if self.config.useEvB or self.options.useLogNormal: utils.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Enable')
 				else:                                               utils.sendSimpleCmdToApp(efrl.host, efrl.port, 'Client',                n, 'start')
 			return
+
+		## In case of mstreamio configurations:
+		elif self.config.useMSIO:
+			for n,ru in enumerate(self.config.RUs):
+				utils.setParam(ru.host, ru.port, 'Client', str(n),
+					           'currentSize', 'unsignedLong',
+					           fragSize,
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+			for n,bu in enumerate(self.config.BUs):
+				utils.setParam(bu.host, bu.port, 'Server', str(n),
+					           'currentSize', 'unsignedLong',
+					           fragSize,
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## --stopRestart option or eFEROLs: stop everything, set new size, start again
 		if (hasattr(self.options, 'stopRestart') and self.options.stopRestart) or len(self.config.eFEROLs) > 0:
