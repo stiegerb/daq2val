@@ -118,6 +118,7 @@ class daq2Config(object):
 		self.contexts = self.ETroot.getiterator(str(QN(self.xcns,'Context')))
 
 		self.useMSIO = False
+		self.useGevbInputEmulator = False
 		self.readXDAQConfigTemplate(configFile)
 		self.useGTPe = False
 		if len(self.GTPe) > 0:
@@ -130,7 +131,7 @@ class daq2Config(object):
 		if len(self.FEROLs) > 0:
 			config = '%ds%dfx%dx%d' % (self.nStreams, len(self.FEROLs),
 				                       len(self.RUs), len(self.BUs))
-		elif self.useMSIO:
+		elif self.useMSIO or self.useGevbInputEmulator:
 			config = '%dx%d' % (len(self.RUs), len(self.BUs))
 		else:
 			config = '%dx%dx%d' % (len(self.eFEROLs), len(self.RUs),
@@ -273,6 +274,7 @@ class daq2Config(object):
 					ho.applications.append((classname, instance))
 
 				## For RU, check whether IVB or UDAPL (only do it once)
+				## and whether there is an InputEmulator
 				if h == 'RU' and checked_ibv == False:
 					self.useIBV = False
 					for app in apps:
@@ -283,6 +285,11 @@ class daq2Config(object):
 						if app.attrib['class'] == 'pt::udapl::Application':
 							self.useIBV = False ## Found UDAPL configuration
 							if self.verbose > 2 : print "Found UDAPL peer transport protocol"
+							break
+					for app in apps:
+						if app.attrib['class'] == 'gevb2g::InputEmulator':
+							self.useGevbInputEmulator = True
+							if self.verbose > 2 : print "Found gevb2g InputEmulator"
 							break
 					checked_ibv = True
 

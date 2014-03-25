@@ -316,6 +316,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		self.nclients = nclients
 		self.nrus = nclients
 		self.nservers = nservers
+		self.nbus = nservers
 
 		##
 		self.makeSkeleton()

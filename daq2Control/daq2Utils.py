@@ -116,11 +116,6 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 					             verbose=verbose, dry=dry)
 			events.append((bu.name, nEvts))
 	else: ## mstreamio
-		for n,ru in enumerate(d2c.config.RUs):
-			nEvts = getParam(ru.host, ru.port, 'Client',
-				             str(n), 'counter',  'xsd:unsignedLong',
-				             verbose=verbose, dry=dry)
-			events.append((ru.name, nEvts))
 		for n,bu in enumerate(d2c.config.BUs):
 			nEvts = getParam(bu.host, bu.port, 'Server',
 				             str(n), 'counter',  'xsd:unsignedLong',
@@ -282,13 +277,6 @@ def checkStates(hosts, statename, verbose=0, dry=False):
 				return False
 			if verbose > 0: stdout.write(' OK\n')
 	return True
-
-def downloadMeasurements(host, port, classname, instance, outputfile, verbose=0, dry=False):
-	if verbose > 1: print separator
-	url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
-	url = url % (host, int(port), classname, int(instance))
-	if dry: print 'curl -o', outputfile, url
-	else: subprocess.check_call(['curl', '-o', outputfile, url])
 
 def stopXDAQPacked(packedargs):
 	(host, verbose, dry) = packedargs
