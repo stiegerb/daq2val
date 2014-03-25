@@ -143,6 +143,9 @@ def main(options, args):
 		output += '_frlAT'
 	if configurator.setCorrelatedSeed:
 		output += '_corr'
+	if configurator.setCWND != -1:
+		output += '_CWND_%d'%(int(configurator.setCWND))
+
 	output += ({0:'', 1:'_COL', 2:'_COL2', 3:'_COL3',
 		        13:'_COL13'}[options.ferolRack])
 	output+='.xml'
