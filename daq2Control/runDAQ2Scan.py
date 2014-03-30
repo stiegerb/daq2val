@@ -5,10 +5,9 @@ from daq2SymbolMap import daq2SymbolMap
 from daq2Utils import sleep, printError, printWarningWithWait
 from daq2Utils import testBuilding, SIZE_LIMIT_TABLE
 
-def getListOfSizes(maxSize, minSize=256, short=False):
-	stepsize = 256
+def getListOfSizes(maxSize, minSize=256, short=False, stepSize=256):
 	## multiples of stepsize up to 8192
-	allsteps = [ n*stepsize for n in xrange(1, 1000) if n*stepsize <= 8192]
+	allsteps = [ n*stepSize for n in xrange(1, 1000) if n*stepSize <= 8192]
 	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
 	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360,
 	#              16384, 20480, 24576, 28672, 32500]
@@ -33,6 +32,9 @@ def addScanningOptions(parser):
 		               dest="minSize",
 		               help=("Minimum fragment size of a scan in bytes, "
 		               	     "[default: %default]"))
+	parser.add_option("--stepSize", default=256, action="store", type="int",
+		               dest="stepSize",
+		               help=("Size of each step [default: %default]"))
 	parser.add_option("--short", default=False, action="store_true",
 		               dest="short",
 		               help=("Run a short scan with only a few points"))
@@ -74,7 +76,8 @@ def runScan(options, args):
 	#####################################
 	## Get the scanning steps
 	steps = getListOfSizes(options.maxSize, minSize=options.minSize,
-		                   short=options.short)
+		               short=options.short,
+			       stepSize=options.stepSize)
 
 	#####################################
 	## Check maxSize from table and merging case:

@@ -44,6 +44,7 @@ Default output directory is 'output/' at location of the first config file
 	else:
 		output_base = options.outputDir
 
+	print "----------------------------------------------------"
 	print ("Will run a scan for the following %d configurations." % (
 		                                         len(list_of_configs)))
 	for config_file in list_of_configs:
