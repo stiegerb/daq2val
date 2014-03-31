@@ -212,12 +212,12 @@ class daq2Configurator(object):
 			pass
 		self.setPropertyInApp(ferol, classname, 'SourceIP',        sourceIp)
 
-		if frl.nstreams == 1:
-			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 135000)
-			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 135000)
-		if frl.nstreams == 2:
-			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 62500)
-			self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 62500)
+		# if frl.nstreams == 1:
+		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 135000)
+		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 135000)
+		# if frl.nstreams == 2:
+		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 62500)
+		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 62500)
 
 		if frl.nstreams == 1:
 			self.setPropertyInApp(ferol, classname, 'enableStream0', 'true')
