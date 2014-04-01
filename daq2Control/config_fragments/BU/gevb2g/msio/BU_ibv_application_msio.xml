@@ -1,0 +1,14 @@
+<xc:Application class="pt::ibv::Application" id="11" instance="0" network="local" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+	<properties xmlns="urn:xdaq-application:pt::ibv::Application" xsi:type="soapenc:Struct">
+		<iaName xsi:type="xsd:string">mlx4_0</iaName>
+		<sendPoolName xsi:type="xsd:string">sibv</sendPoolName>
+		<recvPoolName xsi:type="xsd:string">ribv</recvPoolName>
+		<receiverPoolSize xsi:type="xsd:unsignedInt">0xD000000</receiverPoolSize>
+		<senderPoolSize xsi:type="xsd:unsignedInt">0x2000000</senderPoolSize>
+		<completionQueueSize xsi:type="xsd:unsignedInt">8192</completionQueueSize>
+		<sendQueuePairSize xsi:type="xsd:unsignedInt">64</sendQueuePairSize>
+		<recvQueuePairSize xsi:type="xsd:unsignedInt">128</recvQueuePairSize>
+		<maxMessageSize xsi:type="xsd:unsignedInt">262144</maxMessageSize>
+		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
+	</properties>
+</xc:Application>

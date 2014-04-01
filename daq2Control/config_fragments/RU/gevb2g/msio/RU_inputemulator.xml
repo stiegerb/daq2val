@@ -1,0 +1,16 @@
+<xc:Application class="gevb2g::InputEmulator" id="42" instance="0" network="infini" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+	<properties xmlns="urn:xdaq-application:gevb2g::InputEmulator" xsi:type="soapenc:Struct">
+		<StdDev xsi:type="xsd:unsignedLong">0</StdDev>
+		<Mean xsi:type="xsd:unsignedLong">128</Mean>
+		<MinFragmentSize xsi:type="xsd:unsignedLong">32</MinFragmentSize>
+		<MaxFragmentSize xsi:type="xsd:unsignedLong">262000</MaxFragmentSize>
+		<destinationClassName xsi:type="xsd:string">gevb2g::RU</destinationClassName>
+		<destinationClassInstance xsi:type="xsd:unsignedLong">0</destinationClassInstance>
+		<maxDataFrameSize xsi:type="xsd:unsignedLong">262144</maxDataFrameSize>
+		<frameSendCounter xsi:type="xsd:unsignedLong">0</frameSendCounter>
+		<fixedSize xsi:type="xsd:boolean">true</fixedSize>
+		<rate xsi:type="xsd:unsignedLong">1000000</rate>
+		<createPool xsi:type="xsd:boolean">false</createPool>
+		<poolName xsi:type="xsd:string">sibv</poolName>
+	</properties>
+</xc:Application>

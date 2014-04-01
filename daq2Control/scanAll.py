@@ -44,6 +44,14 @@ Default output directory is 'output/' at location of the first config file
 	else:
 		output_base = options.outputDir
 
+	print "----------------------------------------------------"
+	print ("Will run a scan for the following %d configurations." % (
+		                                         len(list_of_configs)))
+	for config_file in list_of_configs:
+		print config_file
+
+	raw_input("Press Enter to continue...")
+
 	for config_file in list_of_configs:
 		newargs = [config_file]
 		if options.useLogNormal:

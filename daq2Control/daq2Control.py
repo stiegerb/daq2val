@@ -42,14 +42,15 @@ class daq2Control(object):
 			self._user      = os.environ['USER']
 			self._testType  = os.environ['TEST_TYPE']
 		except KeyError as e:
-			printError('Environment missing, did you forget to source setenv-COL.sh? Aborting.', self)
+			printError('Environment missing, did you forget to source '
+				       'setenv-COL.sh? Aborting.', self)
 			raise e
 
 		self.options = options
 		if len(options.symbolMap)>0:
 			self.symbolMap = daq2SymbolMap(options.symbolMap)
 		else:
-			self.symbolMap = daq2SymbolMap() ## will take it from the environment
+			self.symbolMap = daq2SymbolMap() ## take it from the environment
 
 		self.setupConfig(configFile)
 
@@ -58,7 +59,8 @@ class daq2Control(object):
 			self.options.retries = 5
 
 		if self.config.useGTPe and self.options.useRate == 'max':
-			printWarningWithWait("Failed to specify rate for GTPe. Setting it to 100 kHz.", waittime=0, instance=self)
+			printWarningWithWait("Failed to specify rate for GTPe. Setting "
+				                 "it to 100 kHz.", waittime=0, instance=self)
 			self.options.useRate = 100
 
 		self._runDir  = self._testDir + '/' + self._platform + '/'
@@ -66,9 +68,11 @@ class daq2Control(object):
 		self._runDir += (time.strftime('%d%H%M%S') + '/')
 
 		if self.options.outputDir:
-			if self.options.outputDir.endswith('/'): self.options.outputDir = self.options.outputDir[:-1]
+			if self.options.outputDir.endswith('/'):
+				self.options.outputDir = self.options.outputDir[:-1]
 			if self.options.outputTag:
-				self._outputDir = self.options.outputDir+'_'+self.options.outputTag
+				self._outputDir = (self.options.outputDir+'_'+
+					               self.options.outputTag)
 			else:
 				self._outputDir = self.options.outputDir
 		else:
@@ -83,25 +87,39 @@ class daq2Control(object):
 	def setupConfig(self, configFile):
 		self.config = daq2Config(configFile)
 		self.config.fillFromSymbolMap(self.symbolMap)
-		if self.options.enablePauseFrame:  self.config.setFerolParameter('ENA_PAUSE_FRAME', 'true')
-		if self.options.disablePauseFrame: self.config.setFerolParameter('ENA_PAUSE_FRAME', 'false')
+		if self.options.enablePauseFrame:
+			self.config.setFerolParameter('ENA_PAUSE_FRAME', 'true')
+		if self.options.disablePauseFrame:
+			self.config.setFerolParameter('ENA_PAUSE_FRAME', 'false')
 		if self.options.setCWND > 0:
-			self.config.setFerolParameter('TCP_CWND_FED0', self.options.setCWND)
-			self.config.setFerolParameter('TCP_CWND_FED1', self.options.setCWND)
+			self.config.setFerolParameter('TCP_CWND_FED0',
+				                          self.options.setCWND)
+			self.config.setFerolParameter('TCP_CWND_FED1',
+				                          self.options.setCWND)
 		if self.options.verbose>1: self.config.printHosts()
-
 
 	## Multi-commands
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
 		if self.options.verbose > 0: print separator
 		for n,evm in enumerate(self.config.EVM):
-			utils.sendSimpleCmdToApp(evm.host, evm.port, self.config.namespace+'EVM', str(n), cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(evm.host, evm.port,
+				                     self.config.namespace+'EVM', str(n),
+				                     cmd, verbose=self.options.verbose,
+				                     dry=self.options.dry)
 		for n,ru in enumerate(self.config.RUs):
 			classname = 'RU'
 			if self.config.useEvB and n==0: classname = 'EVM'
-			utils.sendSimpleCmdToApp(ru.host, ru.port, self.config.namespace+classname, str(n), cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(ru.host, ru.port,
+				                     self.config.namespace+classname,
+				                     str(n), cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 		for n,bu in enumerate(self.config.BUs):
-			utils.sendSimpleCmdToApp(bu.host, bu.port, self.config.namespace+'BU', str(n), cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(bu.host, bu.port,
+				                     self.config.namespace+'BU', str(n),
+				                     cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 	def sendCmdToRUEVMBU(self, cmd): ## ordering for enable
 		if self.options.verbose > 0: print separator
 		for n,ru in enumerate(self.config.RUs):
@@ -256,7 +274,6 @@ class daq2Control(object):
 		except ZeroDivisionError:
 			self.currentCorrFragSize = size
 
-
 	## Control methods
 	def setup(self):
 		"""Clean up and re-create run directory, fill config templates, create output directory"""
@@ -310,19 +327,8 @@ class daq2Control(object):
 			if self.options.verbose > 0: print 'Waiting 5 seconds and checking again...'
 			sleep(5, self.options.verbose, self.options.dry)
 			if not self.webPingXDAQ():
-				## Stop and restart the processes
-				if self.options.verbose > 0: print separator
-				if self.options.verbose > 0: print "Stopping and restarting XDAQ processes"
-				utils.stopXDAQs(self.symbolMap, verbose=self.options.verbose, dry=self.options.dry)
-				if self.options.verbose > 0: print separator
-				if self.options.verbose > 0: print "Restarting XDAQ processes"
-				for h in self.config.hosts:
-					utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
-				sleep(2, self.options.verbose, self.options.dry)
-
-				## Check one last time before giving up
-				if not self.webPingXDAQ():
-					raise RuntimeError('Not all hosts ready!')
+				self.retry('Not all hosts ready!')
+				return
 
 		## Send the configuration file to each host
 		if self.options.verbose > 0: print separator
@@ -339,7 +345,8 @@ class daq2Control(object):
 		if onlyPrepare: return
 
 		## Configure and enable:
-		self.configure()
+		if not self.config.useMSIO:
+			self.configure()
 		self.enable()
 	def stop(self):
 		if self.options.verbose > 0: print separator
@@ -422,9 +429,20 @@ class daq2Control(object):
 				sleep(2, self.options.verbose, self.options.dry)
 			return
 
+		## In case of gevb2g InputEmulator:
+		if self.config.useGevbInputEmulator:
+			# Configure InputEmulator application
+			for n,ru in enumerate(self.config.RUs):
+				utils.sendSimpleCmdToApp(ru.host, ru.port,
+					                     'gevb2g::InputEmulator', str(n),
+					                     'Configure',
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+			sleep(2, self.options.verbose, self.options.dry)
+			self.sendCmdToEVMRUBU('Configure')
+			return
 
-
-		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
+		printWarningWithWait("daq2Control::Configure ==> Doing nothing.", waittime=1, instance=self)
 		return
 	def checkConfigured(self):
 		if self.options.verbose > 0: print separator
@@ -479,7 +497,37 @@ class daq2Control(object):
 			sleep(2, self.options.verbose, self.options.dry)
 			return
 
-		printWarningWithWait("Doing nothing.", waittime=1, instance=self)
+		## In case of mstreamio configurations:
+		if self.config.useMSIO:
+			if self.options.verbose > 0: print separator
+			for n,bu in enumerate(self.config.BUs):
+				utils.sendSimpleCmdToApp(bu.host, bu.port, 'Server', str(n),
+					                     'start',
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+			for n,ru in enumerate(self.config.RUs):
+				utils.sendSimpleCmdToApp(ru.host, ru.port, 'Client', str(n),
+					                     'start',
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+			return
+
+		## In case of gevb2g InputEmulator:
+		if self.config.useGevbInputEmulator:
+			self.sendCmdToRUEVMBU('Enable')
+			sleep(2, self.options.verbose, self.options.dry)
+
+			# Enable InputEmulator application
+			for n,ru in enumerate(self.config.RUs):
+				utils.sendSimpleCmdToApp(ru.host, ru.port,
+					                     'gevb2g::InputEmulator', str(n),
+					                     'Enable',
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+			sleep(2, self.options.verbose, self.options.dry)
+			return
+
+		printWarningWithWait("daq2Control::Enable ==> Doing nothing.", waittime=1, instance=self)
 		return
 	def checkEnabled(self):
 		if self.options.verbose > 0: print separator
@@ -510,11 +558,18 @@ class daq2Control(object):
 		import glob
 		if not self.options.outputDir:
 			self._outputDir += self.config.testCase
-			if self.options.useLogNormal: self._outputDir += '_RMS_%3.1f' % float(self.options.relRMS)
-			if self.options.outputTag:    self._outputDir += '_'+self.options.outputTag
+			if self.config.useMSIO:
+				self._outputDir += '_MSIO'
+			if self.config.useGevbInputEmulator:
+				self._outputDir += '_gevbIE'
+			if self.options.useLogNormal:
+				self._outputDir += '_RMS_%3.1f' % float(self.options.relRMS)
+			if self.options.outputTag:
+				self._outputDir += '_'+self.options.outputTag
 		if not self._outputDir.endswith('/'): self._outputDir += '/'
-		if self.options.verbose > 0: print separator
-		if self.options.verbose > 0: print 'Storing output in:', self._outputDir
+		if self.options.verbose > 0:
+			print separator
+			print 'Storing output in:', self._outputDir
 		if self.options.dry: return
 
 		## Create output directory
@@ -524,9 +579,12 @@ class daq2Control(object):
 			newdir = self._outputDir + 'previous/' + time.strftime('%b%d-%H%M%S')
 			os.makedirs(newdir)
 			if len(glob.glob(self._outputDir+'*.csv')) > 0:
-				subprocess.check_call(['mv'] + glob.glob(self._outputDir+'*.csv') + [newdir])
+				subprocess.check_call(['mv'] +
+					                  glob.glob(self._outputDir+'*.csv') +
+					                  [newdir])
 			if os.path.exists(self._outputDir+'infospaces'):
-				subprocess.check_call(['mv', self._outputDir+'infospaces', newdir])
+				subprocess.check_call(['mv', self._outputDir+'infospaces',
+					                   newdir])
 
 		if self.options.storeInfoSpaces:
 			try:
@@ -651,6 +709,42 @@ class daq2Control(object):
 				if self.config.useEvB or self.options.useLogNormal: utils.sendSimpleCmdToApp(efrl.host, efrl.port, 'evb::test::DummyFEROL', n, 'Enable')
 				else:                                               utils.sendSimpleCmdToApp(efrl.host, efrl.port, 'Client',                n, 'start')
 			return
+
+		## In case of mstreamio configurations:
+		elif self.config.useMSIO:
+			for n,ru in enumerate(self.config.RUs):
+				utils.setParam(ru.host, ru.port, 'Client', str(n),
+					           'currentSize', 'unsignedLong',
+					           fragSize,
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+			for n,bu in enumerate(self.config.BUs):
+				utils.setParam(bu.host, bu.port, 'Server', str(n),
+					           'currentSize', 'unsignedLong',
+					           fragSize,
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+
+		## In case of gevb2g InputEmulator configurations:
+		elif self.config.useGevbInputEmulator:
+			for n,ru in enumerate(self.config.RUs):
+				utils.setParam(ru.host, ru.port, 'gevb2g::InputEmulator',
+					           str(n), 'Mean', 'unsignedLong',
+					           fragSize,
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+				utils.setParam(ru.host, ru.port, 'gevb2g::InputEmulator',
+					           str(n), 'StdDev', 'unsignedLong',
+					           int(fragSizeRMS),
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+			for n,bu in enumerate(self.config.BUs):
+				utils.setParam(bu.host, bu.port, 'gevb2g::BU', str(n),
+					           'currentSize', 'unsignedLong',
+					           fragSize,
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## --stopRestart option or eFEROLs: stop everything, set new size, start again
 		if (hasattr(self.options, 'stopRestart') and self.options.stopRestart) or len(self.config.eFEROLs) > 0:
@@ -789,14 +883,29 @@ class daq2Control(object):
 			printError("getResultsEvB() only works when running with the EvB, try getResults()",
 				       instance=self)
 			return
+	def downloadMeasurements(self, url, target):
+		if self.options.dry:
+			print 'curl -o', target, url
+			return
+		subprocess.check_call(['curl', '-o', target, url])
 	def getResults(self):
 		"""Download results for each BU, concatenate them, and store them in server.csv. Only works for the gevb2g!"""
 		if self.options.dry: return
+
 		if not self.config.useEvB:
 			outputfiles = []
 			for n,h in enumerate(self.config.BUs):
 				outputfile = '%s/server%d.csv' % (self._outputDir, n)
-				utils.downloadMeasurements(h.host, h.port, self.config.namespace+'BU', n, outputfile) ## need namespace here? this only works for gevb2g anyway
+
+				if not self.config.useMSIO:
+					url = 'http://%s:%d/urn:xdaq-application:class=%s,instance=%d/downloadMeasurements'
+					url = url % (h.host, int(h.port), 'gevb2g::BU', int(n))
+
+				else:
+					url = 'http://%s:%d/urn:xdaq-application:lid=%d/downloadMeasurements'
+					url = url % (h.host, int(h.port), 11) ## TODO: Extract lid from somewhere?
+
+				self.downloadMeasurements(url, outputfile)
 				outputfiles.append(outputfile)
 
 			## Concatenate output files

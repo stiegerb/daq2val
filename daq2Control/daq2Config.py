@@ -117,6 +117,8 @@ class daq2Config(object):
 
 		self.contexts = self.ETroot.getiterator(str(QN(self.xcns,'Context')))
 
+		self.useMSIO = False
+		self.useGevbInputEmulator = False
 		self.readXDAQConfigTemplate(configFile)
 		self.useGTPe = False
 		if len(self.GTPe) > 0:
@@ -126,8 +128,14 @@ class daq2Config(object):
 		if self.verbose>1: self.printHosts()
 
 	def setTestCase(self):
-		if len(self.FEROLs) > 0: config = '%ds%dfx%dx%d' % (self.nStreams, len(self.FEROLs), len(self.RUs), len(self.BUs))
-		else              : config = '%dx%dx%d'     % (len(self.eFEROLs), len(self.RUs), len(self.BUs))
+		if len(self.FEROLs) > 0:
+			config = '%ds%dfx%dx%d' % (self.nStreams, len(self.FEROLs),
+				                       len(self.RUs), len(self.BUs))
+		elif self.useMSIO or self.useGevbInputEmulator:
+			config = '%dx%d' % (len(self.RUs), len(self.BUs))
+		else:
+			config = '%dx%dx%d' % (len(self.eFEROLs), len(self.RUs),
+				                   len(self.BUs))
 		self.testCase = config
 
 
@@ -147,6 +155,7 @@ class daq2Config(object):
 		separator = 70*'-'
 		out.write(prepend+separator+'\n')
 		builder = 'EvB' if self.useEvB else 'gevb2g'
+		if self.useMSIO: builder = 'mstreamio'
 		ptprotocol = 'IBV' if self.useIBV else 'UDAPL'
 		out.write('%s%s configuration with %s/%s\n' % (prepend, self.testCase, builder,ptprotocol))
 		out.write(prepend+separator+'\n')
@@ -225,11 +234,19 @@ class daq2Config(object):
 			if 'gevb2g::' in i2o_protocol[0].attrib['class']: ## there is something with a gevb2g tag
 				if self.verbose > 2 : print "Found a gevb2g configuration"
 				self.useEvB = False
+				self.useMSIO = False
 				self.namespace = 'gevb2g::'
 			elif 'evb::' in i2o_protocol[0].attrib['class']: ## there is something with a evb tag
 				if self.verbose > 2 : print "Found an EvB configuration"
 				self.useEvB = True
+				self.useMSIO = False
 				self.namespace = 'evb::'
+			elif ('Client' in i2o_protocol[0].attrib['class'] or
+			      'Server' in i20_protocol[0].attrib['class']):
+				if self.verbose > 2 : print "Found an mstreamio configuration"
+				self.useEvB = False
+				self.useMSIO = True
+				self.namespace = 'gevb2g::'
 			else:
 				raise RuntimeError("Couldn't determine EvB/gevb2g case!")
 		except TypeError:
@@ -257,6 +274,7 @@ class daq2Config(object):
 					ho.applications.append((classname, instance))
 
 				## For RU, check whether IVB or UDAPL (only do it once)
+				## and whether there is an InputEmulator
 				if h == 'RU' and checked_ibv == False:
 					self.useIBV = False
 					for app in apps:
@@ -267,6 +285,11 @@ class daq2Config(object):
 						if app.attrib['class'] == 'pt::udapl::Application':
 							self.useIBV = False ## Found UDAPL configuration
 							if self.verbose > 2 : print "Found UDAPL peer transport protocol"
+							break
+					for app in apps:
+						if app.attrib['class'] == 'gevb2g::InputEmulator':
+							self.useGevbInputEmulator = True
+							if self.verbose > 2 : print "Found gevb2g InputEmulator"
 							break
 					checked_ibv = True
 
