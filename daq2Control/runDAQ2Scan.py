@@ -201,7 +201,8 @@ if __name__ == "__main__":
 	"""
 	parser = OptionParser(usage=usage)
 	addOptions(parser)
-
+	addScanningOptions(parser)
+	
 	(options, args) = parser.parse_args()
 
 	if not runScan(options, args):
