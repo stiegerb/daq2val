@@ -17,8 +17,8 @@
 			<autoConnect xsi:type="xsd:boolean">false</autoConnect>
 			<!-- Copy worker configuration -->
 			<i2oFragmentBlockSize xsi:type="xsd:unsignedInt">65536</i2oFragmentBlockSize>
-			<i2oFragmentsNo xsi:type="xsd:unsignedInt">14</i2oFragmentsNo>
-			<i2oFragmentPoolSize xsi:type="xsd:unsignedInt">700000</i2oFragmentPoolSize>
+			<i2oFragmentsNo xsi:type="xsd:unsignedInt">128</i2oFragmentsNo>
+			<i2oFragmentPoolSize xsi:type="xsd:unsignedInt">10000000</i2oFragmentPoolSize>
 			<copyWorkerQueueSize xsi:type="xsd:unsignedInt">14</copyWorkerQueueSize>
 			<copyWorkersNo xsi:type="xsd:unsignedInt">2</copyWorkersNo>
 			<!-- Super fragment configuration -->

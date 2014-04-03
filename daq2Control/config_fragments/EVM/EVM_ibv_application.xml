@@ -3,7 +3,7 @@
 		<iaName xsi:type="xsd:string">mlx4_0</iaName>
 		<sendPoolName xsi:type="xsd:string">sudapl</sendPoolName>
 		<recvPoolName xsi:type="xsd:string">rudapl</recvPoolName>
-		<receiverPoolSize xsi:type="xsd:unsignedInt">0x10000000</receiverPoolSize>
+		<receiverPoolSize xsi:type="xsd:unsignedInt">0x40000000</receiverPoolSize>
 		<senderPoolSize xsi:type="xsd:unsignedInt">0x4000000</senderPoolSize>
 		<completionQueueSize xsi:type="xsd:unsignedInt">1024</completionQueueSize>
 		<sendQueuePairSize xsi:type="xsd:unsignedInt">1024</sendQueuePairSize>
