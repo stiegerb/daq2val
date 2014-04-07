@@ -1,44 +1,60 @@
 #! /usr/bin/env python
 import sys, os
+import re
 
 months_toint = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
 months_tostr = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"}
 
 ##---------------------------------------------------------------------------------
 ## Utilities
-def checkMSIO(filename):
+def extractConfig(filename):
+	builder = ''
+	protocol = ''
+	config = ''
+	rms = None
 	with open(filename, 'r') as f:
-		if '#Server(0)' in f.readline():
-			return True
-		else: return False
-	return False
+		rms_regex = re.compile("## useLogNormal = (\w*), RMS =\s*([\d.]*)$")
+		config_regex = re.compile("## (\w*) configuration with (\w*)/(\w*)$")
+
+		for line in f:
+			r = rms_regex.match(line)
+			if r is not None:
+				rms = float(r.groups()[1])
+
+			r = config_regex.match(line)
+			if r is not None:
+				config, builder, protocol = r.groups()
+
+		if rms == None:
+			rms = 0.0
+
+	return config, builder, protocol, rms
 def getConfig(string):
-	"""Extract number of streams, readout units, builder units, and RMS from strings such as
-	8x1x2 or 16s8fx2x4_RMS_0.5 (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
+	"""Extract number of streams, readout units, builder units, and number of streams
+	per frl from strings such as 8x1x2 or 16s8fx2x4 (i.e 8,1,2,0 in the first case,
+	16,2,4,2 in the second)
 	"""
-	import re
 	string = string.split('_')
 	case = string[0].split('x')
-	rms = None
-	strperfrl = 1
-	pattern = re.compile(r'([0-9]+)s([0-9]+)f')
-	if pattern.match(case[0]):
-		nstreams = int(pattern.match(case[0]).group(1))
-		if nstreams > int(pattern.match(case[0]).group(2)): strperfrl = 2
+	nstreams = 0
+	strperfrl = 0
 
-	else: nstreams = int(case[0])
-	nrus = int(case[1]) ## Introduces notation: no _ before the trailing tags
-	nbus = int(case[2])
+	if len(case) == 2:
+		nstreams = 1
+		nrus = int(case[0])
+		nbus = int(case[1])
+	elif len(case) > 2:
+		strperfrl = 1
+		pattern = re.compile(r'([0-9]+)s([0-9]+)f')
+		if pattern.match(case[0]):
+			nstreams = int(pattern.match(case[0]).group(1))
+			if nstreams > int(pattern.match(case[0]).group(2)): strperfrl = 2
 
-	for i in xrange(len(string)):
-		if string[i] == 'RMS':
-			try:
-				rms = float(string[i+1])
-			except ValueError, StopIteration:
-				print 'RMS needs to be a floating point number'
-				rms = None
+		else: nstreams = int(case[0])
+		nrus = int(case[1]) ## Introduces notation: no _ before the trailing tags
+		nbus = int(case[2])
 
-	return nstreams, nrus, nbus, rms, strperfrl
+	return nstreams, nrus, nbus, strperfrl
 def extractDate(filename):
 	with open(filename, 'r') as f:
 		for line in f:
@@ -88,11 +104,14 @@ class daq2Plotter(object):
 		self.startfragsize = 256
 		self.makePNGs = True
 
-	def processFile(self, filename, config):
+	def processFile(self, filename):
 		from numpy import mean, std
 		from logNormalTest import averageFractionSize
 		f = open(filename,'r')
 		if not f: raise RuntimeError, "Cannot open "+filename+"\n"
+
+		config, builder, protocol, rms = extractConfig(filename)
+		nstreams, nrus, nbus, strperfrl = getConfig(config)
 
 		## Process .csv file first
 		data_dict = {} ## Store everything in this dictionary of size -> rate
@@ -100,9 +119,14 @@ class daq2Plotter(object):
 			if len(line.strip()) == 0 or line.strip()[0] == '#': continue
 
 			# Extract sizes and rate from line
-			header, body = line.split(':')
-			size, size_bu = tuple([int(_) for _ in header.split(',')])
-			if self.args.sizeFromBU: size = size_bu
+			if builder == 'mstreamio':
+				line = line.split(',',1)
+				size = int(line[0])
+				body = line[1]
+			else:
+				header, body = line.split(':')
+				size, size_bu = tuple([int(_) for _ in header.split(',')])
+				if self.args.sizeFromBU: size = size_bu
 			rate = [int(float(_)) for _ in body.split(',')]
 
 			if size not in data_dict.keys(): ## First time seeing this size
@@ -118,17 +142,14 @@ class daq2Plotter(object):
 				## Add to the previous samples
 				data_dict[size] = map(lambda a,b:a+b, prev_rate, rate)
 
-		nstreams, nrus, nbus, rms, strperfrl = config
-
-		## If first line in file is "#Server(0)", divide the rates by the number of BUs
-		if checkMSIO(filename):
+		# In case of mstreamio, divide the rates by the number of BUs
+		if builder == 'mstreamio':
 			for size in data_dict.keys():
 				newrate = [a/nbus for a in data_dict[size]]
 				data_dict[size] = newrate
 
 			## IGNORE number of RUs now:
 			nrus = 1
-
 
 		# LOWERLIMIT=32
 		LOWERLIMIT=24
@@ -146,7 +167,9 @@ class daq2Plotter(object):
 		checked = False
 
 		for size in sorted(data_dict.keys()):
-			if abs(mean(data_dict[size])) < 0.01 and abs(std(data_dict[size])) < 0.01: continue ## skip empty lines
+			if (abs(mean(data_dict[size])) < 0.01 and
+			    abs(std(data_dict[size])) < 0.01):
+			    continue ## skip empty lines
 
 			## Determine what the first item in the server.csv file stands for
 			if not checked: ## only do this for the first time
@@ -164,8 +187,12 @@ class daq2Plotter(object):
 				eventsize = float(size)
 
 			## Calculate fragment and super fragment sizes
-			fragsize    = eventsize/nstreams
-			sufragsize  = eventsize/nrus
+			if builder == 'mstreamio':
+				fragsize    = eventsize
+				sufragsize  = eventsize
+			else:
+				fragsize    = eventsize/nstreams
+				sufragsize  = eventsize/nrus
 			if not self.args.sizeFromBU and rms is not None and rms != 0.0:
 				fragsize = averageFractionSize(eventsize/nstreams, rms*eventsize/nstreams, LOWERLIMIT, UPPERLIMIT)
 				sufragsize = fragsize*nstreams/nrus
@@ -189,23 +216,26 @@ class daq2Plotter(object):
 		for filename in self.filelist:
 			self.printTable(filename)
 	def printTable(self, filename):
-		casestring = os.path.dirname(filename).split('/')[-1]
-		config = getConfig(casestring)
-		nstreams, nrus, nbus, rms, strperfrl = config
-		data = self.processFile(filename, config)
+		config, builder, protocol, rms = extractConfig(filename)
+		nstreams, nrus, nbus, strperfrl = getConfig(config)
+		data = self.processFile(filename)
 		print "--------------------------------------------------------------------------------------"
-		print "Case: " + casestring
+		print "Case: %s (%s/%s, RMS=%4.2f)" % (config, builder, protocol, rms)
 		print "--------------------------------------------------------------------------------------"
 		print "Superfrag. Size (B) : Fragment Size (B) : Av. Throughput (MB/s) :       Av. Rate     :"
 		print "--------------------------------------------------------------------------------------"
 		for	fragsize,tp,tpE in data:
-			sufragsize = fragsize*nstreams/nrus
-			print "             %6d :            %6d :      %6.1f +- %6.1f :  %8.1f +- %6.1f" % \
-			(sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize)
+			if builder == 'mstreamio':
+				sufragsize = fragsize
+			else:
+				sufragsize = fragsize*nstreams/nrus
+			print ("             %6d :            %6d :      %6.1f +- %6.1f :  %8.1f +- %6.1f" %
+			       (sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize))
 
 		print "--------------------------------------------------------------------------------------"
 	def makeMultiPlot(self):
-		from ROOT import gROOT, gStyle, TFile, TTree, gDirectory, TGraphErrors, TCanvas, TLegend, TH2D, TLatex, TPave
+		from ROOT import gROOT, gStyle, TFile, TTree, gDirectory
+		from ROOT import TGraphErrors, TCanvas, TLegend, TH2D, TLatex, TPave
 		from operator import itemgetter
 
 		rangey=(self.args.miny, self.args.maxy)
@@ -213,7 +243,8 @@ class daq2Plotter(object):
 
 		## Build caselist
 		caselist = []
-		for filename in self.filelist: caselist.append(os.path.dirname(filename).split('/')[-1])
+		for filename in self.filelist:
+			caselist.append(os.path.dirname(filename).split('/')[-1])
 
 		gROOT.SetBatch()
 		gStyle.SetOptStat(0)
@@ -265,41 +296,19 @@ class daq2Plotter(object):
 			tl.SetTextSize(0.035)
 			tl.DrawLatex(0.145, 0.77, self.args.subtag)
 
-
-		# if len(self.args.tag) > 0:
-		# 	width = 0.019*len(self.args.tag)
-		# 	print width
-		# 	pave = TPaveText(0.12, 0.80, 0.12+width, 0.899, 'NDC')
-		# 	pave.SetTextFont(42)
-		# 	pave.SetTextSize(0.05)
-		# 	pave.SetFillStyle(1001)
-		# 	pave.SetFillColor(0)
-		# 	pave.SetBorderSize(0)
-		# 	pave.SetTextAlign(11)
-		# 	pave.AddText(self.args.tag)
-		# 	pave.Draw()
-
-		# if len(self.args.subtag) > 0:
-		# 	width = 0.019*len(self.args.subtag)
-		# 	print width
-		# 	pave2 = TPaveText(0.12, 0.75, 0.12+width, 0.799, 'NDC')
-		# 	pave2.SetTextFont(42)
-		# 	pave2.SetTextSize(0.035)
-		# 	pave2.SetFillStyle(1001)
-		# 	pave2.SetFillColor(0)
-		# 	pave2.SetBorderSize(0)
-		# 	pave2.SetTextAlign(11)
-		# 	pave2.AddText(self.args.subtag)
-		# 	pave2.Draw()
-
 		graphs = []
 		configs = set()
 		for filename,case in zip(self.filelist,caselist):
 			try:
 				graphs.append(self.getGraph(filename))
-				nstreams, nrus, nbus, rms, strperfrl = getConfig(case)
-				if checkMSIO(filename): nrus = 1 ## ignore number of RUs if MSIO
-				configs.add(nstreams//nrus) ## care only about Nstreams per RU
+
+				config, builder, protocol, rms = extractConfig(filename)
+				nstreams, nrus, nbus, strperfrl = getConfig(config)
+
+				if builder == 'mstreamio':
+					nrus = 1 ## ignore number of RUs if MSIO
+				else:
+					configs.add(nstreams//nrus) ## care only about Nstreams per RU
 			except AttributeError:
 				print "#### Couldn't get graph for ", case, "in file", filename
 				return
@@ -357,17 +366,15 @@ class daq2Plotter(object):
 
 		leg.Draw()
 
-		for graph in graphs: graph.Draw("PL")
+		for graph in graphs:
+			graph.Draw("PL")
 
 		canv.Print(oname + '.pdf')
-		if self.makePNGs:  canv.Print(oname + '.png')
+		# if self.makePNGs:  canv.Print(oname + '.png')
 		# if self.makePNGs:  canv.Print(oname + '.png')
 		# if self.args.makeCFile: canv.SaveAs(oname + '.C')
 	def getGraph(self, filename):
-		casestring = os.path.dirname(filename).split('/')[-1]
-		config = getConfig(casestring)
-		nstreams, nrus, nbus, rms, strperfrl = config
-		data = self.processFile(filename, config)
+		data = self.processFile(filename)
 
 		from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 		from array import array
