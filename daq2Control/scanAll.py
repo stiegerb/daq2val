@@ -24,6 +24,10 @@ Default output directory is 'output/' at location of the first config file
 	parser = OptionParser(usage=usage)
 	addOptions(parser)
 	addScanningOptions(parser)
+	parser.add_option("--nonInteractive", default=False, action="store_true",
+		              dest="nonInteractive",
+		              help=("Don't ask for confirmation before scanning, "
+		              		"instead just wait 10 s."))
 	(options, args) = parser.parse_args()
 
 	list_of_configs = []
@@ -50,7 +54,10 @@ Default output directory is 'output/' at location of the first config file
 	for config_file in list_of_configs:
 		print config_file
 
-	raw_input("Press Enter to continue...")
+	if not options.nonInteractive:
+		raw_input("Press Enter to continue...")
+	else:
+		sleep(10)
 
 	for config_file in list_of_configs:
 		newargs = [config_file]
