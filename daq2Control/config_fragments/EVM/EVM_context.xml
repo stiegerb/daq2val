@@ -16,5 +16,4 @@
 	</xc:Application>
 	<xc:Module>$XDAQ_ROOT/lib/libgevb2g.so</xc:Module>
 	<xc:Module>$XDAQ_ROOT/lib/libtcpla.so</xc:Module>
-    <xc:Module>/usr/lib64/libdat2.so</xc:Module>
 </xc:Context>
