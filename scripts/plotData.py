@@ -145,10 +145,11 @@ class daq2Plotter(object):
 		# In case of mstreamio, divide the rates by the number of RUs
 		# (But don't do this for the case of nx1, want to plot throughput
 		#  per BU in that case.)
-		if builder == 'mstreamio' and nbus>1:
-			for size in data_dict.keys():
-				newrate = [a/nrus for a in data_dict[size]]
-				data_dict[size] = newrate
+		if builder == 'mstreamio':
+			if nbus>1:
+				for size in data_dict.keys():
+					newrate = [a/nrus for a in data_dict[size]]
+					data_dict[size] = newrate
 
 			## IGNORE number of RUs now:
 			nrus = 1
