@@ -495,6 +495,12 @@ class daq2Configurator(object):
 				item_to_add.text = str(fed)
 				fedSourceIds.append(item_to_add)
 
+		## Add libdat2 module in case of udapl
+		if self.ptprot == 'udapl':
+			module = Element(QN(self.xdaqns, 'Module').text)
+			module.text = "/usr/lib64/libdat2.so"
+			ru_context.insert(8,module)
+
 		## Set instance and url
 		for app in ru_context.findall(QN(self.xdaqns, 'Endpoint').text):
 			if 'RU%d' in app.attrib['hostname']:
@@ -510,39 +516,45 @@ class daq2Configurator(object):
 	def makeEVM(self):
 		index = 0
 		fragmentname = 'EVM/EVM_context.xml'
-		evm_element = elementFromFile(self.fragmentdir+fragmentname)
+		evm_context = elementFromFile(self.fragmentdir+fragmentname)
 
 		## Add policy
-		addFragmentFromFile(target=evm_element,
+		addFragmentFromFile(target=evm_context,
 			                filename=self.fragmentdir+
 			                         '/EVM/EVM_policy_%s.xml'%(self.ptprot),
 			                index=0)
 		## Add builder network endpoint
-		evm_element.insert(3,Element(QN(self.xdaqns, 'Endpoint').text, {
+		evm_context.insert(3,Element(QN(self.xdaqns, 'Endpoint').text, {
 			               'protocol':'%s'%self.ptprot ,
 			               'service':"i2o",
 			               'hostname':'EVM%d_I2O_HOST_NAME'%(index),
 			               'port':'EVM%d_I2O_PORT'%(index),
 			               'network':'infini'}))
 		## Add builder network pt application
-		addFragmentFromFile(target=evm_element,
+		addFragmentFromFile(target=evm_context,
 		                    filename=self.fragmentdir+
 		                        '/EVM/EVM_%s_application.xml'%(self.ptprot),
 		                    index=4) ## add after the two endpoints
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
-		evm_element.insert(5,module)
+		evm_context.insert(5,module)
+
+		## Add libdat2 module in case of udapl
+		if self.ptprot == 'udapl':
+			module = Element(QN(self.xdaqns, 'Module').text)
+			module.text = "/usr/lib64/libdat2.so"
+			evm_context.insert(9,module)
 
 		## Set instance and url
-		for app in evm_element.findall(QN(self.xdaqns, 'Application').text):
+		for app in evm_context.findall(QN(self.xdaqns, 'Application').text):
 			if app.attrib['class'] != "%s::EVM"%self.evbns: continue
 			app.set('instance', str(index))
 			break
 
-		evm_element.set('url', evm_element.get('url')%(index, index))
+		evm_context.set('url', evm_context.get('url')%(index, index))
 
-		return evm_element
+		return evm_context
 	def addEVM(self):
 		self.config.append(self.makeEVM())
 
@@ -592,6 +604,12 @@ class daq2Configurator(object):
 			           self.evbns == 'evb' else
 			           "$XDAQ_ROOT/lib/libgevb2g.so")
 		bu_context.insert(8,module)
+
+		## Add libdat2 module in case of udapl
+		if self.ptprot == 'udapl':
+			module = Element(QN(self.xdaqns, 'Module').text)
+			module.text = "/usr/lib64/libdat2.so"
+			bu_context.insert(9,module)
 
 		return bu_context
 	def addBUs(self, nbus):

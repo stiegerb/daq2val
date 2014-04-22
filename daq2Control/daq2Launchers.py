@@ -45,15 +45,31 @@ def startXDAQLaunchers(logfile, symbolMap, options):
 if __name__ == "__main__":
 	from optparse import OptionParser
 	parser = OptionParser()
-	parser.add_option("--stop",   default=False, action="store_true", dest="stop",   help="Stop all the XDAQ launchers and exit")
-	parser.add_option("--start",  default=False, action="store_true", dest="start",  help="Start all the XDAQ launchers and exit")
-	parser.add_option("--status", default=False, action="store_true", dest="status", help="Get the status of all XDAQ launchers")
-	parser.add_option("-v", "--verbose", default=1, action="store", type='int',       dest="verbose",        help="Set the verbose level, [default: %default (semi-quiet)]")
-	parser.add_option("-l", "--logFile", default='launcherLog.txt', action="store",  type='string', dest="logFile", help="Store stdout and stderr output of XDAQ launchers in this file, [default: %default]")
+	parser.add_option("--stop", default=False, action="store_true",
+		              dest="stop",
+		              help="Stop all the XDAQ launchers and exit")
+	parser.add_option("--start", default=False, action="store_true",
+		              dest="start",
+		              help="Start all the XDAQ launchers and exit")
+	parser.add_option("--status", default=False, action="store_true",
+		              dest="status",
+		              help="Get the status of all XDAQ launchers")
+	parser.add_option("-v", "--verbose", default=1, action="store",
+		              type='int', dest="verbose",
+		              help=("Set the verbose level, "
+		              	    "[default: %default (semi-quiet)]"))
+	parser.add_option("-l", "--logFile", default='launcherLog.txt',
+		              action="store", type='string', dest="logFile",
+		              help=("Store stdout and stderr output of XDAQ "
+		              	    "launchers in this file, [default: %default]"))
+	parser.add_option("-m", "--symbolMap", default='',
+		              action="store", type='string', dest="symbolMap",
+		              help=("Use this symbolmap for controlling the "
+		              	    "launchers, [default: take from environment]"))
 
 	(options, args) = parser.parse_args()
 
-	sm = daq2SymbolMap()
+	sm = daq2SymbolMap(symbolMapFile=options.symbolMap)
 
 	if options.stop:
 		stopXDAQLaunchers(sm, options)
@@ -67,7 +83,8 @@ if __name__ == "__main__":
 			logfile.write(length*'#' + '\n')
 			logfile.write(length*'#' + '\n')
 			logfile.write('\n')
-			logfile.write('  Starting launchers at %s \n' % time.strftime('%a %b %d, %Y / %H:%M:%S'))
+			logfile.write('  Starting launchers at %s \n' %
+				            time.strftime('%a %b %d, %Y / %H:%M:%S'))
 			logfile.write('\n')
 			logfile.write(length*'#' + '\n')
 			logfile.write(length*'#' + '\n')

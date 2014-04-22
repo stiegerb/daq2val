@@ -7,11 +7,12 @@ from daq2Utils import testBuilding, SIZE_LIMIT_TABLE
 
 def getListOfSizes(maxSize, minSize=256, short=False, stepSize=256):
 	## multiples of stepsize up to 8192
-	allsteps = [ n*stepSize for n in xrange(1, 1000) if n*stepSize <= 8192]
-	allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
+	allsteps = [ n*stepSize for n in xrange(1, 1000) if n*stepSize <= maxSize]
+	# allsteps = [ n*stepSize for n in xrange(1, 1000) if n*stepSize <= 8192]
+	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
 	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360,
 	#              16384, 20480, 24576, 28672, 32500]
-	# if short: allsteps = [1024, 16000]
+
 	if short:
 		allsteps = [256, 512, 1024, 1535, 2048, 3072, 4096, 5120, 6144, 7168,
 		            8192, 12288, 14336, 16000, 20480, 24576, 28672, 32500]
@@ -20,11 +21,10 @@ def getListOfSizes(maxSize, minSize=256, short=False, stepSize=256):
 	for step in allsteps:
 		if step >= minSize and step <= maxSize: steps.append(step)
 
-	print ' Will scan over the following sizes:', steps
 	return steps
 
 def addScanningOptions(parser):
-	parser.add_option("--maxSize", default=32768, action="store", type="int",
+	parser.add_option("--maxSize", default=16000, action="store", type="int",
 		               dest="maxSize",
 		               help=("Maximum fragment size of a scan in bytes, "
 		               	     "[default: %default]"))
@@ -38,6 +38,10 @@ def addScanningOptions(parser):
 	parser.add_option("--short", default=False, action="store_true",
 		               dest="short",
 		               help=("Run a short scan with only a few points"))
+	parser.add_option("--setEventSize", default=False, action="store_true",
+		               dest="setEventSize",
+		               help=("Scanning steps are event sizes, not "
+		               	     "fragment sizes"))
 	parser.add_option("--stopRestart", default=False, action="store_true",
 		               dest="stopRestart",
 		               help=("Stop XDAQ processes after each step and "
@@ -79,6 +83,13 @@ def runScan(options, args):
 	                       short=options.short,
 	                       stepSize=options.stepSize)
 
+	# Divide by number of RUs if we want to scan event sizes
+	if options.setEventSize:
+		steps = [step/len(d2c.config.RUs) for step in steps]
+		print ' Will scan over the following event sizes:', steps
+	else:
+		print ' Will scan over the following fragment sizes:', steps
+
 	#####################################
 	## Check maxSize from table and merging case:
 	mergingby = d2c.config.nStreams//len(d2c.config.RUs)
@@ -92,8 +103,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 			              SIZE_LIMIT_TABLE[mergingby][1])
 		printWarningWithWait(message, waitfunc=sleep, waittime=2)
 
-	d2c.start(options.minSize,
-		      float(options.relRMS)*options.minSize,
+	d2c.start(steps[0], float(options.relRMS)*options.minSize,
 		      rate=options.useRate)
 
 	#####################################
@@ -202,7 +212,7 @@ if __name__ == "__main__":
 	parser = OptionParser(usage=usage)
 	addOptions(parser)
 	addScanningOptions(parser)
-	
+
 	(options, args) = parser.parse_args()
 
 	if not runScan(options, args):
