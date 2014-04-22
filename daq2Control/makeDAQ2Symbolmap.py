@@ -97,7 +97,7 @@ if __name__ == "__main__":
 		               default="2014-04-16-infiniband-ports.csv",
 		               action="store", type="string", dest="inventoryFile",
 		               help=("Inventory file [default: %default]"))
-	parser.add_option("--outFile", default="customSymbolmap.txt",
+	parser.add_option("-o", "--outFile", default="customSymbolmap.txt",
 		               action="store", type="string", dest="outFile",
 		               help=("Output file [default: %default]"))
 	parser.add_option("--nRUs", default=4,
@@ -117,18 +117,6 @@ if __name__ == "__main__":
 	switch_cabling, ru_inventory, bu_inventory, _ = getDAQ2Inventory(
 		                                              opt.inventoryFile)
 
-	## Take only from the ru machines
-	if opt.useOnlyRUs:
-		new_ru_inventory = {}
-		new_bu_inventory = {}
-		for n,switch in enumerate(ru_inventory):
-			if n<8:
-				new_ru_inventory[switch] = ru_inventory[switch]
-			else:
-				new_bu_inventory[switch] = ru_inventory[switch]
-		ru_inventory = new_ru_inventory
-		bu_inventory = new_bu_inventory
-
 	# pprint(switch_cabling)
 	# pprint(ru_inventory)
 	# pprint(bu_inventory)
@@ -144,14 +132,15 @@ if __name__ == "__main__":
 			RUs = getMachinesShuffled(ru_inventory)
 			BUs = getMachinesShuffled(bu_inventory)
 
-		for n,ru in enumerate(RUs):
-			if n == opt.nRUs: break
-			writeEntry(outfile, 'RU', ru, n)
+		for n in range(opt.nRUs):
+			writeEntry(outfile, 'RU', RUs.next(), n)
 		outfile.write('\n')
+		for n in range(opt.nBUs):
+			if not opt.useOnlyRUs:
+				writeEntry(outfile, 'BU', BUs.next(), n)
+			else:
+				writeEntry(outfile, 'BU', RUs.next(), n)
 
-		for n,bu in enumerate(BUs):
-			if n == opt.nBUs: break
-			writeEntry(outfile, 'BU', bu, n)
 		outfile.write('\n\n')
 
 	exit(0)
