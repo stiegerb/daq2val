@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 def stripTrailingZeros(filename, removeAlsoLeading=False, inPlace=False):
 	from subprocess import call
+	print '... processing', filename
 	if inPlace:
 		call(['cp', filename, filename.replace('.csv', '_original.csv')])
 	with open(filename, 'r') as f, open(filename.replace('.csv','_stripped.csv'), 'w') as o:
@@ -9,25 +10,27 @@ def stripTrailingZeros(filename, removeAlsoLeading=False, inPlace=False):
 				o.write(line)
 				continue
 			spline = line.strip('\n').split(',')
-			data = map(lambda x: int(float(x)), spline[1:])
-			o.write(spline[0])
-			o.write(',')
-			for x in reversed(data):
-				if x == 0: data.pop()
-				else: break # stop as soon as one isn't 0
-
-			# print data
-			if removeAlsoLeading:
-				data.reverse() # 0's now at the end, can use same code as above
+			if len(spline) > 1 and spline[1] != '':
+				data = map(lambda x: int(float(x)), spline[1:])
+				o.write(spline[0])
+				o.write(',')
 				for x in reversed(data):
 					if x == 0: data.pop()
-					else: break
-				data.reverse() # reverse back
+					else: break # stop as soon as one isn't 0
 
-			data = map(int, data)
-			newline = reduce(lambda x,y: str(x)+','+str(y), data) if len(data) > 0 else ''
-			o.write(newline)
-			o.write('\n')
+				# print data
+				if removeAlsoLeading:
+					data.reverse() # 0's now at the end, can use same code as above
+					for x in reversed(data):
+						if x == 0: data.pop()
+						else: break
+					data.reverse() # reverse back
+
+				data = map(int, data)
+				newline = ','.join([str(_) for _ in data])
+				# newline = reduce(lambda x,y: str(x)+','+str(y), data) if len(data) > 0 else ''
+				o.write(newline)
+				o.write('\n')
 		f.close()
 		o.close()
 	if inPlace:
@@ -49,7 +52,8 @@ if __name__ == "__main__":
 	(options, args) = parser.parse_args()
 
 	if len(args) > 0:
-		stripTrailingZeros(args[0], removeAlsoLeading=options.removeAlsoLeading, inPlace=options.inPlace)
+		for filename in args:
+			stripTrailingZeros(filename, removeAlsoLeading=options.removeAlsoLeading, inPlace=options.inPlace)
 		exit(0)
 
 	parser.print_help()

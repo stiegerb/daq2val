@@ -127,6 +127,10 @@ class daq2Plotter(object):
 				header, body = line.split(':')
 				size, size_bu = tuple([int(_) for _ in header.split(',')])
 				if self.args.sizeFromBU: size = size_bu
+
+			# Skip empty lines
+			if body == '\n': continue
+
 			rate = [int(float(_)) for _ in body.split(',')]
 
 			if size not in data_dict.keys(): ## First time seeing this size
@@ -177,10 +181,14 @@ class daq2Plotter(object):
 			## Determine what the first item in the server.csv file stands for
 			if not checked: ## only do this for the first time
 				checked = True
-				if   int(size)//self.startfragsize == 1:             output_case = 0 ## size = fragment size
-				elif int(size)//self.startfragsize == nstreams/nrus: output_case = 1 ## size = superfragment size
-				elif int(size)//self.startfragsize == nstreams:      output_case = 2 ## size = event size
-				else:                                           output_case = 1 ## default
+				if   int(size)//self.startfragsize == 1:
+					output_case = 0 ## size = fragment size
+				elif int(size)//self.startfragsize == nstreams/nrus:
+					output_case = 1 ## size = superfragment size
+				elif int(size)//self.startfragsize == nstreams:
+					output_case = 2 ## size = event size
+				else:
+				    output_case = 1 ## default
 
 			## Extract event size
 			eventsize = float(size)*nstreams ## default (output_case == 0)
@@ -247,6 +255,7 @@ class daq2Plotter(object):
 		## Build caselist
 		caselist = []
 		for filename in self.filelist:
+			print filename
 			caselist.append(os.path.dirname(filename).split('/')[-1])
 
 		gROOT.SetBatch()
@@ -266,11 +275,13 @@ class daq2Plotter(object):
 		## Cosmetics
 		# canv.DrawFrame(rangex[0], rangey[0], rangex[1], rangey[1])
 		axes = TH2D('axes', 'A', 100, rangex[0], rangex[1], 100, rangey[0], rangey[1])
-		axes.GetYaxis().SetTitle("Av. Throughput per RU (MB/s)")
+		titleX = args.titleX if len(args.titleX) else 'Fragment Size (bytes)'
+		titleY = args.titleY if len(args.titleY) else 'Av. Throughput per RU (MB/s)'
+		axes.GetYaxis().SetTitle(titleY)
 		axes.GetYaxis().SetTitleOffset(1.4)
 		axes.GetXaxis().SetTitleOffset(1.2)
 		axes.SetTitle("Throughput vs. Fragment Size")
-		axes.GetXaxis().SetTitle("Fragment Size (bytes)")
+		axes.GetXaxis().SetTitle(titleX)
 		axes.GetXaxis().SetMoreLogLabels()
 		axes.GetXaxis().SetNoExponent()
 		axes.Draw()
@@ -326,6 +337,8 @@ class daq2Plotter(object):
 		nlegentries = len(self.filelist)
 		# nlegentries = len(caselist) if not self.args.daq1 else len(caselist) + 1
 		legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
+		if builder == 'mstreamio':
+			legendpos = (0.13, 0.73, 0.27, 0.73-nlegentries*0.045)
 		# if self.args.legendPos == 'TL':
 		# 	legendpos = (0.12, 0.82-nlegentries*0.05, 0.579, 0.898)
 		# 	# legendpos = (0.12, 0.71-nlegentries*0.05, 0.579, 0.78)
@@ -336,10 +349,11 @@ class daq2Plotter(object):
 		leg.SetTextSize(0.033)
 		leg.SetBorderSize(0)
 
-		colors  = [1,2,3,4,51,95]
-		markers = [20,21,22,23,34,33]
+		colors  = [1,2,3,4,51,95,65]
+		markers = [20,21,22,23,34,33,29]
 
-		if len(self.args.legends) > 0 and len(self.args.legends) != len(self.filelist):
+		if (len(self.args.legends) > 0 and
+			len(self.args.legends) != len(self.filelist)):
 			print "Legends doesn't match with filelist, falling back to default"
 
 		for n,graph in enumerate(graphs):
@@ -348,7 +362,8 @@ class daq2Plotter(object):
 			graph.SetMarkerStyle(markers[n])
 
 			 ## Custom legends
-			if len(self.args.legends) == len(self.filelist) and len(self.args.legends)>0:
+			if (len(self.args.legends) == len(self.filelist) and
+			    len(self.args.legends)>0):
 				leg.AddEntry(graph, self.args.legends[n], 'P')
 			else: ## Default
 				leg.AddEntry(graph, caselist[n], 'P')
@@ -361,11 +376,13 @@ class daq2Plotter(object):
 
 		if not self.args.noRateLine:
 			for n,streams_per_ru in enumerate(configs):
-				func = getRateGraph(streams_per_ru, frag=True, rate=self.args.rate, xmax=rangex[1])
+				func = getRateGraph(streams_per_ru, frag=True,
+					                rate=self.args.rate, xmax=rangex[1])
 				func.SetLineColor(colors[n])
 				func.SetLineWidth(1)
 				func.DrawCopy("same")
-				leg.AddEntry(func, '%.0f kHz (%d streams)'% (self.args.rate, streams_per_ru), 'l')
+				leg.AddEntry(func, '%.0f kHz (%d streams)'%
+					                 (self.args.rate, streams_per_ru), 'l')
 
 		leg.Draw()
 
@@ -373,7 +390,7 @@ class daq2Plotter(object):
 			graph.Draw("PL")
 
 		canv.Print(oname + '.pdf')
-		# if self.makePNGs:  canv.Print(oname + '.png')
+		canv.Print(oname + '.png')
 		# if self.makePNGs:  canv.Print(oname + '.png')
 		# if self.args.makeCFile: canv.SaveAs(oname + '.C')
 	def getGraph(self, filename):
@@ -405,6 +422,10 @@ def addPlottingOptions(parser):
 		                dest="tag", help="Title tag in plot canvas")
 	parser.add_argument("-t2", "--subtag", default="", action="store", type=str,
 		                dest="subtag", help="Subtitle tag in plot canvas")
+	parser.add_argument("-xt", "--titleX", default="", action="store", type=str,
+		                dest="titleX", help="X axis title")
+	parser.add_argument("-yt", "--titleY", default="", action="store", type=str,
+		                dest="titleY", help="Y axis title")
 	parser.add_argument("--outdir", default="", action="store",  type=str,
 		                dest="outdir", help="Output directory for the plots")
 	parser.add_argument('--legend', default=[], action="append", type=str,
