@@ -42,9 +42,11 @@ def getDAQ2Inventory(filename):
 	or
 	switch,port
 
-	And returns a dictionary formatted like:
+	And returns dictionaries formatted like:
 	switch : {port: (peerDevice, peerPort)},
 	...
+
+	hostname : {(switch, port)}
 
 	Also return two dictionaries for RU's and BU's formatted like:
 	switch : [list of connected RU/BU machines]
@@ -132,14 +134,27 @@ if __name__ == "__main__":
 			RUs = getMachinesShuffled(ru_inventory)
 			BUs = getMachinesShuffled(bu_inventory)
 
-		for n in range(opt.nRUs):
-			writeEntry(outfile, 'RU', RUs.next(), n)
-		outfile.write('\n')
-		for n in range(opt.nBUs):
-			if not opt.useOnlyRUs:
-				writeEntry(outfile, 'BU', BUs.next(), n)
-			else:
-				writeEntry(outfile, 'BU', RUs.next(), n)
+		ru_counter, bu_counter = 0,0
+		try:
+			for n in range(opt.nRUs):
+				writeEntry(outfile, 'RU', RUs.next(), n)
+				ru_counter += 1
+			outfile.write('\n')
+		except StopIteration:
+			print ("Less than %d available RU's in inventory, found "
+			       "only %d." %(opt.nRUs, ru_counter))
+
+		try:
+			for n in range(opt.nBUs):
+				if not opt.useOnlyRUs:
+					writeEntry(outfile, 'BU', BUs.next(), n)
+					bu_counter += 1
+				else:
+					writeEntry(outfile, 'BU', RUs.next(), n)
+					bu_counter += 1
+		except StopIteration:
+			print ("Less than %d available BU's in inventory, found "
+			       "only %d." %(opt.nBUs, bu_counter))
 
 		outfile.write('\n\n')
 
