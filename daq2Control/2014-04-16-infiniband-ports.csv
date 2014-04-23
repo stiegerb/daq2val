@@ -230,7 +230,7 @@ sw-ib-c2f14-08-01,6,ru-c2e12-36-01
 sw-ib-c2f14-08-01,7,ru-c2e12-37-01
 sw-ib-c2f14-08-01,8,ru-c2e12-38-01
 sw-ib-c2f14-08-01,9,bu-c2f16-13-01
-sw-ib-c2f14-08-01,10,bu-c2e18-13-01
+sw-ib-c2f14-08-01,10,#bu-c2e18-13-01 ## in use by Marc and Andre (23/05)
 sw-ib-c2f14-08-01,11,bu-c2d38-11-01
 sw-ib-c2f14-08-01,12,bu-c2d41-11-01
 sw-ib-c2f14-08-01,13,bu-c2d38-21-01
