@@ -8,7 +8,7 @@
 		<currentSize xsi:type="xsd:unsignedLong">128</currentSize>
 		<MinFragmentSize xsi:type="xsd:unsignedLong">32</MinFragmentSize>
 		<MaxFragmentSize xsi:type="xsd:unsignedLong">262000</MaxFragmentSize>
-		<randomDestination xsi:type="xsd:boolean">true</randomDestination>
+		<randomDestination xsi:type="xsd:boolean">false</randomDestination>
 		<fixedSize xsi:type="xsd:boolean">true</fixedSize>
 		<createPool xsi:type="xsd:boolean">false</createPool>
 		<poolName xsi:type="xsd:string">sibv</poolName>
