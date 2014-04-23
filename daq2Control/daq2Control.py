@@ -345,8 +345,7 @@ class daq2Control(object):
 		if onlyPrepare: return
 
 		## Configure and enable:
-		if not self.config.useMSIO:
-			self.configure()
+		self.configure()
 		self.enable()
 	def stop(self):
 		if self.options.verbose > 0: print separator
@@ -385,6 +384,33 @@ class daq2Control(object):
 	def configure(self):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring"
+
+		## In case of gevb2g InputEmulator:
+		if self.config.useGevbInputEmulator:
+			# Configure InputEmulator application
+			for n,ru in enumerate(self.config.RUs):
+				utils.sendSimpleCmdToApp(ru.host, ru.port,
+					                     'gevb2g::InputEmulator', str(n),
+					                     'Configure',
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+			sleep(2, self.options.verbose, self.options.dry)
+			self.sendCmdToEVMRUBU('Configure')
+			return
+
+		## In case of mstreamio configurations:
+		if self.config.useMSIO:
+			if self.config.useIBV: ## Only do this for ibv!
+				for h in self.config.RUs: ## + self.config.BUs:
+				# for h in self.config.BUs:
+					print "Sending init to", h.name
+					utils.sendSimpleCmdToApp(h.host, h.port,
+						                     "pt::ibv::Application", 0,
+						                     "init",
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
+				sleep(2, self.options.verbose, self.options.dry)
+			return
 
 		## In case of eFED:
 		if len(self.config.eFEDs) > 0:
@@ -427,19 +453,6 @@ class daq2Control(object):
 					print "Sending init to", h.name
 					utils.sendSimpleCmdToApp(h.host, h.port, "pt::ibv::Application", 0, "init", verbose=self.options.verbose, dry=self.options.dry)
 				sleep(2, self.options.verbose, self.options.dry)
-			return
-
-		## In case of gevb2g InputEmulator:
-		if self.config.useGevbInputEmulator:
-			# Configure InputEmulator application
-			for n,ru in enumerate(self.config.RUs):
-				utils.sendSimpleCmdToApp(ru.host, ru.port,
-					                     'gevb2g::InputEmulator', str(n),
-					                     'Configure',
-					                     verbose=self.options.verbose,
-					                     dry=self.options.dry)
-			sleep(2, self.options.verbose, self.options.dry)
-			self.sendCmdToEVMRUBU('Configure')
 			return
 
 		printWarningWithWait("daq2Control::Configure ==> Doing nothing.", waittime=1, instance=self)
