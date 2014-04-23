@@ -186,7 +186,7 @@ if __name__ == "__main__":
 	######################
 	## --kill
 	if options.kill:
-		d2SM  = daq2SymbolMap()
+		d2SM  = daq2SymbolMap(options.symbolMap)
 		utils.stopXDAQs(d2SM, verbose=options.verbose, dry=options.dry)
 		exit(0)
 
