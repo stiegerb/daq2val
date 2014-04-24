@@ -119,7 +119,7 @@ class daq2Plotter(object):
 			if len(line.strip()) == 0 or line.strip()[0] == '#': continue
 
 			# Extract sizes and rate from line
-			if builder == 'mstreamio':
+			if strperfrl == 0:
 				line = line.split(',',1)
 				size = int(line[0])
 				body = line[1]
@@ -149,14 +149,15 @@ class daq2Plotter(object):
 		# In case of mstreamio, divide the rates by the number of RUs
 		# (But don't do this for the case of nx1, want to plot throughput
 		#  per BU in that case.)
-		if builder == 'mstreamio':
+		if strperfrl == 0:
 			if nbus>1:
 				for size in data_dict.keys():
 					newrate = [a/nrus for a in data_dict[size]]
 					data_dict[size] = newrate
 
 			## IGNORE number of RUs now:
-			nrus = 1
+			if builder == 'mstreamio':
+				nrus = 1
 
 		# LOWERLIMIT=32
 		LOWERLIMIT=24
@@ -198,9 +199,11 @@ class daq2Plotter(object):
 				eventsize = float(size)
 
 			## Calculate fragment and super fragment sizes
-			if builder == 'mstreamio':
+			if strperfrl == 0:
 				fragsize    = eventsize
 				sufragsize  = eventsize
+				if builder == 'gevb2g':
+					sufragsize = nrus*eventsize
 			else:
 				fragsize    = eventsize/nstreams
 				sufragsize  = eventsize/nrus
@@ -236,7 +239,7 @@ class daq2Plotter(object):
 		print "Superfrag. Size (B) : Fragment Size (B) : Av. Throughput (MB/s) :       Av. Rate     :"
 		print "--------------------------------------------------------------------------------------"
 		for	fragsize,tp,tpE in data:
-			if builder == 'mstreamio':
+			if strperfrl == 0:
 				sufragsize = fragsize
 			else:
 				sufragsize = fragsize*nstreams/nrus
@@ -255,7 +258,6 @@ class daq2Plotter(object):
 		## Build caselist
 		caselist = []
 		for filename in self.filelist:
-			print filename
 			caselist.append(os.path.dirname(filename).split('/')[-1])
 
 		gROOT.SetBatch()
@@ -275,12 +277,13 @@ class daq2Plotter(object):
 		## Cosmetics
 		# canv.DrawFrame(rangex[0], rangey[0], rangex[1], rangey[1])
 		axes = TH2D('axes', 'A', 100, rangex[0], rangex[1], 100, rangey[0], rangey[1])
+		title = args.title if len(args.title) else 'Throughput vs. Fragment Size'
 		titleX = args.titleX if len(args.titleX) else 'Fragment Size (bytes)'
 		titleY = args.titleY if len(args.titleY) else 'Av. Throughput per RU (MB/s)'
 		axes.GetYaxis().SetTitle(titleY)
 		axes.GetYaxis().SetTitleOffset(1.4)
 		axes.GetXaxis().SetTitleOffset(1.2)
-		axes.SetTitle("Throughput vs. Fragment Size")
+		axes.SetTitle(title)
 		axes.GetXaxis().SetTitle(titleX)
 		axes.GetXaxis().SetMoreLogLabels()
 		axes.GetXaxis().SetNoExponent()
@@ -319,8 +322,9 @@ class daq2Plotter(object):
 				config, builder, protocol, rms = extractConfig(filename)
 				nstreams, nrus, nbus, strperfrl = getConfig(config)
 
-				if builder == 'mstreamio':
+				if strperfrl == 0:
 					nrus = 1 ## ignore number of RUs if MSIO
+					configs.add(nrus)
 				else:
 					configs.add(nstreams//nrus) ## care only about Nstreams per RU
 			except AttributeError:
@@ -337,7 +341,7 @@ class daq2Plotter(object):
 		nlegentries = len(self.filelist)
 		# nlegentries = len(caselist) if not self.args.daq1 else len(caselist) + 1
 		legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
-		if builder == 'mstreamio':
+		if strperfrl == 0:
 			legendpos = (0.13, 0.73, 0.27, 0.73-nlegentries*0.045)
 		# if self.args.legendPos == 'TL':
 		# 	legendpos = (0.12, 0.82-nlegentries*0.05, 0.579, 0.898)
@@ -381,8 +385,11 @@ class daq2Plotter(object):
 				func.SetLineColor(colors[n])
 				func.SetLineWidth(1)
 				func.DrawCopy("same")
-				leg.AddEntry(func, '%.0f kHz (%d streams)'%
-					                 (self.args.rate, streams_per_ru), 'l')
+				if not strperfrl == 0:
+					leg.AddEntry(func, '%.0f kHz (%d streams)'%
+						                 (self.args.rate, streams_per_ru), 'l')
+				else:
+					leg.AddEntry(func, '%.0f kHz'% (self.args.rate), 'l')
 
 		leg.Draw()
 
@@ -422,6 +429,8 @@ def addPlottingOptions(parser):
 		                dest="tag", help="Title tag in plot canvas")
 	parser.add_argument("-t2", "--subtag", default="", action="store", type=str,
 		                dest="subtag", help="Subtitle tag in plot canvas")
+	parser.add_argument("-tt", "--title", default="", action="store", type=str,
+		                dest="title", help="Canvas title")
 	parser.add_argument("-xt", "--titleX", default="", action="store", type=str,
 		                dest="titleX", help="X axis title")
 	parser.add_argument("-yt", "--titleY", default="", action="store", type=str,
