@@ -3,12 +3,13 @@
 	<pol:element pattern="urn:toolbox-task-workloop:http-(.+)/waiting" package="numa" type="thread" mempolicy="onnode" memnode="0" cpunodes="0"/>
 	<pol:element pattern="urn:toolbox-task-workloop:xrelay/waiting" type="thread" package="numa" mempolicy="onnode" memnode="0" cpunodes="0"/>
 	<pol:element pattern="urn:toolbox-task-workloop:fifo/PeerTransport/waiting" type="thread" package="numa" mempolicy="onnode" memnode="0" cpunodes="0"/>
- -->	<pol:element pattern="urn:toolbox-task-workloop:mstreamio2g-(.+)/waiting" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="0"/>
-	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="2"/>
-	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="6"/>
-	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::eventworkloop/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="8"/>
-	<pol:element pattern="urn:toolbox-mem-allocator-ibv-receiver-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="0"/>
-	<pol:element pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="0"/>
-	<pol:element pattern="urn:toolbox-mem-allocator:CommittedHeapAllocator" type="alloc" package="numa" mempolicy="onnode" node="0"/>
-	<pol:element pattern="urn:undefined:alloc" type="alloc" package="numa" mempolicy="onnode" node="0"/>
+ -->	<pol:element pattern="urn:toolbox-task-workloop:mstreamio2g-(.+)/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="0"/>
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="2"/>
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="6"/>
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::eventworkloop/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="8"/>
+	<pol:element pattern="urn:toolbox-mem-allocator-ibv-receiver-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1"/>
+	<pol:element pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1"/>
+	<pol:element pattern="urn:toolbox-mem-allocator:CommittedHeapAllocator" type="alloc" package="numa" mempolicy="onnode" node="1"/>
+	<pol:element pattern="urn:undefined:alloc" type="alloc" package="numa" mempolicy="onnode" node="1"/>
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::relayworkloop" type="thread" affinity="10" memnode="1" mempolicy="onnode" package="numa"/>
 </pol:policy>

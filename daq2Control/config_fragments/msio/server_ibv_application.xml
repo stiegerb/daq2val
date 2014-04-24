@@ -5,10 +5,12 @@
 		<recvPoolName xsi:type="xsd:string">ribv</recvPoolName>
 		<receiverPoolSize xsi:type="xsd:unsignedInt">0x20000000</receiverPoolSize>
 		<senderPoolSize xsi:type="xsd:unsignedInt">0x2000000</senderPoolSize>
-		<completionQueueSize xsi:type="xsd:unsignedInt">8192</completionQueueSize>
+		<completionQueueSize xsi:type="xsd:unsignedInt">1024</completionQueueSize>
 		<sendQueuePairSize xsi:type="xsd:unsignedInt">64</sendQueuePairSize>
 		<recvQueuePairSize xsi:type="xsd:unsignedInt">128</recvQueuePairSize>
-		<maxMessageSize xsi:type="xsd:unsignedInt">262144</maxMessageSize>
+		<maxMessageSize xsi:type="xsd:unsignedInt">65536</maxMessageSize>
 		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
+        <sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout>
+        <useRelay xsi:type="xsd:boolean">false</useRelay>
 	</properties>
 </xc:Application>
