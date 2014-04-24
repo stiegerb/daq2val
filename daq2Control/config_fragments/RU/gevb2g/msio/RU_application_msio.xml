@@ -4,7 +4,7 @@
 		<inputDataFifoSize xsi:type="xsd:unsignedLong">150000</inputDataFifoSize>
 		<maxDataFrameSize xsi:type="xsd:unsignedLong">262144</maxDataFrameSize>
 		<frameSendCounter xsi:type="xsd:unsignedLong">0</frameSendCounter>
-		<preAllocateDAPL xsi:type="xsd:unsignedLong">0</preAllocateDAPL>
+		<preAllocateDAPL xsi:type="xsd:unsignedLong">220</preAllocateDAPL>
 		<createPool xsi:type="xsd:boolean">false</createPool>
 		<poolName xsi:type="xsd:string">sibv</poolName>
 	</properties>

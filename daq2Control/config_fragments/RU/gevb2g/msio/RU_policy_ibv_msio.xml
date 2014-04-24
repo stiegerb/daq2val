@@ -3,11 +3,11 @@
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::eventworkloop/polling" package="numa" type="thread" mempolicy="onnode" memnode="1" cpunodes="1"/>
 	<pol:element pattern="urn:toolbox-task-workloop:http-(.+)/waiting" package="numa" type="thread" mempolicy="onnode" memnode="1" cpunodes="1"/>
 	<pol:element pattern="urn:toolbox-task-workloop:fifo/PeerTransport/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="14"/>
-	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="10"/>
-	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="12"/>
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="2"/>
+	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="4"/>
 	<pol:element pattern="urn:toolbox-mem-allocator:CommittedHeapAllocator" type="alloc" package="numa" mempolicy="onnode" node="1"/>
-	<pol:element pattern="gevb2g-ru-loop-(.+)" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="13"/>
-	<pol:element pattern="urn:toolbox-task-workloop:gevb2g-InputEmulator-0/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="9"/>
+	<pol:element pattern="gevb2g-ru-loop-(.+)" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="0"/>
+	<pol:element pattern="urn:toolbox-task-workloop:gevb2g-InputEmulator-0/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="8"/>
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-receiver-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1"/>
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1"/>
 	<pol:element pattern="urn:gevb2g-RU-rlist-inputdataFIFO:alloc" type="alloc" package="numa" mempolicy="onnode" node="1"/>
