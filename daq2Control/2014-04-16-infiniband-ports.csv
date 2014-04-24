@@ -184,14 +184,14 @@ sw-ib-c2f14-10-01,34,sw-ib-c2f15-19-01,20
 sw-ib-c2f14-10-01,35,sw-ib-c2f15-19-01,22
 sw-ib-c2f14-10-01,36,sw-ib-c2f15-19-01,24
 
-sw-ib-c2f14-40-01,1,ru-c2e15-10-01
-sw-ib-c2f14-40-01,2,ru-c2e15-11-01
-sw-ib-c2f14-40-01,3,ru-c2e15-12-01
-sw-ib-c2f14-40-01,4,ru-c2e15-13-01
-sw-ib-c2f14-40-01,5,ru-c2e15-14-01
-sw-ib-c2f14-40-01,6,ru-c2e15-15-01
-sw-ib-c2f14-40-01,7,ru-c2e15-16-01
-sw-ib-c2f14-40-01,8,ru-c2e15-17-01
+sw-ib-c2f14-40-01,1,# ru-c2e15-10-01 # used for gevb2g run
+sw-ib-c2f14-40-01,2,# ru-c2e15-11-01 # used for gevb2g run
+sw-ib-c2f14-40-01,3,# ru-c2e15-12-01 # used for gevb2g run
+sw-ib-c2f14-40-01,4,# ru-c2e15-13-01 # used for gevb2g run
+sw-ib-c2f14-40-01,5,# ru-c2e15-14-01 # used for gevb2g run
+sw-ib-c2f14-40-01,6,# ru-c2e15-15-01 # used for gevb2g run
+sw-ib-c2f14-40-01,7,# ru-c2e15-16-01 # used for gevb2g run
+sw-ib-c2f14-40-01,8,# ru-c2e15-17-01 # used for gevb2g run
 sw-ib-c2f14-40-01,9,bu-c2f16-35-01
 sw-ib-c2f14-40-01,10,bu-c2e18-35-01
 sw-ib-c2f14-40-01,11,bu-c2d38-31-01
