@@ -3,7 +3,6 @@ from makeDAQ2Symbolmap import getDAQ2Inventory
 from daq2SymbolMap import daq2SymbolMap
 from pprint import pprint
 
-
 if __name__ == "__main__":
 	from optparse import OptionParser
 	usage = """"""
@@ -20,7 +19,8 @@ if __name__ == "__main__":
 	for key in sorted(sm.keys()):
 		if not 'SOAP_HOST_NAME' in key: continue
 		tag = key.split('_',1)[0]
-		print tag, sm(key), host_cabling[sm(key).strip('.cms')]
+		switchname,port = host_cabling[sm(key).strip('.cms')]
+		print "%5s, %18s, %17s, %2d" % (tag,  sm(key), switchname, port)
 
 
 	exit(0)

@@ -6,13 +6,18 @@ HEADER = ("LAUNCHER_BASE_PORT 17777\n"
           "I2O_BASE_PORT 54320\n"
           "FRL_BASE_PORT 55320\n")
 
-def getMachines(inventory):
+def getMachines(inventory,splitBy=12):
 	"""
 	First take all machines from one switch, then move to the next
 	"""
+	counter = 0
 	for switch in inventory.keys():
 		for device in inventory[switch]:
+			if counter == splitBy:
+				counter = 0
+				break
 			yield device
+			counter += 1
 def getMachinesShuffled(inventory):
 	"""
 	Take one machine from first switch, second from second,
@@ -32,6 +37,19 @@ def writeEntry(filehandle, classifier, hostname, index):
 		                  (classifier, index, hostname))
 	filehandle.write('%s%d_I2O_HOST_NAME %s.ebs0v0.cms\n' %
 		                  (classifier, index, hostname))
+
+def addDictionaries(original, to_be_added):
+	"""
+	Adds two dictionaries of key -> list such that
+	key -> list1 + list2.
+	"""
+	newdict = {}
+	for key,original_list in original.iteritems():
+		try:
+			newdict[key] = sorted(list(set(original_list + to_be_added[key])))
+		except KeyError:
+			print "Could not find key", key, "in second dict"
+	return newdict
 
 def getDAQ2Inventory(filename):
 	"""
@@ -102,6 +120,10 @@ if __name__ == "__main__":
 	parser.add_option("-o", "--outFile", default="customSymbolmap.txt",
 		               action="store", type="string", dest="outFile",
 		               help=("Output file [default: %default]"))
+	parser.add_option("--splitBy", default=12,
+		               action="store", type="int", dest="splitBy",
+		               help=("Take only N machines from a switch before "
+		               	     "moving to the next switch. [default: %default]"))
 	parser.add_option("--nRUs", default=4,
 		               action="store", type="int", dest="nRUs",
 		               help=("Number of RUs [default: %default]"))
@@ -122,46 +144,60 @@ if __name__ == "__main__":
 	switch_cabling, ru_inventory, bu_inventory, _ = getDAQ2Inventory(
 		                                              opt.inventoryFile)
 
-	# pprint(switch_cabling)
 	# pprint(ru_inventory)
 	# pprint(bu_inventory)
-	# pprint(host_cabling)
+
+	## Which hosts to choose from:
+	full_inventory = ru_inventory
+	if not opt.useOnlyRUs:
+		full_inventory = addDictionaries(ru_inventory, bu_inventory)
 
 	with open(opt.outFile, 'w') as outfile:
 		outfile.write(HEADER)
 		outfile.write('\n\n')
 
-		RUs = getMachines(ru_inventory)
-		BUs = getMachines(bu_inventory)
+		## How to select the hosts:
+		allMachines = getMachines(full_inventory,splitBy=opt.splitBy)
+		# RUs = getMachines(ru_inventory)
+		# BUs = getMachines(bu_inventory)
 		if opt.shuffle:
-			RUs = getMachinesShuffled(ru_inventory)
-			BUs = getMachinesShuffled(bu_inventory)
+			allMachines = getMachinesShuffled(full_inventory)
+			# RUs = getMachinesShuffled(ru_inventory)
+			# BUs = getMachinesShuffled(bu_inventory)
 
-		if opt.addEVM:
-			writeEntry(outfile, 'EVM', RUs.next(), 0)
-			outfile.write('\n')
-
+		## Write the symbolmap
 		ru_counter, bu_counter = 0,0
+
+		## RUs:
 		try:
 			for n in range(opt.nRUs):
-				writeEntry(outfile, 'RU', RUs.next(), n)
+				writeEntry(outfile, 'RU', allMachines.next(), n)
 				ru_counter += 1
 			outfile.write('\n')
 		except StopIteration:
 			print ("Less than %d available RU's in inventory, found "
 			       "only %d." %(opt.nRUs, ru_counter))
 
+		## BUs:
 		try:
 			for n in range(opt.nBUs):
-				if not opt.useOnlyRUs:
-					writeEntry(outfile, 'BU', BUs.next(), n)
-					bu_counter += 1
-				else:
-					writeEntry(outfile, 'BU', RUs.next(), n)
-					bu_counter += 1
+				writeEntry(outfile, 'BU', allMachines.next(), n)
+				bu_counter += 1
+			outfile.write('\n')
 		except StopIteration:
 			print ("Less than %d available BU's in inventory, found "
 			       "only %d." %(opt.nBUs, bu_counter))
+
+		## EVMs:
+		if opt.addEVM:
+			try:
+				writeEntry(outfile, 'EVM', allMachines.next(), 0)
+				outfile.write('\n')
+			except StopIteration:
+				print ("No machine left for an EVM! Have %d RU's "
+					   "and %d BU's already." % (ru_counter, bu_counter))
+
+
 
 		outfile.write('\n\n')
 
