@@ -6,18 +6,22 @@ HEADER = ("LAUNCHER_BASE_PORT 17777\n"
           "I2O_BASE_PORT 54320\n"
           "FRL_BASE_PORT 55320\n")
 
-def getMachines(inventory,splitBy=12):
+def getMachines(inventory,splitBy=-1,verbose=False):
 	"""
 	First take all machines from one switch, then move to the next
 	"""
 	counter = 0
 	for switch in inventory.keys():
+		if verbose: print switch
 		for device in inventory[switch]:
 			if counter == splitBy:
+				if verbose: print 'next switch'
 				counter = 0
 				break
+			if verbose: print '   taking', device
 			yield device
 			counter += 1
+		counter = 0
 def getMachinesShuffled(inventory):
 	"""
 	Take one machine from first switch, second from second,
@@ -120,10 +124,11 @@ if __name__ == "__main__":
 	parser.add_option("-o", "--outFile", default="customSymbolmap.txt",
 		               action="store", type="string", dest="outFile",
 		               help=("Output file [default: %default]"))
-	parser.add_option("--splitBy", default=12,
+	parser.add_option("--splitBy", default=-1,
 		               action="store", type="int", dest="splitBy",
 		               help=("Take only N machines from a switch before "
-		               	     "moving to the next switch. [default: %default]"))
+		               	     "moving to the next switch. [default: %default "
+		               	     "(no splitting)]"))
 	parser.add_option("--nRUs", default=4,
 		               action="store", type="int", dest="nRUs",
 		               help=("Number of RUs [default: %default]"))
@@ -139,6 +144,9 @@ if __name__ == "__main__":
 	parser.add_option("--shuffle", default=False,
 		               action="store_true", dest="shuffle",
 		               help=("Shuffle machines between switches"))
+	parser.add_option("-v", "--verbose", default=False,
+		               action="store_true", dest="verbose",
+		               help=("Verbose mode"))
 	(opt, args) = parser.parse_args()
 
 	switch_cabling, ru_inventory, bu_inventory, _ = getDAQ2Inventory(
@@ -157,7 +165,9 @@ if __name__ == "__main__":
 		outfile.write('\n\n')
 
 		## How to select the hosts:
-		allMachines = getMachines(full_inventory,splitBy=opt.splitBy)
+		allMachines = getMachines(full_inventory,
+			                      splitBy=opt.splitBy,
+			                      verbose=opt.verbose)
 		# RUs = getMachines(ru_inventory)
 		# BUs = getMachines(bu_inventory)
 		if opt.shuffle:
