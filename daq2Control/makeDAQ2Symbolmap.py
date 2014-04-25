@@ -108,6 +108,9 @@ if __name__ == "__main__":
 	parser.add_option("--nBUs", default=4,
 		               action="store", type="int", dest="nBUs",
 		               help=("Number of BUs [default: %default]"))
+	parser.add_option("--addEVM", default=False,
+		               action="store_true", dest="addEVM",
+		               help=("Add an EVM machine"))
 	parser.add_option("--useOnlyRUs", default=False,
 		               action="store_true", dest="useOnlyRUs",
 		               help=("Only consider RU machines"))
@@ -133,6 +136,10 @@ if __name__ == "__main__":
 		if opt.shuffle:
 			RUs = getMachinesShuffled(ru_inventory)
 			BUs = getMachinesShuffled(bu_inventory)
+
+		if opt.addEVM:
+			writeEntry(outfile, 'EVM', RUs.next(), 0)
+			outfile.write('\n')
 
 		ru_counter, bu_counter = 0,0
 		try:
