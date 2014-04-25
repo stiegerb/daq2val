@@ -6,6 +6,7 @@
 		<sampleTime xsi:type="xsd:string">PT5S</sampleTime>
 		<StdDev xsi:type="xsd:unsignedLong">0</StdDev>
 		<currentSize xsi:type="xsd:unsignedLong">128</currentSize>
+		<preAllocateBlocks xsi:type="xsd:unsignedLong">461</preAllocateBlocks>
 		<MinFragmentSize xsi:type="xsd:unsignedLong">32</MinFragmentSize>
 		<MaxFragmentSize xsi:type="xsd:unsignedLong">65000</MaxFragmentSize>
 		<randomDestination xsi:type="xsd:boolean">false</randomDestination>

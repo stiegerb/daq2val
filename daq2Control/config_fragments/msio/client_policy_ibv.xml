@@ -1,9 +1,7 @@
 <pol:policy xmlns:pol="http://xdaq.web.cern.ch/xdaq/xsd/2013/XDAQPolicy-10">
-<!-- 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::acceptor/waiting" type="thread" package="numa" mempolicy="onnode" memnode="0" cpunodes="0"/>
-	<pol:element pattern="urn:toolbox-task-workloop:http-(.+)/waiting" package="numa" type="thread" mempolicy="onnode" memnode="0" cpunodes="0"/>
-	<pol:element pattern="urn:toolbox-task-workloop:xrelay/waiting" type="thread" package="numa" mempolicy="onnode" memnode="0" cpunodes="0"/>
-	<pol:element pattern="urn:toolbox-task-workloop:fifo/PeerTransport/waiting" type="thread" package="numa" mempolicy="onnode" memnode="0" cpunodes="0"/>
- -->	<pol:element pattern="urn:toolbox-task-workloop:mstreamio2g-(.+)/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="0"/>
+ 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::acceptor/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="12"/>
+	<pol:element pattern="urn:toolbox-task-workloop:fifo/PeerTransport/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="26"/>
+	<pol:element pattern="urn:toolbox-task-workloop:mstreamio2g-(.+)/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="0"/>
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="2"/>
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="6"/>
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::eventworkloop/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="8"/>
