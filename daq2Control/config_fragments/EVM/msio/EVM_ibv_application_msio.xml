@@ -3,11 +3,11 @@
 		<iaName xsi:type="xsd:string">mlx4_0</iaName>
 		<sendPoolName xsi:type="xsd:string">sibv</sendPoolName>
 		<recvPoolName xsi:type="xsd:string">ribv</recvPoolName>
-		<receiverPoolSize xsi:type="xsd:unsignedInt">0x2000000</receiverPoolSize>
-		<senderPoolSize xsi:type="xsd:unsignedInt">0x2000000</senderPoolSize>
-		<completionQueueSize xsi:type="xsd:unsignedInt">64</completionQueueSize>
-		<sendQueuePairSize xsi:type="xsd:unsignedInt">64</sendQueuePairSize>
-		<recvQueuePairSize xsi:type="xsd:unsignedInt">64</recvQueuePairSize>
+		<receiverPoolSize xsi:type="xsd:unsignedInt">0x80000000</receiverPoolSize>
+		<senderPoolSize xsi:type="xsd:unsignedInt">0x4000000</senderPoolSize>
+		<completionQueueSize xsi:type="xsd:unsignedInt">1024</completionQueueSize>
+		<sendQueuePairSize xsi:type="xsd:unsignedInt">128</sendQueuePairSize>
+		<recvQueuePairSize xsi:type="xsd:unsignedInt">256</recvQueuePairSize>
 		<maxMessageSize xsi:type="xsd:unsignedInt">65536</maxMessageSize>
 		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
 		<!-- <sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout> -->
