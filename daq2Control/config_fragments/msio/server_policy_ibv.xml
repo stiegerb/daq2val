@@ -8,5 +8,6 @@
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="1"/>
 	<pol:element pattern="urn:toolbox-mem-allocator:CommittedHeapAllocator" type="alloc" package="numa" mempolicy="onnode" node="1"/>
 	<pol:element pattern="urn:undefined:alloc" type="alloc" package="numa" mempolicy="onnode" node="1"/>
+	<pol:element pattern="urn:pt-ibv-rlist-relayqueue:alloc" type="alloc" package="numa" mempolicy="onnode" node="1"/>
 	<pol:element pattern="urn:toolbox-task-workloop:pt::ibv::relayworkloop" type="thread" affinity="0" memnode="1" mempolicy="onnode" package="numa"/>
 </pol:policy>

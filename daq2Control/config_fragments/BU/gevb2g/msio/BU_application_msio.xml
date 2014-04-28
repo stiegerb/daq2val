@@ -1,7 +1,7 @@
 <xc:Application class="gevb2g::BU" id="43" instance="0" network="infini" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<properties xmlns="urn:xdaq-application:gevb2g::BU" xsi:type="soapenc:Struct">
 		<availableFrameSize xsi:type="xsd:unsignedLong">1024</availableFrameSize>
-		<maxResources xsi:type="xsd:unsignedLong">2</maxResources>
+		<maxResources xsi:type="xsd:unsignedLong">128</maxResources>
 		<maxDataFrameSize xsi:type="xsd:unsignedLong">262144</maxDataFrameSize>
 		<filterDisable xsi:type="xsd:boolean">true</filterDisable>
 		<numberOfSamples xsi:type="xsd:unsignedLong">50</numberOfSamples>

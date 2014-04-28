@@ -3,13 +3,15 @@
 		<iaName xsi:type="xsd:string">mlx4_0</iaName>
 		<sendPoolName xsi:type="xsd:string">sibv</sendPoolName>
 		<recvPoolName xsi:type="xsd:string">ribv</recvPoolName>
-		<receiverPoolSize xsi:type="xsd:unsignedInt">0x2000000</receiverPoolSize>
+		<receiverPoolSize xsi:type="xsd:unsignedInt">0x4000000</receiverPoolSize>
 		<senderPoolSize xsi:type="xsd:unsignedInt">0x4000000</senderPoolSize>
-		<completionQueueSize xsi:type="xsd:unsignedInt">1024</completionQueueSize>
+		<completionQueueSize xsi:type="xsd:unsignedInt">2048</completionQueueSize>
 		<sendQueuePairSize xsi:type="xsd:unsignedInt">256</sendQueuePairSize>
-		<recvQueuePairSize xsi:type="xsd:unsignedInt">64</recvQueuePairSize>
+		<recvQueuePairSize xsi:type="xsd:unsignedInt">8</recvQueuePairSize>
 		<maxMessageSize xsi:type="xsd:unsignedInt">65000</maxMessageSize>
 		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
+		<sendPoolHighThreshold xsi:type="xsd:double">0.9</sendPoolHighThreshold>
+		<sendPoolLowThreshold xsi:type="xsd:double">0.7</sendPoolLowThreshold>
         <sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout>
         <useRelay xsi:type="xsd:boolean">false</useRelay>
 	</properties>

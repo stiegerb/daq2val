@@ -219,6 +219,9 @@ class daq2MSIOConfigurator(daq2Configurator):
 			if 'RU%d' in app.attrib['port']:
 				app.set('port', app.get('port')%ruindex)
 		ru_context.set('url', ru_context.get('url')%(ruindex, ruindex))
+		
+		self.setPropertyInApp(ru_context, 'gevb2g::InputEmulator',
+			                  'destinationClassInstance', str(ruindex))
 
 		return ru_context
 	def makeEVM(self):
