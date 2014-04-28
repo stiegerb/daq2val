@@ -258,14 +258,14 @@ sw-ib-c2f14-08-01,34,sw-ib-c2f15-29-01,14
 sw-ib-c2f14-08-01,35,sw-ib-c2f15-29-01,16
 sw-ib-c2f14-08-01,36,sw-ib-c2f15-29-01,18
 
-sw-ib-c2f14-38-01,1,# ru-c2e14-28-01 ## Used by Andrea
-sw-ib-c2f14-38-01,2,# ru-c2e14-29-01 ## Used by Andrea
-sw-ib-c2f14-38-01,3,# ru-c2e14-30-01 ## Used by Andrea
-sw-ib-c2f14-38-01,4,# ru-c2e14-34-01 ## Used by Andrea
-sw-ib-c2f14-38-01,5,# ru-c2e14-35-01 ## Used by Andrea
-sw-ib-c2f14-38-01,6,# ru-c2e14-36-01 ## Used by Andrea
-sw-ib-c2f14-38-01,7,# ru-c2e14-37-01 ## Used by Andrea
-sw-ib-c2f14-38-01,8,# ru-c2e14-38-01 ## Used by Andrea
+sw-ib-c2f14-38-01,1,ru-c2e14-28-01
+sw-ib-c2f14-38-01,2,ru-c2e14-29-01
+sw-ib-c2f14-38-01,3,ru-c2e14-30-01
+sw-ib-c2f14-38-01,4,ru-c2e14-34-01
+sw-ib-c2f14-38-01,5,ru-c2e14-35-01
+sw-ib-c2f14-38-01,6,ru-c2e14-36-01
+sw-ib-c2f14-38-01,7,ru-c2e14-37-01
+sw-ib-c2f14-38-01,8,ru-c2e14-38-01
 sw-ib-c2f14-38-01,9,bu-c2f16-31-01
 sw-ib-c2f14-38-01,10,bu-c2e18-31-01
 sw-ib-c2f14-38-01,11,bu-c2d38-29-01
@@ -405,6 +405,44 @@ sw-ib-c2f14-34-01,33,sw-ib-c2f15-27-01,5
 sw-ib-c2f14-34-01,34,sw-ib-c2f15-29-01,1
 sw-ib-c2f14-34-01,35,sw-ib-c2f15-29-01,3
 sw-ib-c2f14-34-01,36,sw-ib-c2f15-29-01,5
+
+#sw-ib-c2f14-04-01,1,ru-c2e12-10-01
+#sw-ib-c2f14-04-01,2,ru-c2e12-11-01
+# sw-ib-c2f14-04-01,3,#ru-c2e12-12-01 ## Problematic (Andre)
+#sw-ib-c2f14-04-01,3,ru-c2e12-12-01
+#sw-ib-c2f14-04-01,4,ru-c2e12-13-01
+#sw-ib-c2f14-04-01,5,ru-c2e12-14-01
+#sw-ib-c2f14-04-01,6,ru-c2e12-15-01
+#sw-ib-c2f14-04-01,7,ru-c2e12-16-01
+#sw-ib-c2f14-04-01,8,ru-c2e12-17-01
+#sw-ib-c2f14-04-01,9,bu-c2f16-09-01
+#sw-ib-c2f14-04-01,10,#bu-c2e18-09-01 ## in use by Marc and Andre (22/05)
+#sw-ib-c2f14-04-01,11,bu-c2d38-07-01
+#sw-ib-c2f14-04-01,12,#bu-c2d41-07-01 ## what():  Failed to read from server:port 'bu-c2d41-07-01.ebs0v0.cms:54405
+#sw-ib-c2f14-04-01,13,bu-c2f16-23-01
+#sw-ib-c2f14-04-01,14,bu-c2f16-25-01
+#sw-ib-c2f14-04-01,15
+#sw-ib-c2f14-04-01,16
+#sw-ib-c2f14-04-01,17
+#sw-ib-c2f14-04-01,18
+#sw-ib-c2f14-04-01,19,sw-ib-c2f15-19-01,2
+#sw-ib-c2f14-04-01,20,sw-ib-c2f15-19-01,4
+#sw-ib-c2f14-04-01,21,sw-ib-c2f15-19-01,6
+#sw-ib-c2f14-04-01,22,sw-ib-c2f15-21-01,2
+#sw-ib-c2f14-04-01,23,sw-ib-c2f15-21-01,4
+#sw-ib-c2f14-04-01,24,sw-ib-c2f15-21-01,6
+#sw-ib-c2f14-04-01,25,sw-ib-c2f15-23-01,2
+#sw-ib-c2f14-04-01,26,sw-ib-c2f15-23-01,4
+#sw-ib-c2f14-04-01,27,sw-ib-c2f15-23-01,6
+#sw-ib-c2f14-04-01,28,sw-ib-c2f15-25-01,2
+#sw-ib-c2f14-04-01,29,sw-ib-c2f15-25-01,4
+#sw-ib-c2f14-04-01,30,sw-ib-c2f15-25-01,6
+#sw-ib-c2f14-04-01,31,sw-ib-c2f15-27-01,2
+#sw-ib-c2f14-04-01,32,sw-ib-c2f15-27-01,4
+#sw-ib-c2f14-04-01,33,sw-ib-c2f15-27-01,6
+#sw-ib-c2f14-04-01,34,sw-ib-c2f15-29-01,2
+#sw-ib-c2f14-04-01,35,sw-ib-c2f15-29-01,4
+#sw-ib-c2f14-04-01,36,sw-ib-c2f15-29-01,6
 
 sw-ib-c2f15-29-01,1,sw-ib-c2f14-34-01,34
 sw-ib-c2f15-29-01,2,sw-ib-c2f14-04-01,34
@@ -627,40 +665,3 @@ sw-ib-c2f15-19-01,33,sw-ib-c2f14-44-01,20
 sw-ib-c2f15-19-01,34,sw-ib-c2f14-14-01,35
 sw-ib-c2f15-19-01,35,sw-ib-c2f14-44-01,21
 sw-ib-c2f15-19-01,36,sw-ib-c2f14-14-01,36
-
-sw-ib-c2f14-04-01,1,ru-c2e12-10-01
-sw-ib-c2f14-04-01,2,ru-c2e12-11-01
-sw-ib-c2f14-04-01,3,#ru-c2e12-12-01 ## Problematic (Andre)
-sw-ib-c2f14-04-01,4,ru-c2e12-13-01
-sw-ib-c2f14-04-01,5,ru-c2e12-14-01
-sw-ib-c2f14-04-01,6,ru-c2e12-15-01
-sw-ib-c2f14-04-01,7,ru-c2e12-16-01
-sw-ib-c2f14-04-01,8,ru-c2e12-17-01
-sw-ib-c2f14-04-01,9,bu-c2f16-09-01
-sw-ib-c2f14-04-01,10,#bu-c2e18-09-01 ## in use by Marc and Andre (22/05)
-sw-ib-c2f14-04-01,11,bu-c2d38-07-01
-sw-ib-c2f14-04-01,12,bu-c2d41-07-01
-sw-ib-c2f14-04-01,13,bu-c2f16-23-01
-sw-ib-c2f14-04-01,14,bu-c2f16-25-01
-sw-ib-c2f14-04-01,15
-sw-ib-c2f14-04-01,16
-sw-ib-c2f14-04-01,17
-sw-ib-c2f14-04-01,18
-sw-ib-c2f14-04-01,19,sw-ib-c2f15-19-01,2
-sw-ib-c2f14-04-01,20,sw-ib-c2f15-19-01,4
-sw-ib-c2f14-04-01,21,sw-ib-c2f15-19-01,6
-sw-ib-c2f14-04-01,22,sw-ib-c2f15-21-01,2
-sw-ib-c2f14-04-01,23,sw-ib-c2f15-21-01,4
-sw-ib-c2f14-04-01,24,sw-ib-c2f15-21-01,6
-sw-ib-c2f14-04-01,25,sw-ib-c2f15-23-01,2
-sw-ib-c2f14-04-01,26,sw-ib-c2f15-23-01,4
-sw-ib-c2f14-04-01,27,sw-ib-c2f15-23-01,6
-sw-ib-c2f14-04-01,28,sw-ib-c2f15-25-01,2
-sw-ib-c2f14-04-01,29,sw-ib-c2f15-25-01,4
-sw-ib-c2f14-04-01,30,sw-ib-c2f15-25-01,6
-sw-ib-c2f14-04-01,31,sw-ib-c2f15-27-01,2
-sw-ib-c2f14-04-01,32,sw-ib-c2f15-27-01,4
-sw-ib-c2f14-04-01,33,sw-ib-c2f15-27-01,6
-sw-ib-c2f14-04-01,34,sw-ib-c2f15-29-01,2
-sw-ib-c2f14-04-01,35,sw-ib-c2f15-29-01,4
-sw-ib-c2f14-04-01,36,sw-ib-c2f15-29-01,6
