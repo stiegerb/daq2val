@@ -102,6 +102,11 @@ class daq2Control(object):
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
 		if self.options.verbose > 0: print separator
 		for n,evm in enumerate(self.config.EVM):
+			#utils.sendSimpleCmdToApp(evm.host, evm.port,
+			#		                     'pt::ibv::Application', '0',
+			#		                     'enable',
+			#		                     verbose=self.options.verbose,
+			#		                     dry=self.options.dry)
 			utils.sendSimpleCmdToApp(evm.host, evm.port,
 				                     self.config.namespace+'EVM', str(n),
 				                     cmd, verbose=self.options.verbose,
@@ -115,6 +120,11 @@ class daq2Control(object):
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		for n,bu in enumerate(self.config.BUs):
+			#utils.sendSimpleCmdToApp(bu.host, bu.port,
+			#		                     'pt::ibv::Application', '0',
+			#		                     'enable',
+			#		                     verbose=self.options.verbose,
+			#		                     dry=self.options.dry)
 			utils.sendSimpleCmdToApp(bu.host, bu.port,
 				                     self.config.namespace+'BU', str(n),
 				                     cmd,
@@ -389,6 +399,11 @@ class daq2Control(object):
 		if self.config.useGevbInputEmulator:
 			# Configure InputEmulator application
 			for n,ru in enumerate(self.config.RUs):
+			#	utils.sendSimpleCmdToApp(ru.host, ru.port,
+			#		                     'pt::ibv::Application', '0',
+			#		                     'enable',
+			#		                     verbose=self.options.verbose,
+			#		                     dry=self.options.dry)
 				utils.sendSimpleCmdToApp(ru.host, ru.port,
 					                     'gevb2g::InputEmulator', str(n),
 					                     'Configure',
@@ -409,7 +424,7 @@ class daq2Control(object):
 						                     "init",
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
-				sleep(2, self.options.verbose, self.options.dry)
+				#sleep(2, self.options.verbose, self.options.dry)
 			return
 
 		## In case of eFED:
@@ -928,6 +943,26 @@ class daq2Control(object):
 					with open(fname, 'r') as infile:
 						outfile.write(infile.read())
 						outfile.write('\n')
+
+			## For mstreamIO get the client measurements	
+			outputfiles = []
+			if self.config.useMSIO:	
+				for n,h in enumerate(self.config.RUs):
+					outputfile = '%s/client%d.csv' % (self._outputDir, n)
+
+					url = 'http://%s:%d/urn:xdaq-application:lid=%d/downloadMeasurements'
+					url = url % (h.host, int(h.port), 10) ## TODO: Extract lid from somewhere?
+
+					self.downloadMeasurements(url, outputfile)
+					outputfiles.append(outputfile)
+
+				## Concatenate output files
+				with open(self._outputDir+'/client.csv', 'a') as outfile:
+					if self.options.verbose > 0: print 'Saving output to', self._outputDir+'client.csv'
+					for fname in outputfiles:
+						with open(fname, 'r') as infile:
+							outfile.write(infile.read())
+							outfile.write('\n')
 		else:
 			printError("getResults() only works when running with the gevb2g, try getResultsEvB()", instance=self)
 			return
