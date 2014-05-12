@@ -107,23 +107,27 @@ class daq2Plotter(object):
 	def processFile(self, filename):
 		from numpy import mean, std
 		from logNormalTest import averageFractionSize
+
+		###########################
+		## Process .csv file
 		f = open(filename,'r')
 		if not f: raise RuntimeError, "Cannot open "+filename+"\n"
 
 		config, builder, protocol, rms = extractConfig(filename)
 		nstreams, nrus, nbus, strperfrl = getConfig(config)
 
-		## Process .csv file first
 		data_dict = {} ## Store everything in this dictionary of size -> rate
 		for line in f:
 			if len(line.strip()) == 0 or line.strip()[0] == '#': continue
 
 			# Extract sizes and rate from line
 			if strperfrl == 0:
+				# size, rate1, rate2, rate3, ...
 				line = line.split(',',1)
 				size = int(line[0])
 				body = line[1]
 			else:
+				# sizeru, sizebu: rate1, rate2, rate3, ...
 				header, body = line.split(':')
 				size, size_bu = tuple([int(_) for _ in header.split(',')])
 				if self.args.sizeFromBU: size = size_bu
@@ -145,6 +149,10 @@ class daq2Plotter(object):
 					prev_rate = prev_rate[:len(rate)]
 				## Add to the previous samples
 				data_dict[size] = map(lambda a,b:a+b, prev_rate, rate)
+		f.close()
+
+		###########################
+		## Calculate throughput
 
 		# In case of mstreamio, divide the rates by the number of RUs
 		# (But don't do this for the case of nx1, want to plot throughput
@@ -221,7 +229,6 @@ class daq2Plotter(object):
 
 			data.append((fragsize, throughput, throughputE))
 
-		f.close()
 		return data
 
 	##---------------------------------------------------------------------------------
@@ -331,8 +338,9 @@ class daq2Plotter(object):
 				print "#### Couldn't get graph for ", case, "in file", filename
 				return
 
-		datepave = drawDate(self.filelist[0])
-		datepave.Draw()
+		if not self.args.hideDate:
+			datepave = drawDate(self.filelist[0])
+			datepave.Draw()
 
 		# if self.args.daq1:
 		# 	daq1_graph = getDAQ1Graph()
@@ -440,6 +448,8 @@ def addPlottingOptions(parser):
 	parser.add_argument('--legend', default=[], action="append", type=str,
 		                dest="legend", nargs='*',
 		                help='Give a list of custom legend entries to be used')
+	parser.add_argument("--hideDate", default=False, action="store_true",
+		                dest="hideDate", help="Hide date.")
 	parser.add_argument("-r", "--rate", default="100", action="store", type=float,
 		                dest="rate",
 		                help="Rate in kHz to be displayed on the plot:\
