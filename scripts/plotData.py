@@ -16,18 +16,23 @@ def extractConfig(filename):
 		rms_regex = re.compile("## useLogNormal = (\w*), RMS =\s*([\d.]*)$")
 		config_regex = re.compile("## (\w*) configuration with (\w*)/(\w*)$")
 
+		found = 0
 		for line in f:
-			r = rms_regex.match(line)
+			stripped = line.strip()
+			if found > 1: break
+
+			r = rms_regex.match(stripped)
 			if r is not None:
 				rms = float(r.groups()[1])
+				found += 1
 
-			r = config_regex.match(line)
+			r = config_regex.match(stripped)
 			if r is not None:
 				config, builder, protocol = r.groups()
+				found += 1
 
 		if rms == None:
 			rms = 0.0
-
 	return config, builder, protocol, rms
 def getConfig(string):
 	"""Extract number of streams, readout units, builder units, and number of streams
@@ -120,17 +125,16 @@ class daq2Plotter(object):
 		for line in f:
 			if len(line.strip()) == 0 or line.strip()[0] == '#': continue
 
-			# Extract sizes and rate from line
-			if strperfrl == 0:
-				# size, rate1, rate2, rate3, ...
-				line = line.split(',',1)
-				size = int(line[0])
-				body = line[1]
-			else:
+			try:
 				# sizeru, sizebu: rate1, rate2, rate3, ...
 				header, body = line.split(':')
 				size, size_bu = tuple([int(_) for _ in header.split(',')])
 				if self.args.sizeFromBU: size = size_bu
+			except ValueError:
+				# size, rate1, rate2, rate3, ...
+				line = line.split(',',1)
+				size = int(line[0])
+				body = line[1]
 
 			# Skip empty lines
 			if body == '\n': continue
