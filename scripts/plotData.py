@@ -354,7 +354,7 @@ class daq2Plotter(object):
 		# nlegentries = len(caselist) if not self.args.daq1 else len(caselist) + 1
 		legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
 		if strperfrl == 0:
-			legendpos = (0.13, 0.73, 0.27, 0.73-nlegentries*0.045)
+			legendpos = (0.13, 0.73, 0.31, 0.73-nlegentries*0.045)
 		# if self.args.legendPos == 'TL':
 		# 	legendpos = (0.12, 0.82-nlegentries*0.05, 0.579, 0.898)
 		# 	# legendpos = (0.12, 0.71-nlegentries*0.05, 0.579, 0.78)
