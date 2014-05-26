@@ -58,7 +58,7 @@ def addDictionaries(original, to_be_added):
 def getDAQ2Inventory(filename):
 	"""
 	Reads a file with lines formatted like:
-	switch,port,peerDevice,peerPort
+	switch,port,peerDevice,peerPort,blacklist,comment
 	or
 	switch,port,peerDevice
 	or
@@ -82,17 +82,18 @@ def getDAQ2Inventory(filename):
 			if line.strip().startswith('#') or len(line.strip()) == 0:
 				continue
 
-			switch,port,device,dport = ([_.strip() for _ in line.split(',')]
-				                                      + [None]*4)[:4]
-			if port is not None: port = int(port)
-			if dport is not None: dport = int(dport)
-			# print switch,port,device,dport
+			switch,port,device,dport,blisted,comment = [
+			                 _.strip() for _ in line.split(',')]
+			if port is not '': port = int(port)
+			if dport is not '': dport = int(dport)
+			if blisted is not '': blisted = bool(int(blisted))
+			# print switch,port,device,dport,blisted,comment
 
 			if not switch in switch_cabling.keys():
 				switch_cabling[switch] = {}
 			switch_cabling[switch][port] = (device,dport)
 
-			if device is None: continue
+			if device is None or blisted: continue
 			if device.startswith('ru'):
 				if not switch in ru_inventory.keys():
 					ru_inventory[switch] = []
