@@ -1,0 +1,24 @@
+#!/usr/bin/perl -w
+
+use IO::Socket;
+use strict;
+
+die "Usage sendCmdToLauncher host port cmd\n" if @ARGV != 3;
+
+my $host = $ARGV[0];
+my $port = $ARGV[1];
+my $cmd  = $ARGV[2];
+
+my $socket = IO::Socket::INET->new(PeerAddr => $host,
+                                   PeerPort => $port,
+                                   Proto    => "tcp",
+                                   Type     => SOCK_STREAM)
+  or die "Failed to connect: $@\n";
+
+print $socket "$cmd\n";
+
+my $reply = <$socket>;
+
+print "$host $port: $reply";
+
+close($socket);
