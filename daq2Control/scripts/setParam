@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+
+use strict;
+
+die "Usage setParam host port class instance paramName paramType paramValue\n" if @ARGV != 7;
+
+my $host       = $ARGV[0];
+my $port       = $ARGV[1];
+my $class      = $ARGV[2];
+my $instance   = $ARGV[3];
+my $paramName  = $ARGV[4];
+my $paramType  = $ARGV[5];
+my $paramValue = $ARGV[6];
+
+my $m = "";
+$m .= '<SOAP-ENV:Envelope';
+$m .= ' SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"';
+$m .= ' xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"';
+$m .= ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"';
+$m .= ' xmlns:xsd="http://www.w3.org/2001/XMLSchema"';
+$m .= ' xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"';
+$m .= '>';
+$m .=   '<SOAP-ENV:Header>';
+$m .=   '</SOAP-ENV:Header>';
+$m .=   '<SOAP-ENV:Body>';
+$m .=     '<xdaq:ParameterSet';
+$m .=     ' xmlns:xdaq="urn:xdaq-soap:3.0"';
+$m .=     '>';
+$m .=       '<p:properties';
+$m .=       ' xmlns:p="urn:xdaq-application:CLASS"';
+$m .=       ' xsi:type="soapenc:Struct"';
+$m .=       '>';
+$m .=         '<p:PARAM_NAME';
+$m .=         ' xsi:type="xsd:PARAM_TYPE"';
+$m .=         '>';
+$m .=           'PARAM_VALUE';
+$m .=         '</p:PARAM_NAME>';
+$m .=       '</p:properties>';
+$m .=     '</xdaq:ParameterSet>';
+$m .=   '</SOAP-ENV:Body>';
+$m .= '</SOAP-ENV:Envelope>';
+
+$m =~ s/CLASS/$class/g;
+$m =~ s/PARAM_NAME/$paramName/g;
+$m =~ s/PARAM_TYPE/$paramType/g;
+$m =~ s/PARAM_VALUE/$paramValue/g;
+
+$m =~ s/"/\\\"/g;
+
+my $curlCmd  = "curl --stderr /dev/null -H \"Content-Type: text/xml\" -H \"Content-Description: SOAP Message\" -H \"SOAPAction: urn:xdaq-application:class=$class,instance=$instance\" http://$host:$port -d \"$m\"";
+
+open CURL, "$curlCmd|";
+
+my $reply = "";
+
+while(<CURL>) {
+  chomp;
+  $reply .= $_;
+}
+
+print "$class $instance $paramName=$paramValue : ";
+
+if($reply =~ m#ParameterSetResponse#) {
+  print "OK\n";
+  exit 0;
+} else {
+  print "ERROR\n";
+  exit 1;
+}

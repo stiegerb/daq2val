@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+
+die "Usage sendCmdFileToApp host port class instance cmdFile\n" if @ARGV != 5;
+
+$host     = $ARGV[0];
+$port     = $ARGV[1];
+$class    = $ARGV[2];
+$instance = $ARGV[3];
+$cmdFile  = $ARGV[4];
+
+die "The file \"$cmdFile\" does not exist\n" unless -e $cmdFile;
+
+$curlCmd  = "curl --stderr /dev/null -H \"Content-Type: text/xml\" -H \"Content-Description: SOAP Message\" -H \"SOAPAction: urn:xdaq-application:class=$class,instance=$instance\" http://$host:$port -d \"`cat $cmdFile`\"";
+
+print "$class $instance $cmdFile ";
+open CURL, "$curlCmd|";
+
+while(<CURL>) {
+  chomp;
+  $soapReply .= $_;
+}
+
+if($soapReply =~ m/Response/) {
+  print "OK\n";
+  exit 0;
+} elsif($soapReply =~ m/Fault/) {
+  print "FAULT\n";
+  print "$soapReply\n";
+  exit 1;
+} elsif($soapReply eq "") {
+  print "NONE\n";
+  exit 1;
+} else {
+  print "UNKNOWN response\n";
+  print "$soapReply\n";
+  exit 1;
+}
