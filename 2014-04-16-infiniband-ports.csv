@@ -1,7 +1,7 @@
 #Switch,Port,Peer-Device,Peer-Port,Blacklist,Comment
 sw-ib-c2f14-14-01,1,ru-c2e13-28-01,,0,
 sw-ib-c2f14-14-01,2,ru-c2e13-29-01,,0,
-sw-ib-c2f14-14-01,3,ru-c2e13-30-01,,0,
+sw-ib-c2f14-14-01,3,ru-c2e13-30-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-14-01,4,ru-c2e13-34-01,,0,
 sw-ib-c2f14-14-01,5,ru-c2e13-35-01,,0,
 sw-ib-c2f14-14-01,6,ru-c2e13-36-01,,0,
@@ -41,7 +41,7 @@ sw-ib-c2f14-44-01,2,ru-c2e15-29-01,,0,
 sw-ib-c2f14-44-01,3,ru-c2e15-30-01,,0,
 sw-ib-c2f14-44-01,4,ru-c2e15-34-01,,0,
 sw-ib-c2f14-44-01,5,ru-c2e15-35-01,,0,
-sw-ib-c2f14-44-01,6,ru-c2e15-36-01,,0,
+sw-ib-c2f14-44-01,6,ru-c2e15-36-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-44-01,7,ru-c2e15-37-01,,1,Set aside for building/testing XDAQ with OFED 2.2
 sw-ib-c2f14-44-01,8,ru-c2e15-38-01,,1,Set aside for building/testing XDAQ with OFED 2.2
 sw-ib-c2f14-44-01,9,bu-c2f16-39-01,,0,
@@ -74,15 +74,15 @@ sw-ib-c2f14-44-01,35,sw-ib-c2f15-29-01,33,0,
 sw-ib-c2f14-44-01,36,sw-ib-c2f15-29-01,35,0,
 
 sw-ib-c2f14-12-01,1,ru-c2e13-18-01,,0,
-sw-ib-c2f14-12-01,2,ru-c2e13-19-01,,0,
-sw-ib-c2f14-12-01,3,ru-c2e13-22-01,,0,
+sw-ib-c2f14-12-01,2,ru-c2e13-19-01,,1,Reserved for fedbuilder network tests
+sw-ib-c2f14-12-01,3,ru-c2e13-22-01,,1,sw-eth-c2e24-29-01 reserved for chain tests
 sw-ib-c2f14-12-01,4,ru-c2e13-23-01,,0,
-sw-ib-c2f14-12-01,5,ru-c2e13-24-01,,0,
+sw-ib-c2f14-12-01,5,ru-c2e13-24-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-12-01,6,ru-c2e13-25-01,,0,
 sw-ib-c2f14-12-01,7,ru-c2e13-26-01,,0,
-sw-ib-c2f14-12-01,8,ru-c2e13-27-01,,0,
+sw-ib-c2f14-12-01,8,ru-c2e13-27-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-12-01,9,bu-c2f16-19-01,,0,
-sw-ib-c2f14-12-01,10,bu-c2e18-19-01,,0,
+sw-ib-c2f14-12-01,10,bu-c2e18-19-01,,1,Reserved for chain tests
 sw-ib-c2f14-12-01,11,bu-c2d38-17-01,,0,
 sw-ib-c2f14-12-01,12,bu-c2d41-17-01,,0,
 sw-ib-c2f14-12-01,13,,,0,
@@ -147,13 +147,13 @@ sw-ib-c2f14-42-01,34,sw-ib-c2f15-29-01,25,0,
 sw-ib-c2f14-42-01,35,sw-ib-c2f15-29-01,27,0,
 sw-ib-c2f14-42-01,36,sw-ib-c2f15-29-01,29,0,
 
-sw-ib-c2f14-10-01,1,ru-c2e13-10-01,,0,
+sw-ib-c2f14-10-01,1,ru-c2e13-10-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-10-01,2,ru-c2e13-11-01,,0,
 sw-ib-c2f14-10-01,3,ru-c2e13-12-01,,0,
-sw-ib-c2f14-10-01,4,ru-c2e13-13-01,,0,
+sw-ib-c2f14-10-01,4,ru-c2e13-13-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-10-01,5,ru-c2e13-14-01,,0,
 sw-ib-c2f14-10-01,6,ru-c2e13-15-01,,0,
-sw-ib-c2f14-10-01,7,ru-c2e13-16-01,,0,
+sw-ib-c2f14-10-01,7,ru-c2e13-16-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-10-01,8,ru-c2e13-17-01,,0,
 sw-ib-c2f14-10-01,9,bu-c2f16-17-01,,0,
 sw-ib-c2f14-10-01,10,bu-c2e18-17-01,,0,
@@ -223,7 +223,7 @@ sw-ib-c2f14-40-01,36,sw-ib-c2f15-29-01,23,0,
 
 sw-ib-c2f14-08-01,1,ru-c2e12-28-01,,0,
 sw-ib-c2f14-08-01,2,ru-c2e12-29-01,,0,
-sw-ib-c2f14-08-01,3,ru-c2e12-30-01,,0,
+sw-ib-c2f14-08-01,3,ru-c2e12-30-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-08-01,4,ru-c2e12-34-01,,0,
 sw-ib-c2f14-08-01,5,ru-c2e12-35-01,,0,
 sw-ib-c2f14-08-01,6,ru-c2e12-36-01,,0,
@@ -263,7 +263,7 @@ sw-ib-c2f14-38-01,2,ru-c2e14-29-01,,0,
 sw-ib-c2f14-38-01,3,ru-c2e14-30-01,,0,
 sw-ib-c2f14-38-01,4,ru-c2e14-34-01,,0,
 sw-ib-c2f14-38-01,5,ru-c2e14-35-01,,0,
-sw-ib-c2f14-38-01,6,ru-c2e14-36-01,,0,
+sw-ib-c2f14-38-01,6,ru-c2e14-36-01,,1,Reserved for chain tests
 sw-ib-c2f14-38-01,7,ru-c2e14-37-01,,0,
 sw-ib-c2f14-38-01,8,ru-c2e14-38-01,,0,
 sw-ib-c2f14-38-01,9,bu-c2f16-31-01,,0,
@@ -296,13 +296,13 @@ sw-ib-c2f14-38-01,35,sw-ib-c2f15-29-01,15,0,
 sw-ib-c2f14-38-01,36,sw-ib-c2f15-29-01,17,0,
 
 sw-ib-c2f14-06-01,1,ru-c2e12-18-01,,0,
-sw-ib-c2f14-06-01,2,ru-c2e12-19-01,,0,
+sw-ib-c2f14-06-01,2,ru-c2e12-19-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-06-01,3,ru-c2e12-22-01,,0,
 sw-ib-c2f14-06-01,4,ru-c2e12-23-01,,0,
-sw-ib-c2f14-06-01,5,ru-c2e12-24-01,,0,
+sw-ib-c2f14-06-01,5,ru-c2e12-24-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-06-01,6,ru-c2e12-25-01,,0,
 sw-ib-c2f14-06-01,7,ru-c2e12-26-01,,0,
-sw-ib-c2f14-06-01,8,ru-c2e12-27-01,,0,
+sw-ib-c2f14-06-01,8,ru-c2e12-27-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-06-01,9,bu-c2f16-11-01,,0,
 sw-ib-c2f14-06-01,10,bu-c2e18-11-01,,0,
 sw-ib-c2f14-06-01,11,bu-c2d38-09-01,,0,
@@ -406,14 +406,13 @@ sw-ib-c2f14-34-01,34,sw-ib-c2f15-29-01,1,0,
 sw-ib-c2f14-34-01,35,sw-ib-c2f15-29-01,3,0,
 sw-ib-c2f14-34-01,36,sw-ib-c2f15-29-01,5,0,
 
-sw-ib-c2f14-04-01,1,ru-c2e12-10-01,,0,
+sw-ib-c2f14-04-01,1,ru-c2e12-10-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-04-01,2,ru-c2e12-11-01,,0,
 sw-ib-c2f14-04-01,3,ru-c2e12-12-01,,0,Problematic (Andre)
-sw-ib-c2f14-04-01,3,ru-c2e12-12-01,,0,
-sw-ib-c2f14-04-01,4,ru-c2e12-13-01,,0,
+sw-ib-c2f14-04-01,4,ru-c2e12-13-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-04-01,5,ru-c2e12-14-01,,0,
 sw-ib-c2f14-04-01,6,ru-c2e12-15-01,,0,
-sw-ib-c2f14-04-01,7,ru-c2e12-16-01,,0,
+sw-ib-c2f14-04-01,7,ru-c2e12-16-01,,1,Reserved for fedbuilder network tests
 sw-ib-c2f14-04-01,8,ru-c2e12-17-01,,0,
 sw-ib-c2f14-04-01,9,bu-c2f16-09-01,,0,
 sw-ib-c2f14-04-01,10,bu-c2e18-09-01,,0,
