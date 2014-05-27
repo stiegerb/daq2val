@@ -8,8 +8,7 @@ MAXNEFEDS = 16
 def addConfiguratorOption(parser):
 	parser.add_option("--useEvB", default=False, action="store_true",
 		              dest="useEvB",
-		              help=("Use EvB for event building (instead of gevb2g "
-		              		"(default))"))
+		              help=("Use EvB for event building (default)"))
 	parser.add_option("--useGevb2g", default=False, action="store_true",
 		              dest="useGevb2g",
 		              help="Use gevb2g for event building (instead of EvB)")
