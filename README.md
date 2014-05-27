@@ -8,6 +8,9 @@
      - `git clone /nfshome0/stiegerb/Workspace/daq2val && cd daq2val`
      - `git checkout production`
 
+- To get a new version simply do:
+     - `git pull`
+
 ----------------------------------------------------------
 ### Setup (do it once before running)
 
@@ -108,6 +111,21 @@
 
 - Print the cabling for a DAQ production system symbolmap:
 	- `./daq2Control/printSwitchCabling.py customSymbolmap.txt`
+
+----------------------------------------------------------
+### Plotting
+
+- To create a throughput vs fragment size plot from a .csv file obtained from a scan (or downloaded from the web archive), use the `plotData.py` script in the plotting subdir. Note that this needs python 2.7+ and ROOT with pyROOT to be installed:
+	- `./plotting/plotData.py 1x1.csv 2x2.csv --legend '1x1' '2x2'`
+- Some of the additional plotting options are:
+	- `-o` to set the output file
+	- `--minx`, `--maxx`, `--miny`, `--maxy` to set the plotting range
+	- `--logy`, `--nologx` toggle logarithmic scale on y or x axis. Default is logarithmic in x.
+	- `--tag TEXT`, `--subtag TEXT` to add text boxes on the canvas.
+	- `--title`, `--titleX`, `--titleY` to set canvas title and axis labels
+	- `--legend 'TEXT1' 'TEXT2' 'TEXT3'` to set the legend. Number of arguments needs to match with the number of .csv files provided.
+	- `--sizeFromBU`, take the fragment size from the BU measurement instead of from the input
+	- `--rate` Set the rate curve (in kHz) to be displayed. Default is 100 kHz.
 
 ----------------------------------------------------------
 ### Troubleshoot
