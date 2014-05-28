@@ -35,8 +35,10 @@ def main(options, args):
 	nClients, nServers = getMSIOConfig(args[0])
 
 	if len(options.fragmentDir) == 0:
-		options.fragmentDir = ('/nfshome0/stiegerb/Workspace/'
-		                       'daq2val/daq2Control/config_fragments/')
+		# By default take the config_fragments dir from the current release
+		workingdir = os.path.dirname(os.path.realpath(__file__))
+		options.fragmentDir = os.path.join(workingdir,'config_fragments')
+
 	configurator = daq2MSIOConfigurator(options.fragmentDir,
 		                                verbose=options.verbose)
 
