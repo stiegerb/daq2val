@@ -19,28 +19,28 @@ my $xdaqpid        = 0;
 my $host           = hostname;
 
 sub reaper {
-  my $waitpid = waitpid(-1, WNOHANG);
-
-  if($waitpid == -1)
-  {
-     # No child is waiting.  Do nothing.
-  } elsif(($xdaqpid != 0) && ($waitpid == $xdaqpid)) {
-    $xdaqdied       = 1;
-    $xdaqexitvalue  = $? >> 8;
-    $xdaqsignalnum  = $? & 127;
-    $xdaqsignalname = &getSignalName($xdaqsignalnum);
-    if($? & 128) {
-      $xdaqcoredumped = 1;
+    my $waitpid = waitpid(-1, WNOHANG);
+    
+    if($waitpid == -1)
+    {
+        # No child is waiting.  Do nothing.
+    } elsif(($xdaqpid != 0) && ($waitpid == $xdaqpid)) {
+        $xdaqdied       = 1;
+        $xdaqexitvalue  = $? >> 8;
+        $xdaqsignalnum  = $? & 127;
+        $xdaqsignalname = &getSignalName($xdaqsignalnum);
+        if($? & 128) {
+            $xdaqcoredumped = 1;
+        }
     }
-  }
-
-  $SIG{CHLD} = \&reaper;
+    
+    $SIG{CHLD} = \&reaper;
 }
 
 
 sub getSignalName {
-  my($num) = @_;
-  my @names = qw/
+    my($num) = @_;
+    my @names = qw/
     UNKNOWN
     SIGHUP
     SIGINT
@@ -57,224 +57,224 @@ sub getSignalName {
     SIGPIPE
     SIGALRM
     SIGTERM/;
-  my $name = "UNKNOWN";
-
-  if($num > 15) {
-    $name = "UNKNOWN";
-  } else {
-    $name = $names[$num];
-  }
+    my $name = "UNKNOWN";
+    
+    if($num > 15) {
+        $name = "UNKNOWN";
+    } else {
+        $name = $names[$num];
+    }
 }
 
 
 sub processClientRequest {
-  my($client)                 = @_;
-  my $cmd                     = <$client>;
-  my $continueRunningLauncher = 1;
-  my $xdaqport                = 0;
-  chomp $cmd;
-
-  if($cmd =~ /STARTXDAQ(\d+)/)
-  {
-    $xdaqport = $1;
-
-    if($xdaqpid && (!$xdaqdied))
+    my($client)                 = @_;
+    my $cmd                     = <$client>;
+    my $continueRunningLauncher = 1;
+    my $xdaqport                = 0;
+    chomp $cmd;
+    
+    if($cmd =~ /STARTXDAQ(\d+)/)
     {
-      print $client "CANNOT START XDAQ - ALREADY RUNNING\n";
-    }
-    else
-    {
-      print $client "STARTING XDAQ\n";
-
-      $xdaqdied = 0;
-
-      defined($xdaqpid = fork) or die "Failed to fork: $!";
-      unless ($xdaqpid) {
-        close($client);
-	my $numactl="";
-	my $cores="";
-        my $cpu="";
-	if ($ENV{TEST_TYPE} eq "IB" ) {
-		if ($host =~ "dvrubu-c2f33") {
+        $xdaqport = $1;
+        
+        if($xdaqpid && (!$xdaqdied))
+        {
+            print $client "CANNOT START XDAQ - ALREADY RUNNING\n";
+        }
+        else
+        {
+            print $client "STARTING XDAQ\n";
+            
+            $xdaqdied = 0;
+            
+            defined($xdaqpid = fork) or die "Failed to fork: $!";
+            unless ($xdaqpid) {
+                close($client);
+                my $numactl="";
+                my $cores="";
+                my $cpu="";
+                if ($ENV{TEST_TYPE} eq "IB" ) {
+                    if ($host =~ "dvrubu-c2f33") {
                         $cores="8,9,10,12,13,14,15";
                         $cpu="1";
                         $numactl="numactl --physcpubind=$cores --membind=$cpu";
-        	} else {
-			#$cores="8,9,10,11,12,13,14,15";
-			#$cpu="1";
-			#$cores="2,3,5,6";
-			$cores="9,10,12,13";
+                    } else {
+                        #$cores="8,9,10,11,12,13,14,15";
+                        #$cpu="1";
+                        #$cores="2,3,5,6";
+                        $cores="9,10,12,13";
                         $cpu="1";
-		}
-	        $numactl="numactl --physcpubind=$cores --membind=$cpu";
-	} elsif ($ENV{TEST_TYPE} eq "COL"){
-		if ($host =~ "dvru-c2f33-27-01" || $host =~ "dvru-c2f33-28-01" || $host =~ "dvbu-c2f34-29-01" || $host =~ "dvbu-c2f34-31-01") {
-                	$cores="0,16";
-                	$cpu="1";
-			$ENV{MLN4_STALL_NUM_LOOP} = '20';
-			$ENV{MLN4_LOCAL_CPUS} = '0xAAAA';
-	  		#$numactl="export MLN4_STALL_NUM_LOOP=20; export MLN4_LOCAL_CPUS=0xAAAA; numactl --physcpubind=$cores --membind=$cpu";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-		} elsif ($host =~ "dvrubu-c2f33-21" || $host =~ "dvrubu-c2f33-23" || $host =~ "dvrubu-c2f34-21" || $host =~ "dvrubu-c2f34-23") {
-			$cores="8,9,10,12,13,14,15";
-			$cpu="1";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-		} else {
-			$cores="0,1,2,3";
+                    }
+                    $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                } elsif ($ENV{TEST_TYPE} eq "COL"){
+                    if ($host =~ "dvru-c2f33-27-01" || $host =~ "dvru-c2f33-28-01" || $host =~ "dvbu-c2f34-29-01" || $host =~ "dvbu-c2f34-31-01") {
+                        $cores="0,16";
+                        $cpu="1";
+                        $ENV{MLN4_STALL_NUM_LOOP} = '20';
+                        $ENV{MLN4_LOCAL_CPUS} = '0xAAAA';
+                        #$numactl="export MLN4_STALL_NUM_LOOP=20; export MLN4_LOCAL_CPUS=0xAAAA; numactl --physcpubind=$cores --membind=$cpu";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    } elsif ($host =~ "dvrubu-c2f33-21" || $host =~ "dvrubu-c2f33-23" || $host =~ "dvrubu-c2f34-21" || $host =~ "dvrubu-c2f34-23") {
+                        $cores="8,9,10,12,13,14,15";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    } else {
+                        $cores="0,1,2,3";
                         $numactl="taskset -c $cores";
-		}
-	} elsif ($ENV{TEST_TYPE} eq "COL2"){
-		if ($host =~ "dvru-c2f33-27-01" || $host =~ "dvru-c2f33-28-01" || $host =~ "dvru-c2f33-29-01" || $host =~ "dvru-c2f33-31-01") {
-                	$cores="0,16";
-                	$cpu="1";
-			$ENV{MLN4_STALL_NUM_LOOP} = '20';
-			$ENV{MLN4_LOCAL_CPUS} = '0xAAAA';
-	  		#$numactl="export MLN4_STALL_NUM_LOOP=20; export MLN4_LOCAL_CPUS=0xAAAA; numactl --physcpubind=$cores --membind=$cpu";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-		} elsif ($host =~ "dvrubu-c2f33-21" || $host =~ "dvrubu-c2f33-23" || $host =~ "dvrubu-c2f34-21" || $host =~ "dvrubu-c2f34-23") {
-			$cores="8,9,10,12,13,14,15";
-			$cpu="1";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-		} else {
-			$cores="0,1,2,3";
+                    }
+                } elsif ($ENV{TEST_TYPE} eq "COL2"){
+                    if ($host =~ "dvru-c2f33-27-01" || $host =~ "dvru-c2f33-28-01" || $host =~ "dvru-c2f33-29-01" || $host =~ "dvru-c2f33-31-01") {
+                        $cores="0,16";
+                        $cpu="1";
+                        $ENV{MLN4_STALL_NUM_LOOP} = '20';
+                        $ENV{MLN4_LOCAL_CPUS} = '0xAAAA';
+                        #$numactl="export MLN4_STALL_NUM_LOOP=20; export MLN4_LOCAL_CPUS=0xAAAA; numactl --physcpubind=$cores --membind=$cpu";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    } elsif ($host =~ "dvrubu-c2f33-21" || $host =~ "dvrubu-c2f33-23" || $host =~ "dvrubu-c2f34-21" || $host =~ "dvrubu-c2f34-23") {
+                        $cores="8,9,10,12,13,14,15";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    } else {
+                        $cores="0,1,2,3";
                         $numactl="taskset -c $cores";
-		}
-	} elsif ($ENV{TEST_TYPE} eq "LO"){
-		if ( $host eq "dvrubu-c2f33-21-01" && $xdaqport eq "65432") {
-			$cores="0,1,2,3,4,5";
+                    }
+                } elsif ($ENV{TEST_TYPE} eq "LO"){
+                    if ( $host eq "dvrubu-c2f33-21-01" && $xdaqport eq "65432") {
+                        $cores="0,1,2,3,4,5";
                         $cpu="0";
-                	#$cores="8,9,10,12,13";
-                	#$cpu="1";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-		}
-		elsif ($host eq "dvru-c2f33-28-01" || $host eq "dvru-c2f33-31-01") {
-                	#$cores="1,3,17,19";
-                	#$cpu="0";
-                	$cores="8,9,10,12,13";
-                	$cpu="1";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-        	} elsif ($host eq "dveb-b1b04-10-03") {
-			#$cores="0,1,2,3,5,6,7";
-			$cores="2,3,5,6";
-		} elsif ($host eq "dveferol-c2f36") {
-			$cores="2,3";
-			$cpu="0";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-			#$numactl="taskset -c $cores";
-		} elsif ($host eq "dvrubu-c2f33") {
-			$cores="8,9,10,12,13,14,15";
-			$cpu="1";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
-			#$numactl="taskset -c $cores";
-		} else {
-			$cores="0,1,2,3";
+                        #$cores="8,9,10,12,13";
+                        #$cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    }
+                    elsif ($host eq "dvru-c2f33-28-01" || $host eq "dvru-c2f33-31-01") {
+                        #$cores="1,3,17,19";
+                        #$cpu="0";
+                        $cores="8,9,10,12,13";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    } elsif ($host eq "dveb-b1b04-10-03") {
+                        #$cores="0,1,2,3,5,6,7";
+                        $cores="2,3,5,6";
+                    } elsif ($host eq "dveferol-c2f36") {
+                        $cores="2,3";
+                        $cpu="0";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                        #$numactl="taskset -c $cores";
+                    } elsif ($host eq "dvrubu-c2f33") {
+                        $cores="8,9,10,12,13,14,15";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                        #$numactl="taskset -c $cores";
+                    } else {
+                        $cores="0,1,2,3";
                         $numactl="taskset -c $cores";
-		}
-  } elsif ($ENV{TEST_TYPE} eq "40GE"){
-    if ($host eq "dvru-c2f33-28-01") {
-                  $cores="1,3,5,7,9,13,15";
-                  $cpu="1";
-        $numactl="numactl --physcpubind=$cores --membind=$cpu";
-          } elsif ($host eq "dveb-b1b04-10-03") {
-      #$cores="0,1,2,3,5,6,7";
-      $cores="2,3,5,6";
-    } elsif ($host eq "dveferol-c2f36") {
-      $cores="2,3";
-      $cpu="0";
-        $numactl="numactl --physcpubind=$cores --membind=$cpu";
-      #$numactl="taskset -c $cores";
-    } else {
-      $cores="0,1,2,3";
+                    }
+                } elsif ($ENV{TEST_TYPE} eq "40GE"){
+                    if ($host eq "dvru-c2f33-28-01") {
+                        $cores="1,3,5,7,9,13,15";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    } elsif ($host eq "dveb-b1b04-10-03") {
+                        #$cores="0,1,2,3,5,6,7";
+                        $cores="2,3,5,6";
+                    } elsif ($host eq "dveferol-c2f36") {
+                        $cores="2,3";
+                        $cpu="0";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                        #$numactl="taskset -c $cores";
+                    } else {
+                        $cores="0,1,2,3";
                         $numactl="taskset -c $cores";
+                    }
+                } elsif ($ENV{TEST_TYPE} eq "daq2"){
+                    if ($host =~ "ru-c2e") {
+                        $cores="10,12,14,26,28,30";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    }
+                    elsif ($host =~ "bu-c2") {
+                        $cores="10,12,14,26,28,30";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    }
+                }
+                
+                close($client);
+                
+                exec "$numactl $ENV{XDAQ_ROOT}/bin/xdaq.exe -e $ENV{XDAQ_ROOT}/etc/default.profile -p $xdaqport ";
+                #exec "$numactl $ENV{XDAQ_ROOT}/bin/xdaq.exe -p $xdaqport -z daqval";
+                #exec "$ENV{XDAQ_ROOT}/bin/xdaq.exe -e $ENV{XDAQ_ROOT}/etc/default.profile -p $xdaqport";
+                die "Failed to exec: $!";
+            }
+        }
+    } elsif($cmd =~ /STOPXDAQ/) {
+        if($xdaqdied) {
+            print $client "XDAQ ALREADY DIED - PID: $xdaqpid";
+            print $client " exit value: $xdaqexitvalue";
+            print $client " signal num: $xdaqsignalnum";
+            print $client " signal name: $xdaqsignalname";
+            print $client " core dumped: $xdaqcoredumped\n";
+            
+            $xdaqdied = 0;
+            $xdaqpid  = 0;
+        } elsif($xdaqpid == 0) {
+            print $client "CANNOT STOP XDAQ - NOT RUNNING\n";
+        } else {
+            print $client "STOPPING XDAQ\n";
+            
+            kill 9 =>$xdaqpid;
+            
+            while($xdaqdied == 0) {
+                # Do nothing
+            }
+            
+            $xdaqpid = 0;
+        }
+    } elsif($cmd =~ /GETXDAQSTATUS/) {
+        if($xdaqdied) {
+            print $client "XDAQ DIED - PID: $xdaqpid";
+            print $client " exit value: $xdaqexitvalue";
+            print $client " signal num: $xdaqsignalnum";
+            print $client " signal name: $xdaqsignalname";
+            print $client " core dumped: $xdaqcoredumped\n";
+        } elsif($xdaqpid) {
+            print $client "XDAQ IS RUNNING - PID: $xdaqpid\n";
+        } else {
+            print $client "XDAQ IS NOT RUNNING\n";
+        }
+    } elsif($cmd =~ /STOPLAUNCHER/) {
+        if($xdaqpid) {
+            print $client "STOPPING XDAQ AND THEN LAUNCHER\n";
+            
+            kill 9 =>$xdaqpid;
+            
+            while($xdaqdied == 0) {
+                # Do nothing
+            }
+            
+            $xdaqpid = 0; # Not needed as launcher is about to stop
+        } else {
+            print $client "STOPPING LAUNCHER - XDAQ IS NOT RUNNING\n";
+        }
+        $continueRunningLauncher = 0;
     }
-	} elsif ($ENV{TEST_TYPE} eq "daq2"){
-		if ($host =~ "ru-c2e") {
-      	$cores="10,12,14,26,28,30";
-      	$cpu="1";
-	  		$numactl="numactl --physcpubind=$cores --membind=$cpu";
+    else
+    {
+        print $client "UNKNOWN COMMAND\n";
     }
-    elsif ($host =~ "bu-c2") {
-        $cores="10,12,14,26,28,30";
-        $cpu="1";
-        $numactl="numactl --physcpubind=$cores --membind=$cpu";
-		}
-	}
-
-        close($client);
-
-        exec "$numactl $ENV{XDAQ_ROOT}/bin/xdaq.exe -e $ENV{XDAQ_ROOT}/etc/default.profile -p $xdaqport ";
-        #exec "$numactl $ENV{XDAQ_ROOT}/bin/xdaq.exe -p $xdaqport -z daqval";
-        #exec "$ENV{XDAQ_ROOT}/bin/xdaq.exe -e $ENV{XDAQ_ROOT}/etc/default.profile -p $xdaqport";
-        die "Failed to exec: $!";
-      }
-    }
-  } elsif($cmd =~ /STOPXDAQ/) {
-    if($xdaqdied) {
-      print $client "XDAQ ALREADY DIED - PID: $xdaqpid";
-      print $client " exit value: $xdaqexitvalue";
-      print $client " signal num: $xdaqsignalnum";
-      print $client " signal name: $xdaqsignalname";
-      print $client " core dumped: $xdaqcoredumped\n";
-
-      $xdaqdied = 0;
-      $xdaqpid  = 0;
-    } elsif($xdaqpid == 0) {
-      print $client "CANNOT STOP XDAQ - NOT RUNNING\n";
-    } else {
-      print $client "STOPPING XDAQ\n";
-
-      kill 9 =>$xdaqpid;
-
-      while($xdaqdied == 0) {
-        # Do nothing
-      }
-
-      $xdaqpid = 0;
-    }
-  } elsif($cmd =~ /GETXDAQSTATUS/) {
-    if($xdaqdied) {
-      print $client "XDAQ DIED - PID: $xdaqpid";
-      print $client " exit value: $xdaqexitvalue";
-      print $client " signal num: $xdaqsignalnum";
-      print $client " signal name: $xdaqsignalname";
-      print $client " core dumped: $xdaqcoredumped\n";
-    } elsif($xdaqpid) {
-      print $client "XDAQ IS RUNNING - PID: $xdaqpid\n";
-    } else {
-      print $client "XDAQ IS NOT RUNNING\n";
-    }
-  } elsif($cmd =~ /STOPLAUNCHER/) {
-    if($xdaqpid) {
-      print $client "STOPPING XDAQ AND THEN LAUNCHER\n";
-
-      kill 9 =>$xdaqpid;
-
-      while($xdaqdied == 0) {
-        # Do nothing
-      }
-
-      $xdaqpid = 0; # Not needed as launcher is about to stop
-    } else {
-      print $client "STOPPING LAUNCHER - XDAQ IS NOT RUNNING\n";
-    }
-    $continueRunningLauncher = 0;
-  }
-  else
-  {
-    print $client "UNKNOWN COMMAND\n";
-  }
-
-  $continueRunningLauncher;
+    
+    $continueRunningLauncher;
 }
 
 
 $SIG{CHLD} = \&reaper;
 
 my $server = IO::Socket::INET->new(LocalPort => $listenport,
-                                   Type      => SOCK_STREAM,
-                                   Reuse     => 1,
-                                   Listen    => 10)
-  or die "Failed to create server socket $@\n";
+Type      => SOCK_STREAM,
+Reuse     => 1,
+Listen    => 10)
+or die "Failed to create server socket $@\n";
 
 
 
@@ -283,20 +283,20 @@ my $continueRunningLauncher = 1;
 my $client;
 
 while($systemCallInterrupted && $continueRunningLauncher) {
-  $systemCallInterrupted = 0;
-
-  while($continueRunningLauncher && ($client = $server->accept())) {
-    $continueRunningLauncher = &processClientRequest($client);
-
-    close($client);
-  }
-
-  # $server->accept may have returned due to a signal
-  if(!defined($client)) {
-    if($! =~ /Interrupted system call/) {
-      $systemCallInterrupted = 1;
+    $systemCallInterrupted = 0;
+    
+    while($continueRunningLauncher && ($client = $server->accept())) {
+        $continueRunningLauncher = &processClientRequest($client);
+        
+        close($client);
     }
-  }
+    
+    # $server->accept may have returned due to a signal
+    if(!defined($client)) {
+        if($! =~ /Interrupted system call/) {
+            $systemCallInterrupted = 1;
+        }
+    }
 }
 
 close($server);
