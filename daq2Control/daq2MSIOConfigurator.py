@@ -35,7 +35,9 @@ class daq2MSIOConfigurator(daq2Configurator):
 		## These should be passed as arguments
 		self.nclients = 1
 		self.nservers = 1
-		self.clientSendQPSize = None
+
+		self.clientIBVConfig = tuple([None]*5)
+		self.serverIBVConfig = tuple([None]*5)
 
 	def addMSIOI2OProtocol(self):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
@@ -69,50 +71,62 @@ class daq2MSIOConfigurator(daq2Configurator):
 				                   'instance':"%d"%n,
 				                   'tid':'%d'%(starting_tid+n)}))
 
-	def configureIBV(self, context):
-		maxMSize = int(self.readPropertyFromApp(context=context,
-			                        classname="pt::ibv::Application",
+	def configureIBV(self):
+		clientIBVApp = elementFromFile(filename=os.path.join(
+			                               self.fragmentdir,
+		                                   'msio/client_ibv_application.xml'))
+
+		serverIBVApp = elementFromFile(filename=os.path.join(
+			                               self.fragmentdir,
+		                                   'msio/server_ibv_application.xml'))
+
+		clientMaxMSize = int(self.readPropertyFromApp(
+			                        application=clientIBVApp,
 			                        prop_name="maxMessageSize"))
 
-		if 'RU' in context.attrib['url']: # Client:
-			sendPoolSize = 64*1024*1024
-			recvPoolSize = 0x40000
-			complQPSize = max(sendPoolSize, recvPoolSize) / maxMSize
-			# print "max(%d, %d) / %d" % (sendPoolSize, recvPoolSize, maxMSize)
-			sendQPSize = sendPoolSize / maxMSize / self.nservers
-			self.clientSendQPSize = sendQPSize
-			recvQPSize = 2
-			if self.verbose > 1:
-				print "  client complQPSize", complQPSize
-				print "  client sendQPSize", sendQPSize
-			self.configureIBVApplication(context=context,
-				                         sendPoolSize=sendPoolSize,
-				                         recvPoolSize=recvPoolSize,
-				                         complQPSize=complQPSize,
-				                         sendQPSize=sendQPSize,
-				                         recvQPSize=recvQPSize)
+		serverMaxMSize = int(self.readPropertyFromApp(
+			                        application=serverIBVApp,
+			                        prop_name="maxMessageSize"))
 
-		elif 'BU' in context.attrib['url']: # Server:
-			sendPoolSize = 0x40000
-			if self.clientSendQPSize is not None:
-				recvQPSize = self.clientSendQPSize
-			else:
-				raise RuntimeError('Need to configure client IBV application before '
-					               'server IBV application!')
-			recvPoolSize = recvQPSize * maxMSize * self.nclients * 2
-			complQPSize = max(sendPoolSize, recvPoolSize) / maxMSize
-			sendQPSize = 2
-			if self.verbose > 1:
-				print "  server complQPSize", complQPSize
-				print "  server sendQPSize", sendQPSize
+		# Client:
+		sendPoolSize = 64*1024*1024
+		recvPoolSize = 0x40000
+		complQPSize = max(sendPoolSize, recvPoolSize) / clientMaxMSize
+		sendQPSize = sendPoolSize / clientMaxMSize / self.nservers
+		recvQPSize = 2
+		self.clientIBVConfig = (sendPoolSize,
+			                    recvPoolSize,
+			                    complQPSize,
+			                    sendQPSize,
+			                    recvQPSize)
 
-			self.configureIBVApplication(context=context,
-				                         sendPoolSize=sendPoolSize,
-				                         recvPoolSize=recvPoolSize,
-				                         complQPSize=complQPSize,
-				                         sendQPSize=sendQPSize,
-				                         recvQPSize=recvQPSize)
+		if self.verbose > 1:
+			print "  client IBV config:"
+			print "    sendPoolSize: %s (%d MB)" % (hex(sendPoolSize), sendPoolSize/1024/1024)
+			print "    recvPoolSize: %s (%d kB)" % (hex(recvPoolSize), recvPoolSize/1024)
+			print "    complQPSize: ", complQPSize
+			print "    sendQPSize: ", sendQPSize
+			print "    recvQPSize: ", recvQPSize
 
+		# Server:
+		sendPoolSize = 0x40000
+		recvQPSize = sendQPSize # still the one from the client
+		recvPoolSize = recvQPSize * serverMaxMSize * self.nclients * 2
+		complQPSize = max(sendPoolSize, recvPoolSize) / serverMaxMSize
+		sendQPSize = 2
+		self.serverIBVConfig = (sendPoolSize,
+			                    recvPoolSize,
+			                    complQPSize,
+			                    sendQPSize,
+			                    recvQPSize)
+
+		if self.verbose > 1:
+			print "  server IBV config:"
+			print "    sendPoolSize: %s (%d kB)" % (hex(sendPoolSize), sendPoolSize/1024)
+			print "    recvPoolSize: %s (%d MB)" % (hex(recvPoolSize), recvPoolSize/1024/1024)
+			print "    complQPSize", complQPSize
+			print "    sendQPSize", sendQPSize
+			print "    recvQPSize", recvQPSize
 
 
 	def makeClient(self, index):
@@ -138,7 +152,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		                    index=2) ## add after policy and endpoint
 
 		## Configure IBV application:
-		self.configureIBV(context)
+		self.configureIBVApplication(context, self.clientIBVConfig)
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
@@ -186,7 +200,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		                    index=2) ## add after the two endpoints
 
 		## Configure IBV application:
-		self.configureIBV(context)
+		self.configureIBVApplication(context, self.serverIBVConfig)
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
@@ -276,7 +290,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 				app.set('port', app.get('port')%ruindex)
 		ru_context.set('url', ru_context.get('url')%(ruindex, ruindex))
 
-		self.setPropertyInApp(ru_context, 'gevb2g::InputEmulator',
+		self.setPropertyInAppInContext(ru_context, 'gevb2g::InputEmulator',
 			                  'destinationClassInstance', str(ruindex))
 
 		return ru_context
@@ -318,7 +332,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		evm_element.set('url', evm_element.get('url')%(index, index))
 
 		## Change poolName in EVM application:
-		self.setPropertyInApp(evm_element, 'gevb2g::EVM',
+		self.setPropertyInAppInContext(evm_element, 'gevb2g::EVM',
 			                  'poolName', 'sibv')
 
 		return evm_element
@@ -382,6 +396,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		## mstreamio
 		if self.evbns == 'msio':
+			if "ibv" in self.ptprot:
+				self.configureIBV()
 			self.addMSIOI2OProtocol()
 			for index in xrange(self.nclients):
 				self.config.append(self.makeClient(index))

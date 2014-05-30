@@ -95,20 +95,27 @@ class daq2Configurator(object):
 		 ## Extract namespace
 		self.xdaqns = re.match(r'\{(.*?)\}Partition',
 		                       self.config.tag).group(1)
-	def propertyInApp(self, context, classname, prop_name, prop_value=None,
+	def propertyInAppInContext(self, context, classname, prop_name, prop_value=None,
 		                 instance=0):
 		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			## find correct application
 			if not app.attrib['class'] == classname: continue
 			if not app.attrib['instance'] == str(instance): continue
+
+			return self.propertyInApp(app, prop_name, prop_value)
+
+		else:
+			raise RuntimeError('Application %s not found in context %s.'%
+				               (classname, context.attrib['url']))
+	def propertyInApp(self, application, prop_name, prop_value=None):
 			try:
 				## Assume here that there is only one element, which
 				## is the properties
-				properties = app[0]
+				properties = application[0]
 				if not 'properties' in properties.tag:
 					raise RuntimeError(
 						  'Could not identify properties of %s application'
-						  'in %s context.'%(app.attrib['class'],
+						  'in %s context.'%(application.attrib['class'],
 						                 context.attrib['url']))
 				## Extract namespace
 				appns = re.match(r'\{(.*?)\}properties',
@@ -116,32 +123,38 @@ class daq2Configurator(object):
 			except IndexError: ## i.e. app[0] didn't work
 				raise RuntimeError(
 					  'Application %s in context %s does not have'
-					  'properties.'%(app.attrib['class'],
+					  'properties.'%(application.attrib['class'],
 					  	             context.attrib['url']))
 
-			prop = app.find(QN(appns,'properties').text+'/'+
+			prop = application.find(QN(appns,'properties').text+'/'+
 				            QN(appns,prop_name).text)
 			try:
 				if prop_value is not None: # if value is given, set it
 					prop.text = str(prop_value)
+					return True
 				else: # if not, return the existing value
 					return prop.text
 			except AttributeError:
-				raise KeyError('Property %s of application %s in context %s'
-					           'not found.'%(prop_name, app.attrib['class'],
-					           	             context.attrib['url']))
-			break
+				raise KeyError('Property %s of application %s '
+					           'not found.'%(prop_name,
+					           	             application.attrib['class']))
 
-		else:
-			raise RuntimeError('Application %s not found in context %s.'%
-				               (classname, context.attrib['url']))
-	def setPropertyInApp(self, context, classname, prop_name, prop_value,
-		                 instance=0):
-		self.propertyInApp(context, classname, prop_name, prop_value,
-			               instance)
-	def readPropertyFromApp(self, context, classname, prop_name, instance=0):
-		return self.propertyInApp(context, classname, prop_name, None, instance)
-	def removePropertyInApp(self, context, classname, prop_name):
+	def setPropertyInAppInContext(self, context, classname,
+		                          prop_name, prop_value,
+		                          instance=0):
+		self.propertyInAppInContext(context, classname,
+			                        prop_name, prop_value,
+			                        instance)
+	def readPropertyFromAppInContext(self, context, classname,
+		                             prop_name, instance=0):
+		return self.propertyInAppInContext(context, classname,
+			                               prop_name, None, instance)
+
+	def setPropertyInApp(self, application, prop_name, prop_value):
+		return self.propertyInApp(application, prop_name, prop_value)
+	def readPropertyFromApp(self, application, prop_name):
+		return self.propertyInApp(application, prop_name, None)
+	def removePropertyInAppInContext(self, context, classname, prop_name):
 		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			## find correct application
 			if not app.attrib['class'] == classname: continue
@@ -179,30 +192,29 @@ class daq2Configurator(object):
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
 
-	def configureIBVApplication(self, context, sendPoolSize, recvPoolSize,
-		                        complQPSize, sendQPSize, recvQPSize,
-		                        instance=0):
+	def configureIBVApplication(self, context, ibvConfig):
+		sPoolSize, rPoolSize, cQPSize, sQPSize, rQPSize = ibvConfig
 		try:
-			self.setPropertyInApp(context, classname='pt::ibv::Application',
+			self.setPropertyInAppInContext(context,
+				                  classname='pt::ibv::Application',
 				                  prop_name='senderPoolSize',
-				                  prop_value=hex(sendPoolSize),
-				                  instance=instance)
-			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_value=hex(sPoolSize))
+			self.setPropertyInAppInContext(context,
+				                  classname='pt::ibv::Application',
 				                  prop_name='receiverPoolSize',
-				                  prop_value=hex(recvPoolSize),
-				                  instance=instance)
-			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_value=hex(rPoolSize))
+			self.setPropertyInAppInContext(context,
+				                  classname='pt::ibv::Application',
 				                  prop_name='completionQueueSize',
-				                  prop_value=str(complQPSize),
-				                  instance=instance)
-			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_value=str(cQPSize))
+			self.setPropertyInAppInContext(context,
+				                  classname='pt::ibv::Application',
 				                  prop_name='sendQueuePairSize',
-				                  prop_value=str(sendQPSize),
-				                  instance=instance)
-			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_value=str(sQPSize))
+			self.setPropertyInAppInContext(context,
+				                  classname='pt::ibv::Application',
 				                  prop_name='recvQueuePairSize',
-				                  prop_value=str(recvQPSize),
-				                  instance=instance)
+				                  prop_value=str(rQPSize))
 		except RuntimeError, e:
 			if "not found in context" in e.strerror: pass
 			else: raise e
@@ -243,66 +255,90 @@ class daq2Configurator(object):
 		physSlot = frl.slotNumber
 		sourceIp = frl.sourceIp
 
-		self.setPropertyInApp(ferol, classname, 'slotNumber', physSlot)
-		self.setPropertyInApp(ferol, classname, 'expectedFedId_0', fedids[0])
+		self.setPropertyInAppInContext(ferol, classname,
+			                           'slotNumber', physSlot)
+		self.setPropertyInAppInContext(ferol, classname,
+			                           'expectedFedId_0', fedids[0])
 		try:
-			self.setPropertyInApp(ferol, classname, 'expectedFedId_1',
-				                  fedids[1])
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'expectedFedId_1', fedids[1])
 		except IndexError:
 			pass
-		self.setPropertyInApp(ferol, classname, 'SourceIP', sourceIp)
+		self.setPropertyInAppInContext(ferol, classname,
+			                           'SourceIP', sourceIp)
 
 		# if frl.nstreams == 1:
-		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 135000)
-		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 135000)
+		# 	self.setPropertyInAppInContext(ferol, classname,
+		# 	                               'TCP_CWND_FED0', 135000)
+		# 	self.setPropertyInAppInContext(ferol, classname,
+		# 	                               'TCP_CWND_FED1', 135000)
 		# if frl.nstreams == 2:
-		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 62500)
-		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED1', 62500)
+		# 	self.setPropertyInAppInContext(ferol, classname,
+		# 	                               'TCP_CWND_FED0', 62500)
+		# 	self.setPropertyInAppInContext(ferol, classname,
+		# 	                               'TCP_CWND_FED1', 62500)
 
 		if frl.nstreams == 1:
-			self.setPropertyInApp(ferol, classname, 'enableStream0', 'true')
-			self.setPropertyInApp(ferol, classname, 'enableStream1', 'false')
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'enableStream0', 'true')
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'enableStream1', 'false')
 		if frl.nstreams == 2:
-			self.setPropertyInApp(ferol, classname, 'enableStream0', 'true')
-			self.setPropertyInApp(ferol, classname, 'enableStream1', 'true')
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'enableStream0', 'true')
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'enableStream1', 'true')
 
 		if self.setCorrelatedSeed:
-			self.setPropertyInApp(ferol, classname, 'Seed_FED0', 12345)
-			self.setPropertyInApp(ferol, classname, 'Seed_FED1', 23456)
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'Seed_FED0', 12345)
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'Seed_FED1', 23456)
 		else:
 			seed = int(time.time()*10000)%100000
-			self.setPropertyInApp(ferol, classname, 'Seed_FED0', seed)
-			self.setPropertyInApp(ferol, classname, 'Seed_FED1', seed+1)
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'Seed_FED0', seed)
+			self.setPropertyInAppInContext(ferol, classname,
+				                           'Seed_FED1', seed+1)
 
 
-		if self.disablePauseFrame: self.setPropertyInApp(ferol, classname,
-			                          'ENA_PAUSE_FRAME', 'false')
-		if self.enablePauseFrame: self.setPropertyInApp(ferol, classname,
-			                          'ENA_PAUSE_FRAME', 'true')
-		if self.setCWND >= 0: self.setPropertyInApp(ferol, classname,
-			                          'TCP_CWND_FED0', self.setCWND)
-		if self.setCWND >= 0: self.setPropertyInApp(ferol, classname,
-			                          'TCP_CWND_FED1', self.setCWND)
+		if self.disablePauseFrame:
+			self.setPropertyInAppInContext(ferol, classname,
+			                              'ENA_PAUSE_FRAME', 'false')
+		if self.enablePauseFrame:
+			self.setPropertyInAppInContext(ferol, classname,
+			                               'ENA_PAUSE_FRAME', 'true')
+		if self.setCWND >= 0:
+			self.setPropertyInAppInContext(ferol, classname,
+			                               'TCP_CWND_FED0', self.setCWND)
+		if self.setCWND >= 0:
+			self.setPropertyInAppInContext(ferol, classname,
+			                               'TCP_CWND_FED1', self.setCWND)
 
-		self.setPropertyInApp(ferol, classname, 'DestinationIP',
+		self.setPropertyInAppInContext(ferol, classname, 'DestinationIP',
 			                  'RU%d_FRL_HOST_NAME'%frl.ruindex)
-		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED0',
+		self.setPropertyInAppInContext(ferol, classname,
+			                  'TCP_DESTINATION_PORT_FED0',
 			                  'RU%d_FRL_PORT'%frl.ruindex)
-		self.setPropertyInApp(ferol, classname, 'TCP_DESTINATION_PORT_FED1',
+		self.setPropertyInAppInContext(ferol, classname,
+			                  'TCP_DESTINATION_PORT_FED1',
 			                  '60600')
 		## route every second one to port 60600 if there is only one
 		## stream per RU
 		if self.streams_per_ferol==1 and (frl.index+1)%2==0:
-			self.setPropertyInApp(ferol, classname,
+			self.setPropertyInAppInContext(ferol, classname,
 				                  'TCP_DESTINATION_PORT_FED0', '60600')
 		try:
-			self.setPropertyInApp(ferol, classname, 'OperationMode',
+			self.setPropertyInAppInContext(ferol, classname,
+				     'OperationMode',
 				     FEROL_OPERATION_MODES[self.operation_mode][0])
 			if FEROL_OPERATION_MODES[self.operation_mode][1] is not None:
-				self.setPropertyInApp(ferol, classname, 'FrlTriggerMode',
+				self.setPropertyInAppInContext(ferol, classname,
+					 'FrlTriggerMode',
 					 FEROL_OPERATION_MODES[self.operation_mode][1])
 			else:
-				self.removePropertyInApp(ferol, classname, 'FrlTriggerMode')
+				self.removePropertyInAppInContext(ferol, classname,
+					                              'FrlTriggerMode')
 		except KeyError as e:
 			printError('Unknown ferol operation mode "%s"'%
 				        self.operation_mode, instance=self)
