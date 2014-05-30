@@ -9,7 +9,7 @@
 		<completionQueueSize xsi:type="xsd:unsignedInt">32768</completionQueueSize>
 		<sendQueuePairSize xsi:type="xsd:unsignedInt">256</sendQueuePairSize>
 		<recvQueuePairSize xsi:type="xsd:unsignedInt">8</recvQueuePairSize>
-		<maxMessageSize xsi:type="xsd:unsignedInt">65000</maxMessageSize>
+		<maxMessageSize xsi:type="xsd:unsignedInt">65536</maxMessageSize>
 		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
 		<!-- <sendPoolHighThreshold xsi:type="xsd:double">0.9</sendPoolHighThreshold> -->
 		<!-- <sendPoolLowThreshold xsi:type="xsd:double">0.7</sendPoolLowThreshold> -->
