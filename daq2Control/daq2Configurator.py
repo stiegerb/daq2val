@@ -95,10 +95,12 @@ class daq2Configurator(object):
 		 ## Extract namespace
 		self.xdaqns = re.match(r'\{(.*?)\}Partition',
 		                       self.config.tag).group(1)
-	def setPropertyInApp(self, context, classname, prop_name, prop_value):
+	def propertyInApp(self, context, classname, prop_name, prop_value=None,
+		                 instance=0):
 		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			## find correct application
 			if not app.attrib['class'] == classname: continue
+			if not app.attrib['instance'] == str(instance): continue
 			try:
 				## Assume here that there is only one element, which
 				## is the properties
@@ -120,7 +122,10 @@ class daq2Configurator(object):
 			prop = app.find(QN(appns,'properties').text+'/'+
 				            QN(appns,prop_name).text)
 			try:
-				prop.text = str(prop_value)
+				if prop_value is not None: # if value is given, set it
+					prop.text = str(prop_value)
+				else: # if not, return the existing value
+					return prop.text
 			except AttributeError:
 				raise KeyError('Property %s of application %s in context %s'
 					           'not found.'%(prop_name, app.attrib['class'],
@@ -130,6 +135,12 @@ class daq2Configurator(object):
 		else:
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
+	def setPropertyInApp(self, context, classname, prop_name, prop_value,
+		                 instance=0):
+		self.propertyInApp(context, classname, prop_name, prop_value,
+			               instance)
+	def readPropertyFromApp(self, context, classname, prop_name, instance=0):
+		return self.propertyInApp(context, classname, prop_name, None, instance)
 	def removePropertyInApp(self, context, classname, prop_name):
 		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			## find correct application
@@ -168,6 +179,35 @@ class daq2Configurator(object):
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
 
+	def configureIBVApplication(self, context, sendPoolSize, recvPoolSize,
+		                        complQPSize, sendQPSize, recvQPSize,
+		                        instance=0):
+		try:
+			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_name='senderPoolSize',
+				                  prop_value=hex(sendPoolSize),
+				                  instance=instance)
+			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_name='receiverPoolSize',
+				                  prop_value=hex(recvPoolSize),
+				                  instance=instance)
+			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_name='completionQueueSize',
+				                  prop_value=str(complQPSize),
+				                  instance=instance)
+			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_name='sendQueuePairSize',
+				                  prop_value=str(sendQPSize),
+				                  instance=instance)
+			self.setPropertyInApp(context, classname='pt::ibv::Application',
+				                  prop_name='recvQueuePairSize',
+				                  prop_value=str(recvQPSize),
+				                  instance=instance)
+		except RuntimeError, e:
+			if "not found in context" in e.strerror: pass
+			else: raise e
+
+
 	def addI2OProtocol(self):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
 		prot = Element(QN(i2ons, 'protocol').text)
@@ -203,14 +243,14 @@ class daq2Configurator(object):
 		physSlot = frl.slotNumber
 		sourceIp = frl.sourceIp
 
-		self.setPropertyInApp(ferol, classname, 'slotNumber',      physSlot)
+		self.setPropertyInApp(ferol, classname, 'slotNumber', physSlot)
 		self.setPropertyInApp(ferol, classname, 'expectedFedId_0', fedids[0])
 		try:
 			self.setPropertyInApp(ferol, classname, 'expectedFedId_1',
 				                  fedids[1])
 		except IndexError:
 			pass
-		self.setPropertyInApp(ferol, classname, 'SourceIP',        sourceIp)
+		self.setPropertyInApp(ferol, classname, 'SourceIP', sourceIp)
 
 		# if frl.nstreams == 1:
 		# 	self.setPropertyInApp(ferol, classname, 'TCP_CWND_FED0', 135000)
