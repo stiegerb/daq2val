@@ -66,10 +66,6 @@ class daq2Configurator(object):
 		self.xdaqappns      = "urn:xdaq-application:%s"
 
 
-		self.RUIBVConfig = tuple([None]*5)
-		self.BUIBVConfig = tuple([None]*5)
-		self.EVMIBVConfig = tuple([None]*5)
-
 		## These should be passed as options
 		self.enablePauseFrame  = True
 		self.disablePauseFrame = False
@@ -161,6 +157,7 @@ class daq2Configurator(object):
 		return self.propertyInApp(application, prop_name, prop_value)
 	def readPropertyFromApp(self, application, prop_name):
 		return self.propertyInApp(application, prop_name, None)
+
 	def removePropertyInAppInContext(self, context, classname, prop_name):
 		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			## find correct application
@@ -199,116 +196,6 @@ class daq2Configurator(object):
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
 
-
-	def configureIBV(self):
-		if self.evbns == 'msio':
-			RUFragmentPath = os.path.join(self.fragmentdir,
-                                 'msio/client_ibv_application.xml')
-			BUFragmentPath = os.path.join(self.fragmentdir,
-                                 'msio/server_ibv_application.xml')
-		elif self.evbns == 'gevb2g':
-			RUFragmentPath = os.path.join(self.fragmentdir,
-                               'RU/gevb2g/msio/RU_ibv_application_msio.xml')
-			BUFragmentPath = os.path.join(self.fragmentdir,
-                               'BU/gevb2g/msio/BU_ibv_application_msio.xml')
-			EVMFragmentPath = os.path.join(self.fragmentdir,
-                               'EVM/msio/EVM_ibv_application_msio.xml')
-			EVMIBVApp = elementFromFile(filename=EVMFragmentPath)
-
-
-		RUIBVApp = elementFromFile(filename=RUFragmentPath)
-		BUIBVApp = elementFromFile(filename=BUFragmentPath)
-
-		BUApp = elementFromFile(filename=os.path.join(self.fragmentdir,
-				                  'BU/gevb2g/msio/BU_application_msio.xml'))
-		maxResources = int(self.readPropertyFromApp(
-		                        application=BUApp,
-		                        prop_name="maxResources"))
-
-		RUMaxMSize = int(self.readPropertyFromApp(
-			                        application=RUIBVApp,
-			                        prop_name="maxMessageSize"))
-
-		BUMaxMSize = int(self.readPropertyFromApp(
-			                        application=BUIBVApp,
-			                        prop_name="maxMessageSize"))
-
-		# RU/Client:
-		if self.evbns == 'msio':
-			sendPoolSize = 64*1024*1024
-			recvPoolSize = 0x40000
-			complQPSize = max(sendPoolSize, recvPoolSize) / RUMaxMSize
-			sendQPSize = sendPoolSize / RUMaxMSize / self.nservers
-			recvQPSize = 2
-		elif self.evbns == 'gevb2g':
-			sendQPSize = maxResources
-			sendPoolSize = RUMaxMSize * self.nservers * sendQPSize * 2
-			recvPoolSize = maxResources*256*1024
-			complQPSize = max(sendPoolSize, recvPoolSize) / RUMaxMSize
-			recvQPSize = maxResources
-
-		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
-			                complQPSize, sendQPSize, recvQPSize)
-
-		if self.verbose > 1:
-			print "  RU/client IBV config:"
-			print "    sendPoolSize: %s (%d MB)" % (
-				                   hex(sendPoolSize), sendPoolSize/1024/1024)
-			print "    recvPoolSize: %s (%d kB)" % (
-				                   hex(recvPoolSize), recvPoolSize/1024)
-			print "    complQPSize: ", complQPSize
-			print "    sendQPSize: ", sendQPSize
-			print "    recvQPSize: ", recvQPSize
-
-		# BU/Server:
-		if self.evbns == 'msio':
-			sendPoolSize = 0x40000
-			recvQPSize = sendQPSize # still the one from the client
-			recvPoolSize = recvQPSize * BUMaxMSize * self.nclients * 2
-			complQPSize = max(sendPoolSize, recvPoolSize) / BUMaxMSize
-			sendQPSize = 2
-		elif self.evbns == 'gevb2g':
-			sendPoolSize = 0x40000
-			recvQPSize = maxResources
-			recvPoolSize = BUMaxMSize*self.nclients*recvQPSize*2
-			sendQPSize = maxResources
-			complQPSize = max(sendPoolSize, recvPoolSize) / BUMaxMSize
-
-
-		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
-			                complQPSize, sendQPSize, recvQPSize)
-
-		if self.verbose > 1:
-			print "  BU/server IBV config:"
-			print "    sendPoolSize: %s (%d kB)" % (
-				                   hex(sendPoolSize), sendPoolSize/1024)
-			print "    recvPoolSize: %s (%d MB)" % (
-				                   hex(recvPoolSize), recvPoolSize/1024/1024)
-			print "    complQPSize", complQPSize
-			print "    sendQPSize", sendQPSize
-			print "    recvQPSize", recvQPSize
-
-		# EVM:
-		if self.evbns == 'gevb2g':
-			sendPoolSize = maxResources*256*1024
-			recvPoolSize = maxResources*256*1024
-			recvQPSize = maxResources
-			sendQPSize = maxResources
-			complQPSize = maxResources * self.nservers
-
-
-			self.EVMIBVConfig = (sendPoolSize, recvPoolSize,
-				                complQPSize, sendQPSize, recvQPSize)
-
-			if self.verbose > 1:
-				print "  EVM IBV config:"
-				print "    sendPoolSize: %s (%d kB)" % (
-					                   hex(sendPoolSize), sendPoolSize/1024)
-				print "    recvPoolSize: %s (%d MB)" % (
-					                   hex(recvPoolSize), recvPoolSize/1024/1024)
-				print "    complQPSize", complQPSize
-				print "    sendQPSize", sendQPSize
-				print "    recvQPSize", recvQPSize
 	def configureIBVApplication(self, context, ibvConfig):
 		sPoolSize, rPoolSize, cQPSize, sQPSize, rQPSize = ibvConfig
 		try:

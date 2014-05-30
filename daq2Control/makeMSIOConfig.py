@@ -4,13 +4,25 @@ from daq2MSIOConfigurator import daq2MSIOConfigurator
 from daq2Utils import getConfig, printWarningWithWait, printError
 
 def addConfiguratorOption(parser):
+	parser.add_option("-d", "--setDynamicIBVConfig", default=False,
+		              action="store_true", dest="setDynamicIBVConfig",
+		              help="Set the senderPoolSize, receiverPoolSize, "
+		                   "completionQueueSize, sendQueuePairSize, "
+		                   "and recvQueuePairSize parameters of the "
+		                   "pt::ibv::Application dynamically according "
+		                   "to Andys algorithm. If not set, take "
+		                   "everything from fragment.")
+	parser.add_option("-c", "--clientSendPoolSize", default=1920,
+		              action="store", type="int", dest="clientSendPoolSize",
+		              help="Set the sendPoolSize parameter on the MStreamIO "
+		                   "client (in MBytes, default: %default).")
 	parser.add_option("--useGevb2g", default=False, action="store_true",
 		              dest="useGevb2g",
 		              help="Use gevb2g for event building (instead of EvB)")
 	parser.add_option("--fragmentDir", default='', action="store",
 		              type="string", dest="fragmentDir",
-		              help=("Use config fragments from a directory other than "
-		                    "the default"))
+		              help=("Use config fragments from a directory other "
+		                    "than the default"))
 	parser.add_option("-v", "--verbose", default=1, action="store",
 		              type='int', dest="verbose",
 		              help=("Set the verbose level, [default: %default "
@@ -20,8 +32,9 @@ def addConfiguratorOption(parser):
 		              help="Where to put the output file")
 
 def getMSIOConfig(string=""):
-	"""Extract number of streams, readout units, builder units, and RMS from strings such as
-	8x1x2 or 16s8fx2x4_RMS_0.5 (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
+	"""Extract number of streams, readout units, builder units, and RMS
+	   from strings such as	8x1x2 or 16s8fx2x4_RMS_0.5
+	   (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
 	"""
 	try:
 		nClie, nServ = tuple([int(x) for x in string.split('x')])
@@ -44,6 +57,9 @@ def main(options, args):
 
 	configurator.evbns = 'msio'
 	if options.useGevb2g: configurator.evbns = 'gevb2g'
+
+	configurator.clientSendPoolSize = options.clientSendPoolSize
+	configurator.setDynamicIBVConfig = options.setDynamicIBVConfig
 
 	## Construct output name
 	output = args[0]
