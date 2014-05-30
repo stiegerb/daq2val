@@ -15,6 +15,7 @@ import re, os, shlex
 import time
 import itertools
 from sys import stdout
+from multiprocessing import Pool
 
 separator = 70*'-'
 
@@ -343,7 +344,11 @@ class daq2Control(object):
 		## Send the configuration file to each host
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring XDAQ processes"
-		if not utils.sendToHostListInParallel(self.config.hosts, utils.sendCmdFileToExecutivePacked, (self._runDir+'/configure.cmd.xml', self.options.verbose, self.options.dry)):
+		if not utils.sendToHostListInParallel(
+			          self.config.hosts,
+                      utils.sendCmdFileToExecutivePacked,
+			          (self._runDir+'/configure.cmd.xml',
+			           self.options.verbose, self.options.dry)):
 			self.retry("Failed to send command file to all hosts")
 			return
 		sleep(2, self.options.verbose, self.options.dry)
@@ -416,15 +421,14 @@ class daq2Control(object):
 		## In case of mstreamio configurations:
 		if self.config.useMSIO:
 			if self.config.useIBV: ## Only do this for ibv!
-				for h in self.config.RUs: ## + self.config.BUs:
-				# for h in self.config.BUs:
-					print "Sending init to", h.name
-					utils.sendSimpleCmdToApp(h.host, h.port,
-						                     "pt::ibv::Application", 0,
-						                     "init",
-						                     verbose=self.options.verbose,
-						                     dry=self.options.dry)
-				#sleep(2, self.options.verbose, self.options.dry)
+				pool = Pool(len(self.config.RUs))
+
+				tasklist = [(ru.host, ru.port, 'pt::ibv::Application', 0,
+					         'init',
+					         self.options.verbose,
+					         self.options.dry) for ru in self.config.RUs]
+				pool.map(utils.sendSimpleCmdToAppPacked, tasklist)
+			sleep(2, self.options.verbose, self.options.dry)
 			return
 
 		## In case of eFED:
@@ -683,12 +687,15 @@ class daq2Control(object):
 
 		## In case of eFEROLs (also configure and enable in this case):
 		elif len(self.config.eFEROLs) > 0:
-			from multiprocessing import Pool
 			pool = Pool(len(self.config.eFEROLs))
 
 			## Configure and enable pt::frl application on eFEROLs:
 			if self.options.verbose > 0: print separator
-			tasklist = [(efrl.host, efrl.port, 'pt::frl::Application', n, 'Configure', self.options.verbose, self.options.dry) for n,efrl in enumerate(self.config.eFEROLs)]
+			tasklist = [(efrl.host, efrl.port, 'pt::frl::Application', n,
+				         'Configure',
+				         self.options.verbose,
+				         self.options.dry) for n,efrl in enumerate(
+				                                       self.config.eFEROLs)]
 			pool.map(utils.sendSimpleCmdToAppPacked, tasklist)
 
 			# for n,efrl in enumerate(self.config.eFEROLs):
