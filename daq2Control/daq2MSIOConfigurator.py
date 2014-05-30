@@ -36,9 +36,6 @@ class daq2MSIOConfigurator(daq2Configurator):
 		self.nclients = 1
 		self.nservers = 1
 
-		self.clientIBVConfig = tuple([None]*5)
-		self.serverIBVConfig = tuple([None]*5)
-
 	def addMSIOI2OProtocol(self):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
 		prot = Element(QN(i2ons, 'protocol').text)
@@ -71,64 +68,6 @@ class daq2MSIOConfigurator(daq2Configurator):
 				                   'instance':"%d"%n,
 				                   'tid':'%d'%(starting_tid+n)}))
 
-	def configureIBV(self):
-		clientIBVApp = elementFromFile(filename=os.path.join(
-			                               self.fragmentdir,
-		                                   'msio/client_ibv_application.xml'))
-
-		serverIBVApp = elementFromFile(filename=os.path.join(
-			                               self.fragmentdir,
-		                                   'msio/server_ibv_application.xml'))
-
-		clientMaxMSize = int(self.readPropertyFromApp(
-			                        application=clientIBVApp,
-			                        prop_name="maxMessageSize"))
-
-		serverMaxMSize = int(self.readPropertyFromApp(
-			                        application=serverIBVApp,
-			                        prop_name="maxMessageSize"))
-
-		# Client:
-		sendPoolSize = 64*1024*1024
-		recvPoolSize = 0x40000
-		complQPSize = max(sendPoolSize, recvPoolSize) / clientMaxMSize
-		sendQPSize = sendPoolSize / clientMaxMSize / self.nservers
-		recvQPSize = 2
-		self.clientIBVConfig = (sendPoolSize,
-			                    recvPoolSize,
-			                    complQPSize,
-			                    sendQPSize,
-			                    recvQPSize)
-
-		if self.verbose > 1:
-			print "  client IBV config:"
-			print "    sendPoolSize: %s (%d MB)" % (hex(sendPoolSize), sendPoolSize/1024/1024)
-			print "    recvPoolSize: %s (%d kB)" % (hex(recvPoolSize), recvPoolSize/1024)
-			print "    complQPSize: ", complQPSize
-			print "    sendQPSize: ", sendQPSize
-			print "    recvQPSize: ", recvQPSize
-
-		# Server:
-		sendPoolSize = 0x40000
-		recvQPSize = sendQPSize # still the one from the client
-		recvPoolSize = recvQPSize * serverMaxMSize * self.nclients * 2
-		complQPSize = max(sendPoolSize, recvPoolSize) / serverMaxMSize
-		sendQPSize = 2
-		self.serverIBVConfig = (sendPoolSize,
-			                    recvPoolSize,
-			                    complQPSize,
-			                    sendQPSize,
-			                    recvQPSize)
-
-		if self.verbose > 1:
-			print "  server IBV config:"
-			print "    sendPoolSize: %s (%d kB)" % (hex(sendPoolSize), sendPoolSize/1024)
-			print "    recvPoolSize: %s (%d MB)" % (hex(recvPoolSize), recvPoolSize/1024/1024)
-			print "    complQPSize", complQPSize
-			print "    sendQPSize", sendQPSize
-			print "    recvQPSize", recvQPSize
-
-
 	def makeClient(self, index):
 		fragmentname = 'msio/client_context.xml'
 		context = elementFromFile(os.path.join(self.fragmentdir,
@@ -152,7 +91,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		                    index=2) ## add after policy and endpoint
 
 		## Configure IBV application:
-		self.configureIBVApplication(context, self.clientIBVConfig)
+		self.configureIBVApplication(context, self.RUIBVConfig)
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
@@ -200,7 +139,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		                    index=2) ## add after the two endpoints
 
 		## Configure IBV application:
-		self.configureIBVApplication(context, self.serverIBVConfig)
+		self.configureIBVApplication(context, self.BUIBVConfig)
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
@@ -237,152 +176,165 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 	def makeRU(self, ruindex):
 		fragmentname = 'RU/gevb2g/msio/RU_context_msio.xml'
-		ru_context = elementFromFile(self.fragmentdir+fragmentname)
+		context = elementFromFile(self.fragmentdir+fragmentname)
 
 		## Add policy
-		addFragmentFromFile(target=ru_context,
+		addFragmentFromFile(target=context,
 			                filename=os.path.join(self.fragmentdir,
 			                'RU/gevb2g/msio/RU_policy_%s_msio.xml'%
 			                self.ptprot),
 			                index=0)
 		polns = "http://xdaq.web.cern.ch/xdaq/xsd/2013/XDAQPolicy-10"
-		for element in ru_context.findall(QN(polns,"policy").text+'/'+
+		for element in context.findall(QN(polns,"policy").text+'/'+
 			                              QN(polns,"element").text):
 			if 'RU%d' in element.get('pattern'):
 				element.set('pattern',element.get('pattern').replace(
 					                         'RU%d', 'RU%d'%(ruindex)))
 		## Add builder network endpoint
-		ru_context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text,
+		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text,
 			              {'protocol':'%s'%self.ptprot ,
 			               'service':"i2o",
 			               'hostname':'RU%d_I2O_HOST_NAME'%(ruindex),
 			               'port':'RU%d_I2O_PORT'%(ruindex),
 			               'network':"infini"}))
 		## Add builder network pt application
-		addFragmentFromFile(target=ru_context,
+		addFragmentFromFile(target=context,
 		                    filename=os.path.join(self.fragmentdir,
 		                    'RU/gevb2g/msio/RU_%s_application_msio.xml'%
 		                    self.ptprot),
 		                    index=2) ## add after the two endpoints
+
+		## Configure IBV application:
+		self.configureIBVApplication(context, self.RUIBVConfig)
+
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
-		ru_context.insert(3,module)
+		context.insert(3,module)
 
 		## Add Inputemulator application
 		inputemu_app = elementFromFile(filename=os.path.join(
 			                    self.fragmentdir,
 		                       'RU/gevb2g/msio/RU_inputemulator.xml'))
 		inputemu_app.set('instance',str(ruindex))
-		ru_context.insert(4,inputemu_app)
+		context.insert(4,inputemu_app)
 
 		## RU application
 		ru_app = elementFromFile(filename=os.path.join(self.fragmentdir,
 			                     'RU/gevb2g/msio/RU_application_msio.xml'))
-		ru_context.insert(5,ru_app)
+		context.insert(5,ru_app)
 		ru_app.set('instance',str(ruindex))
 
 		## Set instance and url
-		for app in ru_context.findall(QN(self.xdaqns, 'Endpoint').text):
+		for app in context.findall(QN(self.xdaqns, 'Endpoint').text):
 			if 'RU%d' in app.attrib['hostname']:
 				app.set('hostname', app.get('hostname')%ruindex)
 			if 'RU%d' in app.attrib['port']:
 				app.set('port', app.get('port')%ruindex)
-		ru_context.set('url', ru_context.get('url')%(ruindex, ruindex))
+		context.set('url', context.get('url')%(ruindex, ruindex))
 
-		self.setPropertyInAppInContext(ru_context, 'gevb2g::InputEmulator',
-			                  'destinationClassInstance', str(ruindex))
+		self.setPropertyInAppInContext(context, 'gevb2g::InputEmulator',
+			                  'destinationClassInstance', str(ruindex),
+			                  instance=ruindex)
 
-		return ru_context
+		return context
 	def makeEVM(self):
 		index = 0
 		fragmentname = 'EVM/EVM_context.xml'
-		evm_element = elementFromFile(os.path.join(self.fragmentdir,
+		context = elementFromFile(os.path.join(self.fragmentdir,
 			                                       fragmentname))
 
 		## Add policy
-		addFragmentFromFile(target=evm_element,
+		addFragmentFromFile(target=context,
 			                filename=os.path.join(self.fragmentdir,
 			                         'EVM/msio/EVM_policy_msio_%s.xml'%(
 			                         self.ptprot)),
 			                index=0)
 		## Add builder network endpoint
-		evm_element.insert(3,Element(QN(self.xdaqns, 'Endpoint').text, {
+		context.insert(3,Element(QN(self.xdaqns, 'Endpoint').text, {
 			               'protocol':'%s'%self.ptprot ,
 			               'service':"i2o",
 			               'hostname':'EVM%d_I2O_HOST_NAME'%(index),
 			               'port':'EVM%d_I2O_PORT'%(index),
 			               'network':'infini'}))
 		## Add builder network pt application
-		addFragmentFromFile(target=evm_element,
+		addFragmentFromFile(target=context,
 		                    filename=os.path.join(self.fragmentdir,
 		                        'EVM/msio/EVM_%s_application_msio.xml'%(
 		                        	                           self.ptprot)),
 		                    index=4) ## add after the two endpoints
+
+		## Configure IBV application:
+		self.configureIBVApplication(context, self.EVMIBVConfig)
+
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
-		evm_element.insert(5,module)
+		context.insert(5,module)
 
 		## Set instance and url
-		for app in evm_element.findall(QN(self.xdaqns, 'Application').text):
+		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			if app.attrib['class'] != "%s::EVM"%self.evbns: continue
 			app.set('instance', str(index))
 			break
-		evm_element.set('url', evm_element.get('url')%(index, index))
+		context.set('url', context.get('url')%(index, index))
 
 		## Change poolName in EVM application:
-		self.setPropertyInAppInContext(evm_element, 'gevb2g::EVM',
+		self.setPropertyInAppInContext(context, 'gevb2g::EVM',
 			                  'poolName', 'sibv')
 
-		return evm_element
+		return context
 	def makeBU(self, index):
 		fragmentname = 'BU/BU_context.xml'
-		bu_context = elementFromFile(os.path.join(self.fragmentdir,
+		context = elementFromFile(os.path.join(self.fragmentdir,
 			                                      fragmentname))
 
 		## Add policy
-		addFragmentFromFile(target=bu_context,
+		addFragmentFromFile(target=context,
 			                filename=os.path.join(self.fragmentdir,
 			                	'BU/gevb2g/msio/BU_policy_%s_msio.xml'%(
 			                	self.ptprot)),
 			                index=0)
 		## Add builder network endpoint
-		bu_context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
+		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
 			                        'protocol':'%s'%self.ptprot ,
 			                        'service':'i2o',
 			                        'hostname':'BU%d_I2O_HOST_NAME'%(index),
 			                        'port':'BU%d_I2O_PORT'%(index),
 			                        'network':'infini'}))
 		## Add builder network pt application
-		addFragmentFromFile(target=bu_context,
+		addFragmentFromFile(target=context,
 		                    filename=os.path.join(self.fragmentdir,
 		                        'BU/gevb2g/msio/BU_%s_application_msio.xml'%(
 		                        self.ptprot)),
 		                    index=2) ## add after the two endpoints
+
+		## Configure IBV application:
+		self.configureIBVApplication(context, self.BUIBVConfig)
+
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
-		bu_context.insert(3,module)
+		context.insert(3,module)
 
 		## BU application
 		bu_app = elementFromFile(filename=os.path.join(self.fragmentdir,
 			                     'BU/gevb2g/msio/BU_application_msio.xml'))
-		bu_context.insert(4,bu_app)
+		context.insert(4,bu_app)
 		bu_app.set('instance',str(index))
 
 		## Set instance and url
-		for app in bu_context.findall(QN(self.xdaqns, 'Application').text):
+		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			if app.attrib['class'] != "%s::BU"%self.evbns: continue
 			app.set('instance', str(index))
 			break
-		bu_context.set('url', bu_context.get('url')%(index, index))
+		context.set('url', context.get('url')%(index, index))
 
 		module = Element(QN(self.xdaqns, 'Module').text)
 		module.text = "$XDAQ_ROOT/lib/libgevb2g.so"
-		bu_context.insert(5,module)
+		context.insert(5,module)
 
-		return bu_context
+		return context
 
 	def makeMSIOConfig(self, nclients=1, nservers=1,
 		           destination='configuration.template.xml'):
@@ -394,10 +346,11 @@ class daq2MSIOConfigurator(daq2Configurator):
 		##
 		self.makeSkeleton()
 
+		if "ibv" in self.ptprot:
+			self.configureIBV()
+
 		## mstreamio
 		if self.evbns == 'msio':
-			if "ibv" in self.ptprot:
-				self.configureIBV()
 			self.addMSIOI2OProtocol()
 			for index in xrange(self.nclients):
 				self.config.append(self.makeClient(index))
