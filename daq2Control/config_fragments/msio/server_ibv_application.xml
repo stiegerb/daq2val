@@ -3,12 +3,12 @@
 		<iaName xsi:type="xsd:string">mlx4_0</iaName>
 		<sendPoolName xsi:type="xsd:string">sibv</sendPoolName>
 		<recvPoolName xsi:type="xsd:string">ribv</recvPoolName>
-		<receiverPoolSize xsi:type="xsd:unsignedInt">0x80000000</receiverPoolSize>
-		<senderPoolSize xsi:type="xsd:unsignedInt">0x2000000</senderPoolSize>
-		<completionQueueSize xsi:type="xsd:unsignedInt">32768</completionQueueSize>
+		<receiverPoolSize xsi:type="xsd:unsignedInt">0x5000000</receiverPoolSize>
+		<senderPoolSize xsi:type="xsd:unsignedInt">0x800000</senderPoolSize>
+		<completionQueueSize xsi:type="xsd:unsignedInt">1024</completionQueueSize>
 		<!-- <completionQueueSize xsi:type="xsd:unsignedInt">2048</completionQueueSize> -->
-		<sendQueuePairSize xsi:type="xsd:unsignedInt">64</sendQueuePairSize>
-		<recvQueuePairSize xsi:type="xsd:unsignedInt">480</recvQueuePairSize>
+		<sendQueuePairSize xsi:type="xsd:unsignedInt">1</sendQueuePairSize>
+		<recvQueuePairSize xsi:type="xsd:unsignedInt">16</recvQueuePairSize>
 		<maxMessageSize xsi:type="xsd:unsignedInt">65536</maxMessageSize>
 		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
         <sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout>
