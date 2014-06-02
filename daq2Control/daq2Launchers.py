@@ -22,15 +22,23 @@ def startXDAQLauncher(host, port, logfile, options):
 		testType = os.environ['TEST_TYPE']
 		user     = os.environ['USER']
 	except KeyError as e:
-		printError('Environment missing, did you forget to source setenv-COL.sh? Aborting.')
+		printError('Environment missing, did you forget to source '
+			       'setenv-COL.sh? Aborting.')
 		raise e
 	testEnv   = ""
 	if len(testType) > 0: testEnv = "-"+testType
 
-	sshCmd      = "ssh -x -n " + host
-	launcherCmd = '"cd /tmp && sudo rm -f /tmp/core.* && source %s/setenv%s.sh && xdaqLauncher %d"' % (testDir, testEnv, port)
-	awkCmd      = "awk '{print \"%s:%d \" $0}'" % (host, port)
-	cmd         = sshCmd + " \"sudo -u %s sh -c \\"%user + launcherCmd +"\\\" | " +  awkCmd + " &"
+	# ssh to the host (no x11, run in background)
+	cmd = "ssh -x -n " + host
+	cmd += " \"sudo -u %s sh -c \\"%user
+	# Actual launcher command
+	cmd += ('"cd /tmp && sudo rm -f /tmp/core.* && source %s/setenv%s.sh'
+	        '&& xdaqLauncher %d"') % (testDir, testEnv, port)
+	# Prepend "host:port " to the output
+	cmd += "\\\" | "
+	cmd += "awk '{print \"%s:%d \" $0}'" % (host, port)
+	cmd += " &"
+
 	return subprocess.call(cmd, stderr=logfile, stdout=logfile, shell=True)
 
 def startXDAQLaunchers(logfile, symbolMap, options):
