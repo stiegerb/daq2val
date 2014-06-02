@@ -70,7 +70,7 @@ def runScan(options, args):
 
 	#####################################
 	## First stop anything already running
-	sm = daq2SymbolMap()
+	sm = daq2SymbolMap(options.symbolMap)
 	utils.stopXDAQs(sm, verbose=options.verbose, dry=options.dry)
 	print separator
 
