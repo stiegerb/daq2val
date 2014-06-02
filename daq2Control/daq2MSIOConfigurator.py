@@ -10,7 +10,7 @@ from xml.etree.ElementTree import SubElement
 from xml.etree.ElementTree import QName as QN
 from xml.parsers.expat import ExpatError
 
-from daq2Utils import printError
+from daq2Utils import printError, printWarningWithWait
 from daq2Configurator import elementFromFile, addFragmentFromFile
 
 ######################################################################
@@ -32,7 +32,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 		self.useGTPe        = False
 		self.useEFEDs       = False
 
-		self.clientSendPoolSize = None ## in MB
+		# self.clientSendPoolSize = None ## in MB
+		self.clientSendQPSize = 1024 ## in MB
 		self.setDynamicIBVConfig = False
 
 		self.RUIBVConfig = tuple([None]*5)
@@ -110,17 +111,19 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		# RU/Client:
 		if self.evbns == 'msio':
-			if self.clientSendPoolSize is not None:
-				sendPoolSize = self.clientSendPoolSize*1024*1024
+			if self.clientSendQPSize is not None:
+				sendQPSize = max(self.clientSendQPSize, 512)
+				if self.clientSendQPSize < 512:
+					printWarningWithWait(("Warning: setting minimum "
+						 " sendQueuePairSize to 512."), waittime=3)
 			else:
-				sendPoolSize = int(self.readPropertyFromApp(
+				sendQPSize = int(self.readPropertyFromApp(
 			                              application=RUIBVApp,
-			                              prop_name="senderPoolSize"))
-
-			recvPoolSize = 0x40000
-			complQPSize = max(sendPoolSize, recvPoolSize) / RUMaxMSize
-			sendQPSize = sendPoolSize / RUMaxMSize / self.nservers
-			recvQPSize = 2
+			                              prop_name="sendQueuePairSize"))
+			complQPSize = sendQPSize
+			sendPoolSize = sendQPSize*RUMaxMSize
+			recvPoolSize = 0x800000
+			recvQPSize = 1
 		elif self.evbns == 'gevb2g':
 			sendQPSize = maxResources
 			sendPoolSize = RUMaxMSize * self.nservers * sendQPSize * 2
@@ -133,11 +136,11 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		# BU/Server:
 		if self.evbns == 'msio':
-			sendPoolSize = 0x40000
-			recvQPSize = sendQPSize # still the one from the client
-			recvPoolSize = recvQPSize * BUMaxMSize * self.nclients * 2
-			complQPSize = max(sendPoolSize, recvPoolSize) / BUMaxMSize
-			sendQPSize = 2
+			recvPoolSize = self.RUIBVConfig[0]
+			recvQPSize = int(self.RUIBVConfig[3] / self.nclients)
+			complQPSize = self.RUIBVConfig[3]
+			sendPoolSize = 0x800000
+			sendQPSize = 1
 		elif self.evbns == 'gevb2g':
 			sendPoolSize = 0x40000
 			recvQPSize = maxResources
@@ -243,8 +246,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 			print "  RU/client IBV config:"
 			print "    sendPoolSize: %s (%d kB)" % (
 				                   hex(sPoolSize), sPoolSize/1024)
-			print "    recvPoolSize: %s (%d MB)" % (
-				                   hex(rPoolSize), rPoolSize/1024/1024)
+			print "    recvPoolSize: %s (%d kB)" % (
+				                   hex(rPoolSize), rPoolSize/1024)
 			print "    complQPSize", cQPSize
 			print "    sendQPSize", sQPSize
 			print "    recvQPSize", rQPSize
@@ -254,8 +257,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 			print "  BU/server IBV config:"
 			print "    sendPoolSize: %s (%d kB)" % (
 				                   hex(sPoolSize), sPoolSize/1024)
-			print "    recvPoolSize: %s (%d MB)" % (
-				                   hex(rPoolSize), rPoolSize/1024/1024)
+			print "    recvPoolSize: %s (%d kB)" % (
+				                   hex(rPoolSize), rPoolSize/1024)
 			print "    complQPSize", cQPSize
 			print "    sendQPSize", sQPSize
 			print "    recvQPSize", rQPSize
@@ -266,8 +269,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 			print "  EVM IBV config:"
 			print "    sendPoolSize: %s (%d kB)" % (
 				                   hex(sPoolSize), sPoolSize/1024)
-			print "    recvPoolSize: %s (%d MB)" % (
-				                   hex(rPoolSize), rPoolSize/1024/1024)
+			print "    recvPoolSize: %s (%d kB)" % (
+				                   hex(rPoolSize), rPoolSize/1024)
 			print "    complQPSize", cQPSize
 			print "    sendQPSize", sQPSize
 			print "    recvQPSize", rQPSize
@@ -547,7 +550,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		return context
 
 	def makeMSIOConfig(self, nclients=1, nservers=1,
-		           destination='configuration.template.xml'):
+		               destination='configuration.template.xml'):
 		self.nclients = nclients
 		self.nrus = nclients
 		self.nservers = nservers

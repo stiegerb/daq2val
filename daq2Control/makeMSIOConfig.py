@@ -12,10 +12,15 @@ def addConfiguratorOption(parser):
 		                   "pt::ibv::Application dynamically according "
 		                   "to Andys algorithm. If not set, take "
 		                   "everything from fragment.")
-	parser.add_option("-c", "--clientSendPoolSize", default=1920,
-		              action="store", type="int", dest="clientSendPoolSize",
-		              help="Set the sendPoolSize parameter on the MStreamIO "
-		                   "client (in MBytes, default: %default).")
+	# parser.add_option("-c", "--clientSendPoolSize", default=None,
+	# 	              action="store", type="int", dest="clientSendPoolSize",
+	# 	              help="Set the sendPoolSize parameter on the MStreamIO "
+	# 	                   "client (in MBytes, default: %default).")
+	parser.add_option("--clientSendQPSize", default=1024,
+		              action="store", type="int", dest="clientSendQPSize",
+		              help="Set the sendQueuePairSize parameter on the "
+		                   "MStreamIO client (in MBytes, default: "
+		                   "%default).")
 	parser.add_option("--useGevb2g", default=False, action="store_true",
 		              dest="useGevb2g",
 		              help="Use gevb2g for event building (instead of EvB)")
@@ -58,7 +63,8 @@ def main(options, args):
 	configurator.evbns = 'msio'
 	if options.useGevb2g: configurator.evbns = 'gevb2g'
 
-	configurator.clientSendPoolSize = options.clientSendPoolSize
+	# configurator.clientSendPoolSize = options.clientSendPoolSize
+	configurator.clientSendQPSize = options.clientSendQPSize
 	configurator.setDynamicIBVConfig = options.setDynamicIBVConfig
 
 	## Construct output name
