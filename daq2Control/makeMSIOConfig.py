@@ -12,15 +12,30 @@ def addConfiguratorOption(parser):
 		                   "pt::ibv::Application dynamically according "
 		                   "to Andys algorithm. If not set, take "
 		                   "everything from fragment.")
-	# parser.add_option("-c", "--clientSendPoolSize", default=None,
-	# 	              action="store", type="int", dest="clientSendPoolSize",
-	# 	              help="Set the sendPoolSize parameter on the MStreamIO "
-	# 	                   "client (in MBytes, default: %default).")
-	parser.add_option("--clientSendQPSize", default=1024,
+	parser.add_option("--cP", "--clientSendPoolSize", default=None,
+		              action="store", type="int", dest="clientSendPoolSize",
+		              help="Set the sendPoolSize parameter on the MStreamIO "
+		                   "client (in MBytes, default: %default)")
+	parser.add_option("--cQ", "--clientSendQPSize", default=1024,
 		              action="store", type="int", dest="clientSendQPSize",
 		              help="Set the sendQueuePairSize parameter on the "
-		                   "MStreamIO client (in MBytes, default: "
-		                   "%default).")
+		                   "MStreamIO client [default %default]")
+	parser.add_option("--cCQ", "--clientComplQPSize", default=None,
+		              action="store", type="int", dest="clientComplQPSize",
+		              help="Set the complQueuePairSize parameter on the "
+		                   "MStreamIO client [default %default]")
+	parser.add_option("--sP", "--serverRecvPoolSize", default=None,
+		              action="store", type="int", dest="serverRecvPoolSize",
+		              help="Set the recvPoolSize parameter on the MStreamIO "
+		                   "server (in MBytes, default: %default)")
+	parser.add_option("--sQ", "--serverRecvQPSize", default=None,
+		              action="store", type="int", dest="serverRecvQPSize",
+		              help="Set the recvQueuePairSize parameter on the "
+		                   "MStreamIO server [default %default]")
+	parser.add_option("--sCQ", "--serverComplQPSize", default=None,
+		              action="store", type="int", dest="serverComplQPSize",
+		              help="Set the complQueuePairSize parameter on the "
+		                   "MStreamIO server [default %default]")
 	parser.add_option("--useGevb2g", default=False, action="store_true",
 		              dest="useGevb2g",
 		              help="Use gevb2g for event building (instead of EvB)")
@@ -63,8 +78,14 @@ def main(options, args):
 	configurator.evbns = 'msio'
 	if options.useGevb2g: configurator.evbns = 'gevb2g'
 
-	# configurator.clientSendPoolSize = options.clientSendPoolSize
-	configurator.clientSendQPSize = options.clientSendQPSize
+	## Pass options
+	configurator.clientSendPoolSize = options.clientSendPoolSize
+	configurator.clientSendQPSize   = options.clientSendQPSize
+	configurator.clientComplQPSize  = options.clientComplQPSize
+	configurator.serverRecvPoolSize = options.serverRecvPoolSize
+	configurator.serverRecvQPSize   = options.serverRecvQPSize
+	configurator.serverComplQPSize  = options.serverComplQPSize
+
 	configurator.setDynamicIBVConfig = options.setDynamicIBVConfig
 
 	## Construct output name
