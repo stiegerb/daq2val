@@ -39,6 +39,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		self.RUIBVConfig = tuple([None]*5)
 		self.BUIBVConfig = tuple([None]*5)
 		self.EVMIBVConfig = tuple([None]*5)
+		self.maxMessageSize = None
 
 		## These should be passed as arguments
 		self.nclients = 1
@@ -109,19 +110,22 @@ class daq2MSIOConfigurator(daq2Configurator):
 			                        application=BUIBVApp,
 			                        prop_name="maxMessageSize"))
 
+		self.maxMessageSize = RUMaxMSize if RUMaxMSize == BUMaxMSize else None
+
 		# RU/Client:
 		if self.evbns == 'msio':
 			if self.clientSendQPSize is not None:
-				sendQPSize = max(self.clientSendQPSize, 512)
-				if self.clientSendQPSize < 512:
-					printWarningWithWait(("Warning: setting minimum "
-						 " sendQueuePairSize to 512."), waittime=3)
+				sendQPSize = self.clientSendQPSize
+				# sendQPSize = max(self.clientSendQPSize, 512)
+				# if self.clientSendQPSize < 512:
+				# 	printWarningWithWait(("Warning: setting minimum "
+				# 		 " sendQueuePairSize to 512."), waittime=3)
 			else:
 				sendQPSize = int(self.readPropertyFromApp(
 			                              application=RUIBVApp,
 			                              prop_name="sendQueuePairSize"))
-			complQPSize = sendQPSize
-			sendPoolSize = sendQPSize*RUMaxMSize
+			complQPSize = (sendQPSize/2)*self.nclients
+			sendPoolSize = (sendQPSize/2)*RUMaxMSize*self.nclients
 			recvPoolSize = 0x800000
 			recvQPSize = 1
 		elif self.evbns == 'gevb2g':
@@ -136,9 +140,9 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		# BU/Server:
 		if self.evbns == 'msio':
-			recvPoolSize = self.RUIBVConfig[0]
-			recvQPSize = int(self.RUIBVConfig[3] / self.nclients)
-			complQPSize = self.RUIBVConfig[3]
+			recvQPSize = int(self.RUIBVConfig[3])
+			complQPSize = recvQPSize*self.nclients
+			recvPoolSize = (recvQPSize*2)*self.nclients*BUMaxMSize
 			sendPoolSize = 0x800000
 			sendQPSize = 1
 		elif self.evbns == 'gevb2g':
@@ -243,6 +247,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		print 70*'-'
 		if not None in self.RUIBVConfig:
 			sPoolSize, rPoolSize, cQPSize, sQPSize,rQPSize = self.RUIBVConfig
+			print " Buffers circulating per destination: %d" % int(sPoolSize/self.maxMessageSize/self.nclients)
 			print "  RU/client IBV config:"
 			print "    sendPoolSize: %s (%d kB)" % (
 				                   hex(sPoolSize), sPoolSize/1024)
