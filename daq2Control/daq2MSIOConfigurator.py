@@ -137,11 +137,24 @@ class daq2MSIOConfigurator(daq2Configurator):
 			recvPoolSize = 0x800000
 			recvQPSize = 1
 		elif self.evbns == 'gevb2g':
-			sendQPSize = maxResources
-			sendPoolSize = RUMaxMSize * self.nservers * sendQPSize * 2
-			recvPoolSize = maxResources*256*1024
-			complQPSize = max(sendPoolSize, recvPoolSize) / RUMaxMSize
-			recvQPSize = maxResources
+			print maxResources
+			if self.clientSendQPSize is not None:
+				sendQPSize = self.clientSendQPSize
+			else:
+				sendQPSize = maxResource*self.nservers
+
+			if self.clientSendPoolSize is not None:
+				sendPoolSize = 1024*1024*self.clientSendPoolSize
+			else:
+				sendPoolSize = 0x4000000
+
+			if self.clientComplQPSize is not None:
+				complQPSize = self.clientComplQPSize
+			else:
+				complQPSize = 8192
+
+			recvPoolSize = 0x2000000
+			recvQPSize = 64
 
 		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
@@ -167,11 +180,23 @@ class daq2MSIOConfigurator(daq2Configurator):
 			sendPoolSize = 0x800000
 			sendQPSize = 1
 		elif self.evbns == 'gevb2g':
-			sendPoolSize = 0x40000
-			recvQPSize = maxResources
-			recvPoolSize = BUMaxMSize*self.nclients*recvQPSize*2
-			sendQPSize = maxResources
-			complQPSize = max(sendPoolSize, recvPoolSize) / BUMaxMSize
+			if self.serverRecvQPSize is not None:
+				recvQPSize = self.serverRecvQPSize
+			else:
+				recvQPSize = int(self.RUIBVConfig[0]*2/self.nclients/BUMaxMSize)
+
+			if self.serverRecvPoolSize is not None:
+				recvPoolSize = 1024*1024*self.serverRecvPoolSize
+			else:
+				recvPoolSize = (recvQPSize+maxResources)*self.nclients*BUMaxMSize
+
+			if self.serverComplQPSize is not None:
+				complQPSize = self.serverComplQPSize
+			else:
+				complQPSize = recvQPSize*self.nclients
+
+			sendPoolSize = 0x2000000
+			sendQPSize = 64
 
 
 		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
@@ -179,8 +204,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		# EVM:
 		if self.evbns == 'gevb2g':
-			sendPoolSize = maxResources*256*1024
-			recvPoolSize = maxResources*256*1024
+			sendPoolSize = maxResources*256*1024*self.nservers*2
+			recvPoolSize = maxResources*256*1024*self.nservers*2
 			recvQPSize = maxResources
 			sendQPSize = maxResources
 			complQPSize = maxResources * self.nservers
