@@ -124,8 +124,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 				sendQPSize = int(self.readPropertyFromApp(
 			                              application=RUIBVApp,
 			                              prop_name="sendQueuePairSize"))
-			complQPSize = (sendQPSize/2)*self.nclients
-			sendPoolSize = (sendQPSize/2)*RUMaxMSize*self.nclients
+			complQPSize = (sendQPSize/16)*self.nclients
+			sendPoolSize = (sendQPSize/16)*RUMaxMSize*self.nclients
 			recvPoolSize = 0x800000
 			recvQPSize = 1
 		elif self.evbns == 'gevb2g':
@@ -140,7 +140,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		# BU/Server:
 		if self.evbns == 'msio':
-			recvQPSize = int(self.RUIBVConfig[3])
+			recvQPSize = int(self.RUIBVConfig[0]*2/self.nclients/BUMaxMSize)
 			complQPSize = recvQPSize*self.nclients
 			recvPoolSize = (recvQPSize*2)*self.nclients*BUMaxMSize
 			sendPoolSize = 0x800000
@@ -151,7 +151,6 @@ class daq2MSIOConfigurator(daq2Configurator):
 			recvPoolSize = BUMaxMSize*self.nclients*recvQPSize*2
 			sendQPSize = maxResources
 			complQPSize = max(sendPoolSize, recvPoolSize) / BUMaxMSize
-
 
 		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
