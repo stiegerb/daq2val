@@ -16,7 +16,7 @@ def addConfiguratorOption(parser):
 		              action="store", type="int", dest="clientSendPoolSize",
 		              help="Set the sendPoolSize parameter on the MStreamIO "
 		                   "client (in MBytes, default: %default)")
-	parser.add_option("--cQ", "--clientSendQPSize", default=1024,
+	parser.add_option("--cQ", "--clientSendQPSize", default=None,
 		              action="store", type="int", dest="clientSendQPSize",
 		              help="Set the sendQueuePairSize parameter on the "
 		                   "MStreamIO client [default %default]")

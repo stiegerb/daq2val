@@ -20,7 +20,7 @@ my $host           = hostname;
 
 sub reaper {
     my $waitpid = waitpid(-1, WNOHANG);
-    
+
     if($waitpid == -1)
     {
         # No child is waiting.  Do nothing.
@@ -33,7 +33,7 @@ sub reaper {
             $xdaqcoredumped = 1;
         }
     }
-    
+
     $SIG{CHLD} = \&reaper;
 }
 
@@ -58,7 +58,7 @@ sub getSignalName {
     SIGALRM
     SIGTERM/;
     my $name = "UNKNOWN";
-    
+
     if($num > 15) {
         $name = "UNKNOWN";
     } else {
@@ -73,11 +73,11 @@ sub processClientRequest {
     my $continueRunningLauncher = 1;
     my $xdaqport                = 0;
     chomp $cmd;
-    
+
     if($cmd =~ /STARTXDAQ(\d+)/)
     {
         $xdaqport = $1;
-        
+
         if($xdaqpid && (!$xdaqdied))
         {
             print $client "CANNOT START XDAQ - ALREADY RUNNING\n";
@@ -85,9 +85,9 @@ sub processClientRequest {
         else
         {
             print $client "STARTING XDAQ\n";
-            
+
             $xdaqdied = 0;
-            
+
             defined($xdaqpid = fork) or die "Failed to fork: $!";
             unless ($xdaqpid) {
                 close($client);
@@ -199,9 +199,9 @@ sub processClientRequest {
                         $numactl="numactl --physcpubind=$cores --membind=$cpu";
                     }
                 }
-                
+
                 close($client);
-                
+
                 exec "$numactl $ENV{XDAQ_ROOT}/bin/xdaq.exe -e $ENV{XDAQ_ROOT}/etc/default.profile -p $xdaqport ";
                 #exec "$numactl $ENV{XDAQ_ROOT}/bin/xdaq.exe -p $xdaqport -z daqval";
                 #exec "$ENV{XDAQ_ROOT}/bin/xdaq.exe -e $ENV{XDAQ_ROOT}/etc/default.profile -p $xdaqport";
@@ -215,20 +215,20 @@ sub processClientRequest {
             print $client " signal num: $xdaqsignalnum";
             print $client " signal name: $xdaqsignalname";
             print $client " core dumped: $xdaqcoredumped\n";
-            
+
             $xdaqdied = 0;
             $xdaqpid  = 0;
         } elsif($xdaqpid == 0) {
             print $client "CANNOT STOP XDAQ - NOT RUNNING\n";
         } else {
             print $client "STOPPING XDAQ\n";
-            
+
             kill 9 =>$xdaqpid;
-            
+
             while($xdaqdied == 0) {
                 # Do nothing
             }
-            
+
             $xdaqpid = 0;
         }
     } elsif($cmd =~ /GETXDAQSTATUS/) {
@@ -246,13 +246,13 @@ sub processClientRequest {
     } elsif($cmd =~ /STOPLAUNCHER/) {
         if($xdaqpid) {
             print $client "STOPPING XDAQ AND THEN LAUNCHER\n";
-            
+
             kill 9 =>$xdaqpid;
-            
+
             while($xdaqdied == 0) {
                 # Do nothing
             }
-            
+
             $xdaqpid = 0; # Not needed as launcher is about to stop
         } else {
             print $client "STOPPING LAUNCHER - XDAQ IS NOT RUNNING\n";
@@ -263,7 +263,7 @@ sub processClientRequest {
     {
         print $client "UNKNOWN COMMAND\n";
     }
-    
+
     $continueRunningLauncher;
 }
 
@@ -284,13 +284,13 @@ my $client;
 
 while($systemCallInterrupted && $continueRunningLauncher) {
     $systemCallInterrupted = 0;
-    
+
     while($continueRunningLauncher && ($client = $server->accept())) {
         $continueRunningLauncher = &processClientRequest($client);
-        
+
         close($client);
     }
-    
+
     # $server->accept may have returned due to a signal
     if(!defined($client)) {
         if($! =~ /Interrupted system call/) {

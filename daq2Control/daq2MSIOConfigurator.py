@@ -14,6 +14,18 @@ from daq2Utils import printError, printWarningWithWait
 from daq2Configurator import elementFromFile, addFragmentFromFile
 from daq2Configurator import RU_STARTING_TID, BU_STARTING_TID
 
+def getLog2SizeAndUnit(size):
+	size = int(size)
+	if size < 1024:
+		return "%d B" % size
+	if size >= 1024 and size < 1024**2:
+		return "%d kB" % (size/1024)
+	if size >= 1024**2 and size < 1024**3:
+		return "%d MB" % (size/1024/1024)
+	if size >= 1024**3:
+		return "%d GB" % (size/1024/1024/1024)
+
+
 ######################################################################
 from daq2Configurator import daq2Configurator
 class daq2MSIOConfigurator(daq2Configurator):
@@ -140,7 +152,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 			if self.clientSendQPSize is not None:
 				sendQPSize = self.clientSendQPSize
 			else:
-				sendQPSize = maxResource*self.nservers
+				sendQPSize = maxResources*self.nservers
 
 			if self.clientSendPoolSize is not None:
 				sendPoolSize = 1024*1024*self.clientSendPoolSize
@@ -205,9 +217,9 @@ class daq2MSIOConfigurator(daq2Configurator):
 		if self.evbns == 'gevb2g':
 			sendPoolSize = maxResources*256*1024*self.nservers*2
 			recvPoolSize = maxResources*256*1024*self.nservers*2
-			recvQPSize = maxResources
+			recvQPSize = maxResources*2
 			sendQPSize = maxResources
-			complQPSize = maxResources * self.nservers
+			complQPSize = maxResources*2*self.nservers
 
 
 			self.EVMIBVConfig = (sendPoolSize, recvPoolSize,
@@ -245,6 +257,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		BUMaxMSize = int(self.readPropertyFromApp(
 			                        application=BUIBVApp,
 			                        prop_name="maxMessageSize"))
+		self.maxMessageSize = RUMaxMSize if RUMaxMSize == BUMaxMSize else None
 
 
 		sendPoolSize = int(self.readPropertyFromApp(RUIBVApp,
@@ -295,10 +308,10 @@ class daq2MSIOConfigurator(daq2Configurator):
 			print (" Buffers circulating per destination: %d" %
 				            int(sPoolSize/self.maxMessageSize/self.nclients))
 			print "  RU/client IBV config:"
-			print "    sendPoolSize: %s (%d kB)" % (
-				                   hex(sPoolSize), sPoolSize/1024)
-			print "    recvPoolSize: %s (%d kB)" % (
-				                   hex(rPoolSize), rPoolSize/1024)
+			print "    sendPoolSize: %s (%s)" % (
+				               hex(sPoolSize), getLog2SizeAndUnit(sPoolSize))
+			print "    recvPoolSize: %s (%s)" % (
+				               hex(rPoolSize), getLog2SizeAndUnit(rPoolSize))
 			print "    complQPSize", cQPSize
 			print "    sendQPSize", sQPSize
 			print "    recvQPSize", rQPSize
@@ -306,10 +319,10 @@ class daq2MSIOConfigurator(daq2Configurator):
 		if not None in self.BUIBVConfig:
 			sPoolSize, rPoolSize, cQPSize, sQPSize,rQPSize = self.BUIBVConfig
 			print "  BU/server IBV config:"
-			print "    sendPoolSize: %s (%d kB)" % (
-				                   hex(sPoolSize), sPoolSize/1024)
-			print "    recvPoolSize: %s (%d kB)" % (
-				                   hex(rPoolSize), rPoolSize/1024)
+			print "    sendPoolSize: %s (%s)" % (
+				               hex(sPoolSize), getLog2SizeAndUnit(sPoolSize))
+			print "    recvPoolSize: %s (%s)" % (
+				               hex(rPoolSize), getLog2SizeAndUnit(rPoolSize))
 			print "    complQPSize", cQPSize
 			print "    sendQPSize", sQPSize
 			print "    recvQPSize", rQPSize
@@ -318,10 +331,10 @@ class daq2MSIOConfigurator(daq2Configurator):
 		if not None in self.EVMIBVConfig:
 			sPoolSize, rPoolSize, cQPSize,sQPSize,rQPSize = self.EVMIBVConfig
 			print "  EVM IBV config:"
-			print "    sendPoolSize: %s (%d kB)" % (
-				                   hex(sPoolSize), sPoolSize/1024)
-			print "    recvPoolSize: %s (%d kB)" % (
-				                   hex(rPoolSize), rPoolSize/1024)
+			print "    sendPoolSize: %s (%s)" % (
+				               hex(sPoolSize), getLog2SizeAndUnit(sPoolSize))
+			print "    recvPoolSize: %s (%s)" % (
+				               hex(rPoolSize), getLog2SizeAndUnit(rPoolSize))
 			print "    complQPSize", cQPSize
 			print "    sendQPSize", sQPSize
 			print "    recvQPSize", rQPSize
