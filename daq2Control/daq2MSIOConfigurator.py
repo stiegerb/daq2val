@@ -12,6 +12,7 @@ from xml.parsers.expat import ExpatError
 
 from daq2Utils import printError, printWarningWithWait
 from daq2Configurator import elementFromFile, addFragmentFromFile
+from daq2Configurator import RU_STARTING_TID, BU_STARTING_TID
 
 ######################################################################
 from daq2Configurator import daq2Configurator
@@ -49,19 +50,17 @@ class daq2MSIOConfigurator(daq2Configurator):
 		prot = Element(QN(i2ons, 'protocol').text)
 
 		## Add Clients:
-		cl_starting_tid = 20
 		for n in xrange(self.nclients):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'Client',
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(cl_starting_tid+n)}))
+				                   'tid':'%d'%(RU_STARTING_TID+n)}))
 		## Add Servers:
-		se_starting_tid = 50
 		for n in xrange(self.nservers):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'Server',
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(se_starting_tid+2*n)}))
+				                   'tid':'%d'%(BU_STARTING_TID+2*n)}))
 
 		self.config.append(prot)
 	def addInputEmulatorProtocol(self):
@@ -69,7 +68,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 		prot = self.config.find(QN(i2ons, 'protocol').text)
 
 		## Add Inputemulators
-		starting_tid = 55
+		starting_tid = BU_STARTING_TID + 200
 		for n in range(self.nclients):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'gevb2g::InputEmulator',
