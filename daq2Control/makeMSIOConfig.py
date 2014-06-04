@@ -3,6 +3,8 @@ import os
 from daq2MSIOConfigurator import daq2MSIOConfigurator
 from daq2Utils import getConfig, printWarningWithWait, printError
 
+from makeDAQ2Config import getNxNConfig
+
 def addConfiguratorOption(parser):
 	parser.add_option("-d", "--setDynamicIBVConfig", default=False,
 		              action="store_true", dest="setDynamicIBVConfig",
@@ -51,21 +53,8 @@ def addConfiguratorOption(parser):
 		              type='string', dest="output",
 		              help="Where to put the output file")
 
-def getMSIOConfig(string=""):
-	"""Extract number of streams, readout units, builder units, and RMS
-	   from strings such as	8x1x2 or 16s8fx2x4_RMS_0.5
-	   (i.e 8,1,2,None in the first case, 16,2,4,0.5 in the second)
-	"""
-	try:
-		nClie, nServ = tuple([int(x) for x in string.split('x')])
-		return nClie, nServ
-	except:
-		print "There was an error?"
-
-
-
 def main(options, args):
-	nClients, nServers = getMSIOConfig(args[0])
+	nClients, nServers = getNxNConfig(args[0])
 
 	if len(options.fragmentDir) == 0:
 		# By default take the config_fragments dir from the current release

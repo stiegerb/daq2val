@@ -15,15 +15,15 @@ from daq2Configurator import elementFromFile, addFragmentFromFile
 from daq2Configurator import RU_STARTING_TID, BU_STARTING_TID
 
 def getLog2SizeAndUnit(size):
-	size = int(size)
+	size = float(size)
 	if size < 1024:
-		return "%d B" % size
+		return "%d B" % int(size)
 	if size >= 1024 and size < 1024**2:
-		return "%d kB" % (size/1024)
+		return "%d kB" % int(size/1024)
 	if size >= 1024**2 and size < 1024**3:
-		return "%d MB" % (size/1024/1024)
+		return "%d MB" % int(size/1024/1024)
 	if size >= 1024**3:
-		return "%d GB" % (size/1024/1024/1024)
+		return "%d GB" % int(size/1024/1024/1024)
 
 
 ######################################################################
@@ -643,7 +643,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 				self.config.append(self.makeServer(index))
 
 		## gevb2g with input emulator
-		else:
+		if self.evbns == 'gevb2g':
 			self.addI2OProtocol()
 			self.addInputEmulatorProtocol()
 			self.config.append(self.makeEVM())
@@ -651,7 +651,6 @@ class daq2MSIOConfigurator(daq2Configurator):
 				self.config.append(self.makeRU(index))
 			for index in xrange(self.nservers):
 				self.config.append(self.makeBU(index))
-
 
 		self.writeConfig(destination)
 		if self.verbose>0: print 70*'-'

@@ -75,6 +75,17 @@ def addConfiguratorOption(parser):
 		              type='string', dest="output",
 		              help="Where to put the output file")
 
+def getNxNConfig(string=""):
+	"""Extract number of RUs/clients and BUs/servers
+	   from strings such as	72x50 or 1x1
+	"""
+	try:
+		nClie, nServ = tuple([int(x) for x in string.split('x')])
+		return nClie, nServ
+	except:
+		print "There was an error?"
+
+
 def main(options, args):
 	nstreams, nrus, nbus, _, strperfrl = getConfig(args[0])
 	nferols = nstreams//strperfrl
