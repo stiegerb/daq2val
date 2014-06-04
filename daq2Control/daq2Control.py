@@ -328,6 +328,11 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Starting XDAQ processes"
 		for h in self.config.hosts:
+			if (self.options.maskHost is not None and
+				self.options.maskHost in h.host):
+				printWarningWithWait("Skipping %s" % h.host,
+					                  waittime=1, instance=self)
+				continue
 			utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
 		sleep(2, self.options.verbose, self.options.dry)
 
@@ -951,9 +956,9 @@ class daq2Control(object):
 						outfile.write(infile.read())
 						outfile.write('\n')
 
-			## For mstreamIO get the client measurements	
+			## For mstreamIO get the client measurements
 			outputfiles = []
-			if self.config.useMSIO:	
+			if self.config.useMSIO:
 				for n,h in enumerate(self.config.RUs):
 					outputfile = '%s/client%d.csv' % (self._outputDir, n)
 

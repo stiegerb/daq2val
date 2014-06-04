@@ -111,6 +111,11 @@ def addOptions(parser):
 		              help="Set the verbose level, [default: %default\
 		                    (semi-quiet)]")
 
+	parser.add_option("--maskHost", default=None, action="store",
+					  type="string", dest="maskHost",
+					  help=("Don't start xdaq application on this host. "
+					        "I.e. will do it manually there to debug."))
+
 	parser.add_option("--setCWND", default=-1, action="store", type='int',
 		              dest="setCWND",
 		              help="Set the TCP_CWND_FEDX parameter in the FEROL\
