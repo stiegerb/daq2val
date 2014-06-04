@@ -111,7 +111,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 	#####################################
 	## Test event building first
 	retries = 0
-	if not testBuilding(d2c, 1000, options.testTime,
+	if not testBuilding(d2c, 10, options.testTime,
 		                verbose=options.verbose,
 		                dry=options.dry):
 		while(retries < options.retries):
@@ -126,7 +126,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 				      rate=options.useRate)
 
 			## Check again
-			if not testBuilding(d2c, 1000, options.testTime,
+			if not testBuilding(d2c, 10, options.testTime,
 				                verbose=options.verbose,
 				                dry=options.dry):
 				retries += 1
