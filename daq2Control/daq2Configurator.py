@@ -247,7 +247,7 @@ class daq2Configurator(object):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'%s::BU'%self.evbns ,
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(BU_STARTING_TID+2*n)}))
+				                   'tid':'%d'%(BU_STARTING_TID+n)}))
 
 		self.config.append(prot)
 	def makeFerolController(self, frl):
