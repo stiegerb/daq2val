@@ -2,7 +2,7 @@
 	<properties xmlns="urn:xdaq-application:gevb2g::RU" xsi:type="soapenc:Struct">
 		<maxRequestsQueue xsi:type="xsd:unsignedLong">16384</maxRequestsQueue>
 		<inputDataFifoSize xsi:type="xsd:unsignedLong">150000</inputDataFifoSize>
-		<maxDataFrameSize xsi:type="xsd:unsignedLong">262144</maxDataFrameSize>
+		<maxDataFrameSize xsi:type="xsd:unsignedLong">131072</maxDataFrameSize>
 		<frameSendCounter xsi:type="xsd:unsignedLong">0</frameSendCounter>
 		<preAllocateDAPL xsi:type="xsd:unsignedLong">220</preAllocateDAPL>
 		<createPool xsi:type="xsd:boolean">false</createPool>

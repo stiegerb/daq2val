@@ -3,10 +3,10 @@
 		<StdDev xsi:type="xsd:unsignedLong">0</StdDev>
 		<Mean xsi:type="xsd:unsignedLong">128</Mean>
 		<MinFragmentSize xsi:type="xsd:unsignedLong">32</MinFragmentSize>
-		<MaxFragmentSize xsi:type="xsd:unsignedLong">262000</MaxFragmentSize>
+		<MaxFragmentSize xsi:type="xsd:unsignedLong">131072</MaxFragmentSize>
 		<destinationClassName xsi:type="xsd:string">gevb2g::RU</destinationClassName>
 		<destinationClassInstance xsi:type="xsd:unsignedLong">0</destinationClassInstance>
-		<maxDataFrameSize xsi:type="xsd:unsignedLong">262144</maxDataFrameSize>
+		<maxDataFrameSize xsi:type="xsd:unsignedLong">131072</maxDataFrameSize>
 		<frameSendCounter xsi:type="xsd:unsignedLong">0</frameSendCounter>
 		<fixedSize xsi:type="xsd:boolean">true</fixedSize>
 		<rate xsi:type="xsd:unsignedLong">1000000</rate>

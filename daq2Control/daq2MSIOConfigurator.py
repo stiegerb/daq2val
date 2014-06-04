@@ -157,7 +157,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 			if self.clientSendPoolSize is not None:
 				sendPoolSize = 1024*1024*self.clientSendPoolSize
 			else:
-				sendPoolSize = 0x4000000
+				sendPoolSize = sendQPSize*RUMaxMSize
 
 			if self.clientComplQPSize is not None:
 				complQPSize = self.clientComplQPSize
@@ -199,7 +199,8 @@ class daq2MSIOConfigurator(daq2Configurator):
 			if self.serverRecvPoolSize is not None:
 				recvPoolSize = 1024*1024*self.serverRecvPoolSize
 			else:
-				recvPoolSize = (recvQPSize+maxResources)*self.nclients*BUMaxMSize
+				recvPoolSize = int((recvQPSize+maxResources)*self.nclients*BUMaxMSize)
+				# recvPoolSize = int(recvQPSize*self.nclients*BUMaxMSize*1.4)
 
 			if self.serverComplQPSize is not None:
 				complQPSize = self.serverComplQPSize
