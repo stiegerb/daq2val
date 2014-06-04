@@ -21,6 +21,9 @@ FEROL_OPERATION_MODES = {
       'efed_slink_gtpe' :('SLINK_MODE',         'FRL_GTPE_TRIGGER_MODE')}
 
 
+RU_STARTING_TID = 10
+BU_STARTING_TID = 200
+
 ######################################################################
 def elementFromFile(filename):
 	"""
@@ -232,21 +235,19 @@ class daq2Configurator(object):
 			                      {'class':'%s::EVM'%self.evbns ,
 			                       'instance':"0", "tid":"1"}))
 		## Add RUs:
-		ru_starting_tid = 10
 		ru_instances_to_add = [n for n in range(self.nrus)]
 		if self.evbns == 'evb': ru_instances_to_add.remove(0)
 		for n in ru_instances_to_add:
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'%s::RU'%self.evbns ,
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(ru_starting_tid+n)}))
+				                   'tid':'%d'%(RU_STARTING_TID+n)}))
 		## Add BUs:
-		bu_starting_tid = 30
 		for n in xrange(self.nbus):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'%s::BU'%self.evbns ,
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(bu_starting_tid+2*n)}))
+				                   'tid':'%d'%(BU_STARTING_TID+2*n)}))
 
 		self.config.append(prot)
 	def makeFerolController(self, frl):
