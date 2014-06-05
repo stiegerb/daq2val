@@ -64,6 +64,39 @@ def split_list(alist, wanted_parts=1):
 	         for i in range(wanted_parts) ]
 
 
+######################################################################
+def propertyInApp(application, prop_name, prop_value=None):
+	try:
+		## Assume here that there is only one element, which
+		## is the properties
+		properties = application[0]
+		if not 'properties' in properties.tag:
+			raise RuntimeError(
+				  'Could not identify properties of %s application'
+				  'in %s context.'%(application.attrib['class'],
+				                 context.attrib['url']))
+		## Extract namespace
+		appns = re.match(r'\{(.*?)\}properties',
+		                 properties.tag).group(1)
+	except IndexError: ## i.e. app[0] didn't work
+		raise RuntimeError(
+			  'Application %s in context %s does not have'
+			  'properties.'%(application.attrib['class'],
+			  	             context.attrib['url']))
+
+	prop = application.find(QN(appns,'properties').text+'/'+
+		            QN(appns,prop_name).text)
+	try:
+		if prop_value is not None: # if value is given, set it
+			prop.text = str(prop_value)
+			return True
+		else: # if not, return the existing value
+			return prop.text
+	except AttributeError:
+		raise KeyError('Property %s of application %s '
+			           'not found.'%(prop_name,
+			           	             application.attrib['class']))
+
 
 ######################################################################
 class daq2Configurator(object):
@@ -262,42 +295,11 @@ class daq2Configurator(object):
 			if not app.attrib['class'] == classname: continue
 			if not app.attrib['instance'] == str(instance): continue
 
-			return self.propertyInApp(app, prop_name, prop_value)
+			return propertyInApp(app, prop_name, prop_value)
 
 		else:
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
-	def propertyInApp(self, application, prop_name, prop_value=None):
-			try:
-				## Assume here that there is only one element, which
-				## is the properties
-				properties = application[0]
-				if not 'properties' in properties.tag:
-					raise RuntimeError(
-						  'Could not identify properties of %s application'
-						  'in %s context.'%(application.attrib['class'],
-						                 context.attrib['url']))
-				## Extract namespace
-				appns = re.match(r'\{(.*?)\}properties',
-				                 properties.tag).group(1)
-			except IndexError: ## i.e. app[0] didn't work
-				raise RuntimeError(
-					  'Application %s in context %s does not have'
-					  'properties.'%(application.attrib['class'],
-					  	             context.attrib['url']))
-
-			prop = application.find(QN(appns,'properties').text+'/'+
-				            QN(appns,prop_name).text)
-			try:
-				if prop_value is not None: # if value is given, set it
-					prop.text = str(prop_value)
-					return True
-				else: # if not, return the existing value
-					return prop.text
-			except AttributeError:
-				raise KeyError('Property %s of application %s '
-					           'not found.'%(prop_name,
-					           	             application.attrib['class']))
 
 	def setPropertyInAppInContext(self, context, classname,
 		                          prop_name, prop_value,
@@ -311,9 +313,9 @@ class daq2Configurator(object):
 			                               prop_name, None, instance)
 
 	def setPropertyInApp(self, application, prop_name, prop_value):
-		return self.propertyInApp(application, prop_name, prop_value)
+		return propertyInApp(application, prop_name, prop_value)
 	def readPropertyFromApp(self, application, prop_name):
-		return self.propertyInApp(application, prop_name, None)
+		return propertyInApp(application, prop_name, None)
 
 	def removePropertyInApp(self, application, prop_name):
 		try:
