@@ -75,8 +75,8 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		else:
 			complQPSize = 8192
 
-		recvPoolSize = 0x20000000
-		recvQPSize = 512
+		recvPoolSize = 0x40000000
+		recvQPSize = 1024
 
 		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
@@ -98,8 +98,8 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		else:
 			complQPSize = recvQPSize*self.nrus
 
-		sendPoolSize = 0x20000000
-		sendQPSize = 512
+		sendPoolSize = 0x40000000
+		sendQPSize = 1024
 
 		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
