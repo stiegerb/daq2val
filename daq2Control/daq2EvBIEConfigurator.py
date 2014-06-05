@@ -105,9 +105,9 @@ class daq2EvBIEConfigurator(daq2Configurator):
 			                complQPSize, sendQPSize, recvQPSize)
 
 		# EVM
-		sendPoolSize = int(3.5*1024*1024*1024)
-		recvPoolSize = int(3.5*1024*1024*1024)
-		recvQPSize   = 128
+		sendPoolSize = int(3.9*1024*1024*1024)
+		recvPoolSize = int(3.9*1024*1024*1024)
+		recvQPSize   = 256
 		sendQPSize   = 128
 		complQPSize  = 12800
 
