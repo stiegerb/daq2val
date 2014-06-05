@@ -75,8 +75,8 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		else:
 			complQPSize = 8192
 
-		recvPoolSize = 0x8000000
-		recvQPSize = 64
+		recvPoolSize = 0x20000000
+		recvQPSize = 512
 
 		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
@@ -98,17 +98,17 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		else:
 			complQPSize = recvQPSize*self.nrus
 
-		sendPoolSize = 0x8000000
-		sendQPSize = 64
+		sendPoolSize = 0x20000000
+		sendQPSize = 512
 
 		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
 
 		# EVM
-		sendPoolSize = 3*1024*1024*1024
-		recvPoolSize = 3*1024*1024*1024
-		recvQPSize   = 64
-		sendQPSize   = 64
+		sendPoolSize = int(3.5*1024*1024*1024)
+		recvPoolSize = int(3.5*1024*1024*1024)
+		recvQPSize   = 128
+		sendQPSize   = 128
 		complQPSize  = 12800
 
 		self.EVMIBVConfig = (sendPoolSize, recvPoolSize,
@@ -174,6 +174,23 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		## fedSourceIds are created automatically, remove them
 		self.removePropertyInApp(ru_app, 'fedSourceIds')
+
+		# ## In case of EvB, add expected fedids
+		# if self.evbns == 'evb':
+		# 	ruevbappns = (self.xdaqappns%'evb::RU' if
+		# 		          ru.index>0 else self.xdaqappns%'evb::EVM')
+		# 	fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+
+		# 		                       QN(ruevbappns, 'fedSourceIds').text)
+		# 	fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = (
+		# 		                       "xsd:ur-type[%d]"%(len(feds_to_add)))
+		# 	item_element = fedSourceIds.find(QN(ruevbappns,'item').text)
+		# 	fedSourceIds.remove(item_element)
+		# 	for n,fed in enumerate(feds_to_add):
+		# 		item_to_add = deepcopy(item_element)
+		# 		item_to_add.attrib[QN(self.soapencns, 'position').text] = (
+		# 			                                                '[%d]'%n)
+		# 		item_to_add.text = str(fed)
+		# 		fedSourceIds.append(item_to_add)
 
 		context.insert(5,ru_app)
 		ru_app.set('instance',str(ruindex))
