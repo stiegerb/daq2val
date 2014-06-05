@@ -10,11 +10,15 @@ if __name__ == "__main__":
 	from optparse import OptionParser
 	parser = OptionParser()
 	parser.add_option("-v", "--verbose", default=0, action="store", type='int', dest="verbose", help="Set the verbose level, [default: %default (quiet)]")
+	parser.add_option("-m", "--symbolMap", default='', action="store", type='str', dest="symbolMap", help="Use a custom symbolmap")
 	(options, args) = parser.parse_args()
 
 	to_be_printed = ['d2s::GTPeController', 'd2s::FEDEmulator', 'tts::FMMController', 'ferol::FerolController', 'evb::EVM', 'evb::RU', 'evb::BU']
 
-	d2SM  = daq2SymbolMap()
+	if len(options.symbolMap)>0:
+		d2SM = daq2SymbolMap(options.symbolMap)
+	else:
+		d2SM = daq2SymbolMap()
 	d2Cfg = daq2Config(args[0], verbose=options.verbose)
 	d2Cfg.fillFromSymbolMap(d2SM)
 
