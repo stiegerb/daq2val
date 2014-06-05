@@ -171,15 +171,12 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## Set inputSource to Local:
 		self.setPropertyInApp(ru_app, 'inputSource', 'Local')
 
+		## fedSourceIds are created automatically, remove them
+		self.removePropertyInApp(ru_app, 'fedSourceIds')
+
 		context.insert(5,ru_app)
 		ru_app.set('instance',str(ruindex))
 
-		ruevbappns = (self.xdaqappns%'evb::RU' if
-			          ruindex>0 else self.xdaqappns%'evb::EVM')
-		fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+
-			                       QN(ruevbappns, 'fedSourceIds').text)
-		fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = (
-			                       "xsd:ur-type[1]")
 
 		## Set instance and url
 		for app in context.findall(QN(self.xdaqns, 'Endpoint').text):
