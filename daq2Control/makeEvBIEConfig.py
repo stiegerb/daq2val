@@ -12,8 +12,8 @@ def addConfiguratorOption(parser):
 		                   "completionQueueSize, sendQueuePairSize, "
 		                   "and recvQueuePairSize parameters of the "
 		                   "pt::ibv::Application dynamically according "
-		                   "to Andys algorithm. If not set, take "
-		                   "everything from fragment.")
+		                   "to an algorithm. If not set, take everything "
+		                   "from fragment.")
 	parser.add_option("--cP", "--RUSendPoolSize", default=None,
 		              action="store", type="int", dest="RUSendPoolSize",
 		              help="Set the sendPoolSize parameter on the MStreamIO "

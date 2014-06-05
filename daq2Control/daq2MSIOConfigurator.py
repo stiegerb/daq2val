@@ -10,7 +10,6 @@ from xml.etree.ElementTree import SubElement
 from xml.etree.ElementTree import QName as QN
 from xml.parsers.expat import ExpatError
 
-from daq2Utils import printError, printWarningWithWait
 from daq2Configurator import elementFromFile, addFragmentFromFile
 from daq2Configurator import RU_STARTING_TID, BU_STARTING_TID
 

@@ -33,22 +33,18 @@ class daq2EvBIEConfigurator(daq2Configurator):
 	def configureIBVforEvBIE(self):
 		## TODO: Update!
 		RUFragmentPath = os.path.join(self.fragmentdir,
-                           'RU/gevb2g/msio/RU_ibv_application_msio.xml')
+                           'RU/evb/RU_ibv_application.xml')
 		BUFragmentPath = os.path.join(self.fragmentdir,
-                           'BU/gevb2g/msio/BU_ibv_application_msio.xml')
-		EVMFragmentPath = os.path.join(self.fragmentdir,
-                           'EVM/msio/EVM_ibv_application_msio.xml')
-		EVMIBVApp = elementFromFile(filename=EVMFragmentPath)
-
+                           'BU/BU_ibv_application.xml')
 
 		RUIBVApp = elementFromFile(filename=RUFragmentPath)
 		BUIBVApp = elementFromFile(filename=BUFragmentPath)
 
 		BUApp = elementFromFile(filename=os.path.join(self.fragmentdir,
-				                  'BU/gevb2g/msio/BU_application_msio.xml'))
+				                  'BU/evb/BU_application.xml'))
 		maxResources = int(self.readPropertyFromApp(
 		                        application=BUApp,
-		                        prop_name="maxResources"))
+		                        prop_name="maxEvtsUnderConstruction")) #??
 
 		RUMaxMSize = int(self.readPropertyFromApp(
 			                        application=RUIBVApp,
@@ -57,7 +53,11 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		BUMaxMSize = int(self.readPropertyFromApp(
 			                        application=BUIBVApp,
 			                        prop_name="maxMessageSize"))
-		self.maxMessageSize = RUMaxMSize if RUMaxMSize == BUMaxMSize else None
+		if RUMaxMSize == BUMaxMSize:
+			self.maxMessageSize = RUMaxMSize
+		else:
+			printWarningWithWait('Differing maxMessageSize on RU and BU',
+				                 waittime=2)
 
 		# RU:
 		if self.RUSendQPSize is not None:
@@ -75,7 +75,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		else:
 			complQPSize = 8192
 
-		recvPoolSize = 0x2000000
+		recvPoolSize = 0x8000000
 		recvQPSize = 64
 
 		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
@@ -98,20 +98,18 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		else:
 			complQPSize = recvQPSize*self.nrus
 
-		sendPoolSize = 0x2000000
+		sendPoolSize = 0x8000000
 		sendQPSize = 64
-
 
 		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
 
-		# EVM:?
-		sendPoolSize = maxResources*256*1024*self.nbus*2
-		recvPoolSize = maxResources*256*1024*self.nbus*2
-		recvQPSize = maxResources*2
-		sendQPSize = maxResources
-		complQPSize = maxResources*2*self.nbus
-
+		# EVM
+		sendPoolSize = 3*1024*1024*1024
+		recvPoolSize = 3*1024*1024*1024
+		recvQPSize   = 64
+		sendQPSize   = 64
+		complQPSize  = 12800
 
 		self.EVMIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
@@ -148,7 +146,10 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		## Configure IBV application:
 		if self.setDynamicIBVConfig:
-			self.configureIBVApplication(context, self.RUIBVConfig)
+			if ruindex == 0:
+				self.configureIBVApplication(context, self.EVMIBVConfig)
+			else:
+				self.configureIBVApplication(context, self.RUIBVConfig)
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
