@@ -87,6 +87,7 @@ class daq2Control(object):
 		self.__RETRY_COUNTER = 0
 	def setupConfig(self, configFile):
 		self.config = daq2Config(configFile)
+		# self.config = daq2Config(configFile, verbose=self.options.verbose)
 		self.config.fillFromSymbolMap(self.symbolMap)
 		if self.options.enablePauseFrame:
 			self.config.setFerolParameter('ENA_PAUSE_FRAME', 'true')
@@ -405,21 +406,17 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring"
 
-		## In case of gevb2g InputEmulator:
-		if self.config.useGevbInputEmulator:
-			# Configure InputEmulator application
-			for n,ru in enumerate(self.config.RUs):
-			#	utils.sendSimpleCmdToApp(ru.host, ru.port,
-			#		                     'pt::ibv::Application', '0',
-			#		                     'enable',
-			#		                     verbose=self.options.verbose,
-			#		                     dry=self.options.dry)
-				utils.sendSimpleCmdToApp(ru.host, ru.port,
-					                     'gevb2g::InputEmulator', str(n),
-					                     'Configure',
-					                     verbose=self.options.verbose,
-					                     dry=self.options.dry)
-			sleep(2, self.options.verbose, self.options.dry)
+		## In case of EvB/gevb2g InputEmulator:
+		if self.config.useInputEmulator:
+			# Configure gevb2g InputEmulator application
+			if not self.config.useEvB:
+				for n,ru in enumerate(self.config.RUs):
+					utils.sendSimpleCmdToApp(ru.host, ru.port,
+						                     'gevb2g::InputEmulator', str(n),
+						                     'Configure',
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
+				sleep(2, self.options.verbose, self.options.dry)
 			self.sendCmdToEVMRUBU('Configure')
 			return
 
@@ -549,19 +546,20 @@ class daq2Control(object):
 					                     dry=self.options.dry)
 			return
 
-		## In case of gevb2g InputEmulator:
-		if self.config.useGevbInputEmulator:
+		## In case of EvB/gevb2g InputEmulator:
+		if self.config.useInputEmulator:
 			self.sendCmdToRUEVMBU('Enable')
 			sleep(2, self.options.verbose, self.options.dry)
 
-			# Enable InputEmulator application
-			for n,ru in enumerate(self.config.RUs):
-				utils.sendSimpleCmdToApp(ru.host, ru.port,
-					                     'gevb2g::InputEmulator', str(n),
-					                     'Enable',
-					                     verbose=self.options.verbose,
-					                     dry=self.options.dry)
-			sleep(2, self.options.verbose, self.options.dry)
+			# Enable InputEmulator application in Gevb2g case
+			if not self.config.useEvB:
+				for n,ru in enumerate(self.config.RUs):
+					utils.sendSimpleCmdToApp(ru.host, ru.port,
+						                     'gevb2g::InputEmulator', str(n),
+						                     'Enable',
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
+				sleep(2, self.options.verbose, self.options.dry)
 			return
 
 		printWarningWithWait("daq2Control::Enable ==> Doing nothing.", waittime=1, instance=self)
@@ -597,8 +595,11 @@ class daq2Control(object):
 			self._outputDir += self.config.testCase
 			if self.config.useMSIO:
 				self._outputDir += '_MSIO'
-			if self.config.useGevbInputEmulator:
-				self._outputDir += '_gevbIE'
+			if self.config.useInputEmulator:
+				if self.config.useEvB:
+					self._outputDir += '_gevbIE'
+				else:
+					self._outputDir += '_EvBIE'
 			if self.options.useLogNormal:
 				self._outputDir += '_RMS_%3.1f' % float(self.options.relRMS)
 			if self.options.outputTag:
@@ -766,7 +767,7 @@ class daq2Control(object):
 					           dry=self.options.dry)
 
 		## In case of gevb2g InputEmulator configurations:
-		elif self.config.useGevbInputEmulator:
+		elif self.config.useInputEmulator and not self.config.useEvB:
 			for n,ru in enumerate(self.config.RUs):
 				utils.setParam(ru.host, ru.port, 'gevb2g::InputEmulator',
 					           str(n), 'Mean', 'unsignedLong',
@@ -784,6 +785,22 @@ class daq2Control(object):
 					           fragSize,
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
+		## In case of EvB InputEmulator configurations:
+		elif self.config.useInputEmulator and self.config.useEvB:
+			for n,ru in enumerate(self.config.RUs):
+				classname = 'RU'
+				if n==0: classname = 'EVM'
+				utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
+					           str(n), 'superFragmentSize', 'unsignedInt',
+					           fragSize,
+					           verbose=self.options.verbose,
+					           dry=self.options.dry)
+			# for n,bu in enumerate(self.config.BUs):
+			# 	utils.setParam(bu.host, bu.port, 'gevb2g::BU', str(n),
+			# 		           'currentSize', 'unsignedLong',
+			# 		           fragSize,
+			# 		           verbose=self.options.verbose,
+			# 		           dry=self.options.dry)
 
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## --stopRestart option or eFEROLs: stop everything, set new size, start again

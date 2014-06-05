@@ -7,6 +7,8 @@ from xml.etree.ElementTree import QName as QN
 
 from daq2Utils import printError, printWarningWithWait, sleep, SIZE_LIMIT_TABLE, checkMaxSize
 
+from daq2Configurator import propertyInApp
+
 separator = 70*'-'
 
 
@@ -118,7 +120,7 @@ class daq2Config(object):
 		self.contexts = self.ETroot.getiterator(str(QN(self.xcns,'Context')))
 
 		self.useMSIO = False
-		self.useGevbInputEmulator = False
+		self.useInputEmulator = False
 		self.readXDAQConfigTemplate(configFile)
 		self.useGTPe = False
 		if len(self.GTPe) > 0:
@@ -131,7 +133,7 @@ class daq2Config(object):
 		if len(self.FEROLs) > 0:
 			config = '%ds%dfx%dx%d' % (self.nStreams, len(self.FEROLs),
 				                       len(self.RUs), len(self.BUs))
-		elif self.useMSIO or self.useGevbInputEmulator:
+		elif self.useMSIO or self.useInputEmulator:
 			config = '%dx%d' % (len(self.RUs), len(self.BUs))
 		else:
 			config = '%dx%dx%d' % (len(self.eFEROLs), len(self.RUs),
@@ -188,6 +190,9 @@ class daq2Config(object):
 
 	def setRUIBVParameter(self, param_name, param_value):
 		self.setProperty(['RU','EVM'], 'pt::ibv::Application', param_name, param_value)
+
+	def getProperty(self, application, prop_name):
+		pass
 
 	def setProperty(self, context_list, classname, prop_name, prop_value):
 		for context in self.contexts:
@@ -255,6 +260,7 @@ class daq2Config(object):
 		maxsizes = []
 		tcp_cwnd = []
 		checked_ibv = False
+		checked_evbie = False
 
 		#### Scan <xc:Context>'s to extract configuration
 		for context in self.contexts:
@@ -275,7 +281,7 @@ class daq2Config(object):
 
 				## For RU, check whether IVB or UDAPL (only do it once)
 				## and whether there is an InputEmulator
-				if h == 'RU' and checked_ibv == False:
+				if h == 'RU' and not checked_ibv:
 					self.useIBV = False
 					for app in apps:
 						if app.attrib['class'] == 'pt::ibv::Application':
@@ -288,10 +294,20 @@ class daq2Config(object):
 							break
 					for app in apps:
 						if app.attrib['class'] == 'gevb2g::InputEmulator':
-							self.useGevbInputEmulator = True
+							self.useInputEmulator = True
 							if self.verbose > 2 : print "Found gevb2g InputEmulator"
 							break
 					checked_ibv = True
+
+				## For evb RU (or EVM), check whether inputSource is set to Local
+				if h == 'RU' and self.useEvB and not checked_evbie:
+					for app in apps:
+						if app.attrib['class'] == 'evb::EVM':
+							if propertyInApp(app, 'inputSource') == 'Local':
+								self.useInputEmulator = True
+								if self.verbose > 2 : print "Found evb InputEmulator"
+							break
+					checked_evbie = True
 
 				## For FEROLs, check which of the streams are enabled
 				if h == 'FEROLCONTROLLER':
