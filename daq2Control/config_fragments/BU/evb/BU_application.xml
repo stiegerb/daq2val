@@ -3,5 +3,6 @@
 		<dropEventData xsi:type="xsd:boolean">true</dropEventData>
 		<maxEvtsUnderConstruction xsi:type="xsd:unsignedInt">1024</maxEvtsUnderConstruction>
 		<eventsPerRequest xsi:type="xsd:unsignedInt">32</eventsPerRequest>
+		<checkCRC xsi:type="xsd:boolean">false</checkCRC>
 	</properties>
 </xc:Application>
