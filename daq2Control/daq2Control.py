@@ -104,11 +104,6 @@ class daq2Control(object):
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
 		if self.options.verbose > 0: print separator
 		for n,evm in enumerate(self.config.EVM):
-			#utils.sendSimpleCmdToApp(evm.host, evm.port,
-			#		                     'pt::ibv::Application', '0',
-			#		                     'enable',
-			#		                     verbose=self.options.verbose,
-			#		                     dry=self.options.dry)
 			utils.sendSimpleCmdToApp(evm.host, evm.port,
 				                     self.config.namespace+'EVM', str(n),
 				                     cmd, verbose=self.options.verbose,
@@ -122,11 +117,6 @@ class daq2Control(object):
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		for n,bu in enumerate(self.config.BUs):
-			#utils.sendSimpleCmdToApp(bu.host, bu.port,
-			#		                     'pt::ibv::Application', '0',
-			#		                     'enable',
-			#		                     verbose=self.options.verbose,
-			#		                     dry=self.options.dry)
 			utils.sendSimpleCmdToApp(bu.host, bu.port,
 				                     self.config.namespace+'BU', str(n),
 				                     cmd,
@@ -137,50 +127,94 @@ class daq2Control(object):
 		for n,ru in enumerate(self.config.RUs):
 			classname = 'RU'
 			if self.config.useEvB and n==0: classname = 'EVM'
-			utils.sendSimpleCmdToApp(ru.host, ru.port, self.config.namespace+classname, str(n), cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(ru.host, ru.port,
+				                     self.config.namespace+classname, str(n),
+				                     cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 		for n,evm in enumerate(self.config.EVM):
-			utils.sendSimpleCmdToApp(evm.host, evm.port, self.config.namespace+'EVM', str(n), cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(evm.host, evm.port,
+				                     self.config.namespace+'EVM', str(n),
+				                     cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 		for n,bu in enumerate(self.config.BUs):
-			utils.sendSimpleCmdToApp(bu.host, bu.port, self.config.namespace+'BU', str(n), cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(bu.host, bu.port,
+				                     self.config.namespace+'BU', str(n),
+				                     cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 	def sendCmdToFEROLs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for frl in self.config.FEROLs:
-			utils.sendSimpleCmdToApp(frl.host, frl.port, 'ferol::FerolController', 0, cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(frl.host, frl.port,
+				                     'ferol::FerolController', 0, cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 	def sendCmdToEFEDs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for efed in self.config.eFEDs:
 			for instance,_,_ in efed.streams:
-				utils.sendSimpleCmdToApp(efed.host, efed.port, 'd2s::FEDEmulator', instance, cmd, verbose=self.options.verbose, dry=self.options.dry)
+				utils.sendSimpleCmdToApp(efed.host, efed.port,
+					                     'd2s::FEDEmulator', instance, cmd,
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
 	def sendCmdToGTPeFMM(self, cmd, invert=False):
 		try:
 			gtpe = self.symbolMap('GTPE0')
 			fmm  = self.symbolMap('FMM0')
 			if not invert:
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
-				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
+					                     'd2s::GTPeController', '0',
+					                     str(cmd),
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port,
+					                     'tts::FMMController', '0',
+					                     str(cmd),
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
 				return
 			else:
-				utils.sendSimpleCmdToApp(fmm.host, fmm.port,   'tts::FMMController',  '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', str(cmd), verbose=self.options.verbose, dry=self.options.dry)
+				utils.sendSimpleCmdToApp(fmm.host, fmm.port,
+					                     'tts::FMMController', '0',
+					                     str(cmd),
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
+				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
+					                     'd2s::GTPeController', '0',
+					                     str(cmd),
+					                     verbose=self.options.verbose,
+					                     dry=self.options.dry)
 				return
 		except KeyError as e:
 			if not self.config.useGTPe:
-				printError("You're trying to send a command to a non-existing GTPe...", self)
-				raise RuntimeError('Addressing GTPe in non-GTPe running mode')
+				printError("You're trying to send a command to a "
+					       "non-existing GTPe...", self)
+				raise RuntimeError('Addressing GTPe in non-GTPe running '
+					               'mode')
 			raise e
 	def sendCmdToFMM(self, cmd):
 		try:
 			fmm = self.symbolMap('FMM0')
-			utils.sendSimpleCmdToApp(fmm.host, fmm.port, 'tts::FMMController', '0', cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(fmm.host, fmm.port,
+				                     'tts::FMMController', '0', cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 		except KeyError as e:
-			printWarningWithWait('No FMM found in symbol map, aborting.', waittime=0, instance=self)
+			printWarningWithWait('No FMM found in symbol map, aborting.',
+				                 waittime=0, instance=self)
 			raise e
 	def sendCmdToGTPe(self, cmd):
 		try:
 			gtpe = self.symbolMap('GTPE0')
-			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController', '0', cmd, verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
+				                     'd2s::GTPeController', '0', cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
 		except KeyError as e:
-			printWarningWithWait('No GTPe found in symbol map, aborting.', waittime=0, instance=self)
+			printWarningWithWait('No GTPe found in symbol map, aborting.',
+				                 waittime=0, instance=self)
 			pass
 
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
@@ -195,12 +229,37 @@ class daq2Control(object):
 
 			for frl in self.config.FEROLs:
 				if frl.enableStream0:
-					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED0',       'unsignedInt', int(fragSize),    verbose=self.options.verbose, dry=self.options.dry)
-					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED0', 'unsignedInt', int(fragSizeRMS), verbose=self.options.verbose, dry=self.options.dry)
-					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED0',           'unsignedInt', int(delay),       verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(frl.host, frl.port,
+						           'ferol::FerolController', 0,
+						           'Event_Length_bytes_FED0',
+						           'unsignedInt', int(fragSize),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl.host, frl.port,
+						           'ferol::FerolController', 0,
+						           'Event_Length_Stdev_bytes_FED0',
+						           'unsignedInt', int(fragSizeRMS),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl.host, frl.port,
+						           'ferol::FerolController', 0,
+						           'Event_Delay_ns_FED0',
+						           'unsignedInt', int(delay),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
 				if frl.enableStream1:
-					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_bytes_FED1',       'unsignedInt', int(fragSize),    verbose=self.options.verbose, dry=self.options.dry)
-					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Length_Stdev_bytes_FED1', 'unsignedInt', int(fragSizeRMS), verbose=self.options.verbose, dry=self.options.dry)
+					utils.setParam(frl.host, frl.port,
+						           'ferol::FerolController', 0,
+						           'Event_Length_bytes_FED1',
+						           'unsignedInt', int(fragSize),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl.host, frl.port,
+						           'ferol::FerolController', 0,
+						           'Event_Length_Stdev_bytes_FED1',
+						           'unsignedInt', int(fragSizeRMS),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
 					utils.setParam(frl.host, frl.port, 'ferol::FerolController', 0, 'Event_Delay_ns_FED1',           'unsignedInt', int(delay),       verbose=self.options.verbose, dry=self.options.dry)
 		else:
 			if not self.options.profilePerFRL: ## same size for both streams of each FEROL!
@@ -320,8 +379,8 @@ class daq2Control(object):
 				configureCmd = utils.SOAPEnvelope % configureBody
 				file.write(configureCmd)
 	def start(self, fragSize, fragSizeRMS=0, rate='max', onlyPrepare=False):
-		"""Start all XDAQ processes, set configuration for fragSize and start running
-			onlyPrepare=True will stop before configuring and enabling
+		"""Start all XDAQ processes, set configuration for fragSize and start
+		   running onlyPrepare=True will stop before configuring and enabling
 		"""
 		self.setCurrentSize(fragSize, fragSizeRMS, rate)
 
@@ -334,14 +393,17 @@ class daq2Control(object):
 				printWarningWithWait("Skipping %s" % h.host,
 					                  waittime=1, instance=self)
 				continue
-			utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port), verbose=self.options.verbose, dry=self.options.dry)
+			utils.sendCmdToLauncher(h.host, h.lport, 'STARTXDAQ'+str(h.port),
+				                    verbose=self.options.verbose,
+				                    dry=self.options.dry)
 		sleep(2, self.options.verbose, self.options.dry)
 
 		## Check availability of xdaq processes on relevant hosts
 		if not self.webPingXDAQ():
 			## Check again, maybe it needs more time to start?
-			if self.options.verbose > 0: print separator
-			if self.options.verbose > 0: print 'Waiting 5 seconds and checking again...'
+			if self.options.verbose > 0:
+				print separator
+				print 'Waiting 5 seconds and checking again...'
 			sleep(5, self.options.verbose, self.options.dry)
 			if not self.webPingXDAQ():
 				self.retry('Not all hosts ready!')
@@ -389,13 +451,22 @@ class daq2Control(object):
 	def checkStopped(self):
 		if self.options.verbose > 0: print separator
 		## Check everything is 'Configured' or 'Ready'
-		to_be_checked = [(self.config.RUs[1:] + self.config.FEROLs, 'Configured'), ([self.config.RUs[0]] + self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.GTPe, 'Ready')]
+		to_be_checked = [
+		        (self.config.RUs[1:] + self.config.FEROLs, 'Configured'),
+		        ([self.config.RUs[0]] + self.config.BUs + self.config.EVM +
+		          self.config.eFEDs + self.config.GTPe, 'Ready')]
 		if not self.config.useEvB:
-			to_be_checked = [(self.config.RUs + self.config.FEROLs, 'Configured'), (self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.GTPe, 'Ready')]
+			to_be_checked = [
+			    (self.config.RUs + self.config.FEROLs, 'Configured'),
+			    (self.config.BUs + self.config.EVM +
+			     self.config.eFEDs + self.config.GTPe, 'Ready')]
 
 		for hostlist, state in to_be_checked:
-			if utils.checkStates(hostlist, state, verbose=self.options.verbose, dry=self.options.dry): continue
-			printWarningWithWait("Failed to reach 'Configured' state.", waittime=0, instance=self)
+			if utils.checkStates(hostlist, state,
+				                 verbose=self.options.verbose,
+				                 dry=self.options.dry): continue
+			printWarningWithWait("Failed to reach 'Configured' state.",
+				                 waittime=0, instance=self)
 			return False
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print 'STOPPED'
@@ -441,7 +512,9 @@ class daq2Control(object):
 			self.sendCmdToFEROLs('Configure')
 			sleep(10, self.options.verbose, self.options.dry)
 			if not self.checkConfigured():
-				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
+				printWarningWithWait("Not everything configured. Waiting "
+					                 "another 10s and checking again.",
+					                 waittime=10, instance=self)
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
 					return
@@ -449,7 +522,11 @@ class daq2Control(object):
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
 					print "Sending init to", h.name
-					utils.sendSimpleCmdToApp(h.host, h.port, "pt::ibv::Application", 0, "init", verbose=self.options.verbose, dry=self.options.dry)
+					utils.sendSimpleCmdToApp(h.host, h.port,
+						                     "pt::ibv::Application", 0,
+						                     "init",
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
 				sleep(2, self.options.verbose, self.options.dry)
 			return
 
@@ -464,7 +541,9 @@ class daq2Control(object):
 
 			sleep(10, self.options.verbose, self.options.dry)
 			if not self.checkConfigured():
-				printWarningWithWait("Not everything configured. Waiting another 10s and checking again.", waittime=10, instance=self)
+				printWarningWithWait("Not everything configured. Waiting "
+					                 "another 10s and checking again.",
+					                 waittime=10, instance=self)
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
 					return
@@ -472,22 +551,33 @@ class daq2Control(object):
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
 					print "Sending init to", h.name
-					utils.sendSimpleCmdToApp(h.host, h.port, "pt::ibv::Application", 0, "init", verbose=self.options.verbose, dry=self.options.dry)
+					utils.sendSimpleCmdToApp(h.host, h.port,
+						                     "pt::ibv::Application", 0,
+						                     "init",
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
 				sleep(2, self.options.verbose, self.options.dry)
 			return
 
-		printWarningWithWait("daq2Control::Configure ==> Doing nothing.", waittime=1, instance=self)
+		printWarningWithWait("daq2Control::Configure ==> Doing nothing.",
+			                 waittime=1, instance=self)
 		return
 	def checkConfigured(self):
 		if self.options.verbose > 0: print separator
 		## Check everything is 'Configured' or 'Ready'
-		to_be_checked = [(self.config.FEROLs, 'Configured'), (self.config.RUs + self.config.BUs + self.config.EVM + self.config.eFEDs + self.config.FMM + self.config.GTPe, 'Ready')]
+		to_be_checked = [(self.config.FEROLs, 'Configured'),
+		                 (self.config.RUs + self.config.BUs +
+		                  self.config.EVM + self.config.eFEDs +
+		                  self.config.FMM + self.config.GTPe, 'Ready')]
 		if not self.config.useEvB:
 			to_be_checked = [(self.config.FEROLs, 'Configured')]
 
 		for hostlist, state in to_be_checked:
-			if utils.checkStates(hostlist, state, verbose=self.options.verbose, dry=self.options.dry): continue
-			printWarningWithWait('Configure failed for some machines.', waittime=0, instance=self)
+			if utils.checkStates(hostlist, state,
+				                 verbose=self.options.verbose,
+				                 dry=self.options.dry): continue
+			printWarningWithWait('Configure failed for some machines.',
+				                  waittime=0, instance=self)
 			return False
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print 'CONFIGURED'
@@ -562,7 +652,8 @@ class daq2Control(object):
 				sleep(2, self.options.verbose, self.options.dry)
 			return
 
-		printWarningWithWait("daq2Control::Enable ==> Doing nothing.", waittime=1, instance=self)
+		printWarningWithWait("daq2Control::Enable ==> Doing nothing.",
+			                 waittime=1, instance=self)
 		return
 	def checkEnabled(self):
 		if self.options.verbose > 0: print separator
@@ -791,16 +882,10 @@ class daq2Control(object):
 				classname = 'RU'
 				if n==0: classname = 'EVM'
 				utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
-					           str(n), 'superFragmentSize', 'unsignedInt',
+					           str(n), 'dummyFedSize', 'unsignedInt',
 					           fragSize,
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
-			# for n,bu in enumerate(self.config.BUs):
-			# 	utils.setParam(bu.host, bu.port, 'gevb2g::BU', str(n),
-			# 		           'currentSize', 'unsignedLong',
-			# 		           fragSize,
-			# 		           verbose=self.options.verbose,
-			# 		           dry=self.options.dry)
 
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## --stopRestart option or eFEROLs: stop everything, set new size, start again
