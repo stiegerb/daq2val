@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import os
-from daq2MSIOConfigurator import daq2MSIOConfigurator
+from daq2EvBIEConfigurator import daq2EvBIEConfigurator
 from daq2Utils import getConfig, printWarningWithWait, printError
 
 from makeDAQ2Config import getNxNConfig
@@ -14,33 +14,30 @@ def addConfiguratorOption(parser):
 		                   "pt::ibv::Application dynamically according "
 		                   "to Andys algorithm. If not set, take "
 		                   "everything from fragment.")
-	parser.add_option("--cP", "--clientSendPoolSize", default=None,
-		              action="store", type="int", dest="clientSendPoolSize",
+	parser.add_option("--cP", "--RUSendPoolSize", default=None,
+		              action="store", type="int", dest="RUSendPoolSize",
 		              help="Set the sendPoolSize parameter on the MStreamIO "
-		                   "client (in MBytes, default: %default)")
-	parser.add_option("--cQ", "--clientSendQPSize", default=None,
-		              action="store", type="int", dest="clientSendQPSize",
+		                   "RU (in MBytes, default: %default)")
+	parser.add_option("--cQ", "--RUSendQPSize", default=None,
+		              action="store", type="int", dest="RUSendQPSize",
 		              help="Set the sendQueuePairSize parameter on the "
-		                   "MStreamIO client [default %default]")
-	parser.add_option("--cCQ", "--clientComplQPSize", default=None,
-		              action="store", type="int", dest="clientComplQPSize",
+		                   "MStreamIO RU [default %default]")
+	parser.add_option("--cCQ", "--RUComplQPSize", default=None,
+		              action="store", type="int", dest="RUComplQPSize",
 		              help="Set the complQueuePairSize parameter on the "
-		                   "MStreamIO client [default %default]")
-	parser.add_option("--sP", "--serverRecvPoolSize", default=None,
-		              action="store", type="int", dest="serverRecvPoolSize",
+		                   "MStreamIO RU [default %default]")
+	parser.add_option("--sP", "--BURecvPoolSize", default=None,
+		              action="store", type="int", dest="BURecvPoolSize",
 		              help="Set the recvPoolSize parameter on the MStreamIO "
-		                   "server (in MBytes, default: %default)")
-	parser.add_option("--sQ", "--serverRecvQPSize", default=None,
-		              action="store", type="int", dest="serverRecvQPSize",
+		                   "BU (in MBytes, default: %default)")
+	parser.add_option("--sQ", "--BURecvQPSize", default=None,
+		              action="store", type="int", dest="BURecvQPSize",
 		              help="Set the recvQueuePairSize parameter on the "
-		                   "MStreamIO server [default %default]")
-	parser.add_option("--sCQ", "--serverComplQPSize", default=None,
-		              action="store", type="int", dest="serverComplQPSize",
+		                   "MStreamIO BU [default %default]")
+	parser.add_option("--sCQ", "--BUComplQPSize", default=None,
+		              action="store", type="int", dest="BUComplQPSize",
 		              help="Set the complQueuePairSize parameter on the "
-		                   "MStreamIO server [default %default]")
-	parser.add_option("--useGevb2g", default=False, action="store_true",
-		              dest="useGevb2g",
-		              help="Use gevb2g for event building (instead of EvB)")
+		                   "MStreamIO BU [default %default]")
 	parser.add_option("--fragmentDir", default='', action="store",
 		              type="string", dest="fragmentDir",
 		              help=("Use config fragments from a directory other "
@@ -54,35 +51,31 @@ def addConfiguratorOption(parser):
 		              help="Where to put the output file")
 
 def main(options, args):
-	nClients, nServers = getNxNConfig(args[0])
+	nRUs, nBUs = getNxNConfig(args[0])
 
 	if len(options.fragmentDir) == 0:
 		# By default take the config_fragments dir from the current release
 		workingdir = os.path.dirname(os.path.realpath(__file__))
 		options.fragmentDir = os.path.join(workingdir,'config_fragments')
 
-	configurator = daq2MSIOConfigurator(options.fragmentDir,
+	configurator = daq2EvBIEConfigurator(options.fragmentDir,
 		                                verbose=options.verbose)
 
-	configurator.evbns = 'msio'
-	if options.useGevb2g: configurator.evbns = 'gevb2g'
+	configurator.evbns = 'evb'
 
 	## Pass options
-	configurator.clientSendPoolSize = options.clientSendPoolSize
-	configurator.clientSendQPSize   = options.clientSendQPSize
-	configurator.clientComplQPSize  = options.clientComplQPSize
-	configurator.serverRecvPoolSize = options.serverRecvPoolSize
-	configurator.serverRecvQPSize   = options.serverRecvQPSize
-	configurator.serverComplQPSize  = options.serverComplQPSize
+	configurator.RUSendPoolSize = options.RUSendPoolSize
+	configurator.RUSendQPSize   = options.RUSendQPSize
+	configurator.RUComplQPSize  = options.RUComplQPSize
+	configurator.BURecvPoolSize = options.BURecvPoolSize
+	configurator.BURecvQPSize   = options.BURecvQPSize
+	configurator.BUComplQPSize  = options.BUComplQPSize
 
 	configurator.setDynamicIBVConfig = options.setDynamicIBVConfig
 
 	## Construct output name
 	output = args[0]
-	if not options.useGevb2g:
-		output += '_msio'
-	else:
-		output += '_gevb2g'
+	output += '_evb'
 	output+='_ibv'
 	output+='.xml'
 
@@ -101,7 +94,7 @@ def main(options, args):
 		elif ext == '':
 			output = os.path.join(name, output)
 
-	configurator.makeMSIOConfig(nClients, nServers, output)
+	configurator.makeEvBIEConfig(nRUs, nBUs, output)
 
 	return True
 
@@ -109,7 +102,7 @@ if __name__ == "__main__":
 	from optparse import OptionParser
 	usage = """
 	%prog [options] topology
-	where topology is in the format of nClients x nServers,
+	where topology is in the format of nRUs x nBUs,
 	e.g. 4x2
 
 	Examples:
