@@ -66,19 +66,19 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		if self.RUSendQPSize is not None:
 			sendQPSize = self.RUSendQPSize
 		else:
-			sendQPSize = maxResources*self.nbus
+			sendQPSize = 1024
 
 		if self.RUSendPoolSize is not None:
 			sendPoolSize = 1024*1024*self.RUSendPoolSize
 		else:
-			sendPoolSize = sendQPSize*RUMaxMSize
+			sendPoolSize = 4*1024**3
 
 		if self.RUComplQPSize is not None:
 			complQPSize = self.RUComplQPSize
 		else:
 			complQPSize = 8192
 
-		recvPoolSize = 0x40000000
+		recvPoolSize = 1*1024**3
 		recvQPSize = 2048
 
 		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
@@ -88,30 +88,30 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		if self.BURecvQPSize is not None:
 			recvQPSize = self.BURecvQPSize
 		else:
-			recvQPSize = int(self.RUIBVConfig[0]*2/self.nrus/BUMaxMSize)
+			recvQPSize = 1024
 
 		if self.BURecvPoolSize is not None:
 			recvPoolSize = 1024*1024*self.BURecvPoolSize
 		else:
-			recvPoolSize = int((recvQPSize+maxResources)*self.nrus*BUMaxMSize)
-			# recvPoolSize = int(recvQPSize*self.nrus*BUMaxMSize*1.4)
+			# recvPoolSize = 0x200000000
+			recvPoolSize = 8*1024**3
 
 		if self.BUComplQPSize is not None:
 			complQPSize = self.BUComplQPSize
 		else:
-			complQPSize = recvQPSize*self.nrus
+			complQPSize = 12800
 
-		sendPoolSize = 0x40000000
+		sendPoolSize = 1*1024**3
 		sendQPSize = 2048
 
 		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
 
 		# EVM
-		sendPoolSize = int(3.9*1024*1024*1024)
-		recvPoolSize = int(3.9*1024*1024*1024)
-		recvQPSize   = 256
-		sendQPSize   = 128
+		sendPoolSize = 6*1024**3
+		recvPoolSize = 6*1024**3
+		recvQPSize   = 1024
+		sendQPSize   = 1024
 		complQPSize  = 12800
 
 		self.EVMIBVConfig = (sendPoolSize, recvPoolSize,

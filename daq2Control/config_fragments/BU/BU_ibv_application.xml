@@ -1,7 +1,7 @@
 <xc:Application class="pt::ibv::Application" id="21" instance="0" network="infini" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<properties xmlns="urn:xdaq-application:pt::ibv::Application" xsi:type="soapenc:Struct">
-		<senderPoolSize xsi:type="xsd:unsignedInt">0x4000000</senderPoolSize>
-		<receiverPoolSize xsi:type="xsd:unsignedInt">0x40000000</receiverPoolSize>
+		<senderPoolSize xsi:type="xsd:unsignedLong">0x4000000</senderPoolSize>
+		<receiverPoolSize xsi:type="xsd:unsignedLong">0x40000000</receiverPoolSize>
 		<completionQueueSize xsi:type="xsd:unsignedInt">1024</completionQueueSize>
 		<sendQueuePairSize xsi:type="xsd:unsignedInt">1024</sendQueuePairSize>
 		<recvQueuePairSize xsi:type="xsd:unsignedInt">128</recvQueuePairSize>
