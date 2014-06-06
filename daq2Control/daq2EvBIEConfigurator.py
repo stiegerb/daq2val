@@ -30,6 +30,9 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		self.evbns          = 'evb'
 		self.ptprot         = 'ibv' ## 'ibv' or 'udapl'
 
+		self.maxEvtsUnderConstruction = None
+		self.numberOfBuilders = None
+
 	def configureIBVforEvBIE(self):
 		## TODO: Update!
 		RUFragmentPath = os.path.join(self.fragmentdir,
@@ -242,8 +245,14 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## BU application
 		bu_app = elementFromFile(filename=os.path.join(self.fragmentdir,
 			                     'BU/evb/BU_application.xml'))
-		self.removePropertyInApp(bu_app, 'maxEvtsUnderConstruction')
-		self.removePropertyInApp(bu_app, 'eventsPerRequest')
+		# self.removePropertyInApp(bu_app, 'maxEvtsUnderConstruction')
+		# self.removePropertyInApp(bu_app, 'eventsPerRequest')
+		if self.maxEvtsUnderConstruction is not None:
+			self.setPropertyInApp(bu_app, 'maxEvtsUnderConstruction',
+				                  self.maxEvtsUnderConstruction)
+		if self.numberOfBuilders is not None:
+			self.setPropertyInApp(bu_app, 'numberOfBuilders',
+				                  self.numberOfBuilders)
 		context.insert(4,bu_app)
 		bu_app.set('instance',str(index))
 

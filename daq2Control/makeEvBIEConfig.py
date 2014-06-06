@@ -38,6 +38,14 @@ def addConfiguratorOption(parser):
 		              action="store", type="int", dest="BUComplQPSize",
 		              help="Set the complQueuePairSize parameter on the "
 		                   "MStreamIO BU [default %default]")
+	parser.add_option("--maxEUC", "--maxEvtsUnderConstruction", default=None,
+		              action="store", type="int", dest="maxEvtsUnderConstruction",
+		              help="Set the maxEvtsUnderConstruction parameter on the "
+		                   "EvB BU [default %default]")
+	parser.add_option("--nBuilders", "--numberOfBuilders", default=None,
+		              action="store", type="int", dest="numberOfBuilders",
+		              help="Set the numberOfBuilders parameter on the "
+		                   "EvB BU [default %default]")
 	parser.add_option("--fragmentDir", default='', action="store",
 		              type="string", dest="fragmentDir",
 		              help=("Use config fragments from a directory other "
@@ -70,6 +78,9 @@ def main(options, args):
 	configurator.BURecvPoolSize = options.BURecvPoolSize
 	configurator.BURecvQPSize   = options.BURecvQPSize
 	configurator.BUComplQPSize  = options.BUComplQPSize
+
+	configurator.maxEvtsUnderConstruction = options.maxEvtsUnderConstruction
+	configurator.numberOfBuilders = options.numberOfBuilders
 
 	configurator.setDynamicIBVConfig = options.setDynamicIBVConfig
 
