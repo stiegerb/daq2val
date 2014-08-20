@@ -4,6 +4,6 @@
 		<maxEvtsUnderConstruction xsi:type="xsd:unsignedInt">288</maxEvtsUnderConstruction>
 		<eventsPerRequest xsi:type="xsd:unsignedInt">16</eventsPerRequest>
 		<numberOfBuilders xsi:type="xsd:unsignedInt">6</numberOfBuilders>
-		<checkCRC xsi:type="xsd:boolean">false</checkCRC>
+		<checkCRC xsi:type="xsd:unsignedInt">0</checkCRC>
 	</properties>
 </xc:Application>

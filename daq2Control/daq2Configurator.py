@@ -15,11 +15,19 @@ from daq2FEDConfiguration import daq2FEDConfiguration, FRLNode, RUNode
 
 
 FEROL_OPERATION_MODES = {
-      'ferol_emulator'  :('FEROL_EMULATOR_MODE', None),
-      'frl_autotrigger' :('FRL_EMULATOR_MODE',  'FRL_AUTO_TRIGGER_MODE'),
-      'frl_gtpe_trigger':('FRL_EMULATOR_MODE',  'FRL_GTPE_TRIGGER_MODE'),
-      'efed_slink_gtpe' :('SLINK_MODE',         'FRL_GTPE_TRIGGER_MODE')}
-
+      'ferol_emulator'  :('FEROL_MODE',
+      	                  None,
+      	                  'GENERATOR_SOURCE'),
+      'frl_autotrigger' :('FRL_MODE',
+      	                  'FRL_AUTO_TRIGGER_MODE',
+      	                  'GENERATOR_SOURCE'),
+      'frl_gtpe_trigger':('FRL_MODE',
+      	                  'FRL_GTPE_TRIGGER_MODE',
+      	                  'GENERATOR_SOURCE'),
+      'efed_slink_gtpe' :('SLINK_MODE',
+      	                  'FRL_GTPE_TRIGGER_MODE',
+      	                  '???')}
+## New modes: FRL_MODE, FEDKIT_MODE, FEROL_MODE?
 
 RU_STARTING_TID = 10
 BU_STARTING_TID = 200
@@ -501,6 +509,10 @@ class daq2Configurator(object):
 			else:
 				self.removePropertyInAppInContext(ferol, classname,
 					                              'FrlTriggerMode')
+			self.setPropertyInAppInContext(ferol, classname,
+				     'DataSource',
+				     FEROL_OPERATION_MODES[self.operation_mode][2])
+
 		except KeyError as e:
 			printError('Unknown ferol operation mode "%s"'%
 				        self.operation_mode, instance=self)

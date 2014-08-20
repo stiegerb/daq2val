@@ -10,8 +10,9 @@
 			<!-- Common FEROL Settings -->
 			<enableStream0 xsi:type="xsd:boolean">true</enableStream0>
 			<enableStream1 xsi:type="xsd:boolean">true</enableStream1>
-			<OperationMode xsi:type="xsd:string">FEROL_EMULATOR_MODE</OperationMode>
-			<FrlTriggerMode xsi:type="xsd:string">FRL_AUTOTRIGGER_MODE</FrlTriggerMode>
+			<OperationMode xsi:type="xsd:string">FRL_MODE</OperationMode>
+			<FrlTriggerMode xsi:type="xsd:string">FRL_AUTO_TRIGGER_MODE</FrlTriggerMode>
+			<DataSource xsi:type="xsd:string">GENERATOR_SOURCE</DataSource>
 			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">80000</TCP_CWND_FED0>
 			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">80000</TCP_CWND_FED1>
 			<ENA_PAUSE_FRAME xsi:type="xsd:boolean">true</ENA_PAUSE_FRAME>
@@ -38,9 +39,9 @@
 			<MAX_ARP_Tries xsi:type="xsd:unsignedInt">20</MAX_ARP_Tries>
 			<ARP_Timeout_Ms xsi:type="xsd:unsignedInt">1500</ARP_Timeout_Ms>
 			<Connection_Timeout_Ms xsi:type="xsd:unsignedInt">7000</Connection_Timeout_Ms>
-			<SourceMACAddressMol xsi:type="xsd:unsignedLong">234945892</SourceMACAddressMol>
+			<!-- <SourceMACAddressMol xsi:type="xsd:unsignedLong">234945892</SourceMACAddressMol> -->
 			<enableSpy xsi:type="xsd:boolean">false</enableSpy>
-			<MolMode xsi:type="xsd:boolean">false</MolMode>
+			<!-- <MolMode xsi:type="xsd:boolean">false</MolMode> -->
 			<TCP_SOURCE_PORT_FED0 xsi:type="xsd:unsignedInt">10</TCP_SOURCE_PORT_FED0>
 			<TCP_SOURCE_PORT_FED1 xsi:type="xsd:unsignedInt">11</TCP_SOURCE_PORT_FED1>
 			<deltaTMonMs xsi:type="xsd:unsignedInt">1000</deltaTMonMs>
