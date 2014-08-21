@@ -16,7 +16,7 @@ from daq2FEDConfiguration import daq2FEDConfiguration, FRLNode, RUNode
 
 FEROL_OPERATION_MODES = {
       'ferol_emulator'  :('FEROL_MODE',
-      	                  None,
+      	                  'FRL_AUTO_TRIGGER_MODE',
       	                  'GENERATOR_SOURCE'),
       'frl_autotrigger' :('FRL_MODE',
       	                  'FRL_AUTO_TRIGGER_MODE',
@@ -434,8 +434,10 @@ class daq2Configurator(object):
 				                           'expectedFedId_1', fedids[1])
 		except IndexError:
 			pass
-		self.setPropertyInAppInContext(ferol, classname,
-			                           'SourceIP', sourceIp)
+
+		#### This is 'auto' now
+		# self.setPropertyInAppInContext(ferol, classname,
+		# 	                           'SourceIP', sourceIp)
 
 		# if frl.nstreams == 1:
 		# 	self.setPropertyInAppInContext(ferol, classname,

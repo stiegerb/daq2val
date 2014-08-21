@@ -38,7 +38,6 @@ def startXDAQLauncher(host, port, logfile, options):
 	cmd += "\\\" | "
 	cmd += "awk '{print \"%s:%d \" $0}'" % (host, port)
 	cmd += " &"
-
 	return subprocess.call(cmd, stderr=logfile, stdout=logfile, shell=True)
 
 def startXDAQLaunchers(logfile, symbolMap, options):
