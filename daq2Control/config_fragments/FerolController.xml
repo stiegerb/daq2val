@@ -13,8 +13,8 @@
 			<OperationMode xsi:type="xsd:string">FRL_MODE</OperationMode>
 			<FrlTriggerMode xsi:type="xsd:string">FRL_AUTO_TRIGGER_MODE</FrlTriggerMode>
 			<DataSource xsi:type="xsd:string">GENERATOR_SOURCE</DataSource>
-			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">1300000</TCP_CWND_FED0>
-			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">1300000</TCP_CWND_FED1>
+			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">300000</TCP_CWND_FED0>
+			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">300000</TCP_CWND_FED1>
 			<ENA_PAUSE_FRAME xsi:type="xsd:boolean">true</ENA_PAUSE_FRAME>
 
 			<!-- Settings for groups of FEROLs -->
@@ -49,8 +49,8 @@
 			<TCP_CONFIGURATION_FED1 xsi:type="xsd:unsignedInt">16384</TCP_CONFIGURATION_FED1>
 			<TCP_OPTIONS_MSS_SCALE_FED0 xsi:type="xsd:unsignedInt">74496</TCP_OPTIONS_MSS_SCALE_FED0>
 			<TCP_OPTIONS_MSS_SCALE_FED1 xsi:type="xsd:unsignedInt">74496</TCP_OPTIONS_MSS_SCALE_FED1>
-			<TCP_TIMER_RTT_FED0 xsi:type="xsd:unsignedInt">312500</TCP_TIMER_RTT_FED0>
-			<TCP_TIMER_RTT_FED1 xsi:type="xsd:unsignedInt">312500</TCP_TIMER_RTT_FED1>
+			<TCP_TIMER_RTT_FED0 xsi:type="xsd:unsignedInt">625000</TCP_TIMER_RTT_FED0>
+			<TCP_TIMER_RTT_FED1 xsi:type="xsd:unsignedInt">625000</TCP_TIMER_RTT_FED1>
 			<TCP_TIMER_RTT_SYN_FED0 xsi:type="xsd:unsignedInt">312500000</TCP_TIMER_RTT_SYN_FED0>
 			<TCP_TIMER_RTT_SYN_FED1 xsi:type="xsd:unsignedInt">312500000</TCP_TIMER_RTT_SYN_FED1>
 			<TCP_TIMER_PERSIST_FED0 xsi:type="xsd:unsignedInt">40000</TCP_TIMER_PERSIST_FED0>
