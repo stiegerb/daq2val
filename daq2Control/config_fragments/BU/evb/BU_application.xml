@@ -3,6 +3,7 @@
 		<dropEventData xsi:type="xsd:boolean">true</dropEventData>
 		<maxEvtsUnderConstruction xsi:type="xsd:unsignedInt">288</maxEvtsUnderConstruction>
 		<eventsPerRequest xsi:type="xsd:unsignedInt">16</eventsPerRequest>
+		<lumiSectionTimeout xsi:type="xsd:unsignedInt">0</lumiSectionTimeout>
 		<numberOfBuilders xsi:type="xsd:unsignedInt">6</numberOfBuilders>
 		<checkCRC xsi:type="xsd:unsignedInt">0</checkCRC>
 	</properties>
