@@ -529,7 +529,10 @@ if __name__ == "__main__":
 		d2P = daq2Plotter(filelist, args)
 		if not args.quiet:
 			d2P.printTables()
-		if args.outdir: args.outputName = args.outdir + '/' + args.outputName
+		if args.outdir:
+			if not os.path.exists(args.outdir):
+				os.system('mkdir -p %s' % args.outdir)
+			args.outputName = args.outdir + '/' + args.outputName
 		args.legends=[]
 		if len(args.legend)>0: args.legends=args.legend[0]
 		d2P.makeMultiPlot()
