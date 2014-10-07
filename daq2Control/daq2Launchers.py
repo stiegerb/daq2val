@@ -30,12 +30,13 @@ def startXDAQLauncher(host, port, logfile, options):
 
 	# ssh to the host (no x11, run in background)
 	cmd = "ssh -x -n " + host
-	cmd += " \"sudo -u %s sh -c \\"%user
+	# cmd += " \"sudo -u %s sh -c \\"%user
+	cmd += ' "'
 	# Actual launcher command
-	cmd += ('"cd /tmp && sudo rm -f /tmp/core.* && source %s/setenv%s.sh'
-	        '&& xdaqLauncher %d"') % (testDir, testEnv, port)
+	cmd += ('cd /tmp && sudo rm -f /tmp/core.* && source %s/setenv%s.sh'
+	        ' && xdaqLauncher %d') % (testDir, testEnv, port)
 	# Prepend "host:port " to the output
-	cmd += "\\\" | "
+	cmd += '" | '
 	cmd += "awk '{print \"%s:%d \" $0}'" % (host, port)
 	cmd += " &"
 	return subprocess.call(cmd, stderr=logfile, stdout=logfile, shell=True)

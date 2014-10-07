@@ -164,12 +164,8 @@ def main(options, args):
 
 	if len(options.output)>0:
 		name, ext = os.path.splitext(options.output)
-		if not os.path.dirname(name) == '':
-			try:
-				os.makedirs(os.path.dirname(name))
-			except OSError as e:
-				if not 'File exists' in str(e):
-					raise e
+		if not os.path.exists(name):
+			os.system('mkdir -p %s' % name)
 
 		if ext == '.xml':
 			# Take exactly what's given in the option
