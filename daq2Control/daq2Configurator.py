@@ -150,6 +150,7 @@ class daq2Configurator(object):
 		self.ferolRack      = 1
 
 		self.useGTPe        = False
+		self.useFMMForDAQ2  = False
 		self.useEFEDs       = False
 
 		## These should be passed as arguments
@@ -563,6 +564,9 @@ class daq2Configurator(object):
 		if self.useEFEDs:
 			bitmask += self.FEDConfig.nSlices*'1'
 			partitionId = 3
+		elif self.useFMMForDAQ2:
+			bitmask += '1'
+			partitionId = 0
 		else:
 			bitmask += '1000'
 			partitionId = 0
@@ -660,6 +664,15 @@ class daq2Configurator(object):
 				       "N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C")
 		outputlabel = "GTPe:3;N/C;N/C;N/C"
 		label       = "CSC_EFED"
+
+		if self.useFMMForDAQ2:
+			geoslot     = 5
+			inputmask   = "0x6"
+			inputlabel  = ("N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;"
+					       "N/C;N/C;N/C;N/C;N/C;N/C;1006;1005;N/C")
+			outputlabel = "GTPe:3;N/C;N/C;N/C"
+			label       = "BPIX_GTPE"
+
 		return [[geoslot, inputmask, inputlabel, outputlabel, label]]
 
 	def makeRU(self, ru):

@@ -25,6 +25,10 @@ def addConfiguratorOption(parser):
 		              help=("Use the GTPe for triggering at a certain rate. "
 		              		"Implies 'frl_gtpe_trigger' or 'efed_slink_gtpe' "
 		              		"for --ferolMode"))
+	parser.add_option("--useFMMForDAQ2", default=False, action="store_true",
+		              dest="useFMMForDAQ2",
+		              help=("Configure the FMM and GTPe for running on the "
+		              		"daq2 system"))
 	parser.add_option("--useEFEDs", default=False, action="store_true",
 		              dest="useEFEDs",
 		              help=("Use the FED emulators to generate events. "
@@ -116,6 +120,7 @@ def main(options, args):
 
 	if options.useEFEDs: options.useGTPe = True ## need GTPe for eFEDs
 	configurator.useGTPe           = options.useGTPe
+	configurator.useFMMForDAQ2     = options.useFMMForDAQ2
 	configurator.useEFEDs          = options.useEFEDs
 
 	## Some checks:
@@ -151,6 +156,8 @@ def main(options, args):
 		output += '_efeds'
 	if configurator.operation_mode == 'frl_gtpe_trigger':
 		output += '_gtpe'
+	if configurator.useFMMForDAQ2:
+		output += '_daq2FMM'
 	if configurator.operation_mode == 'frl_autotrigger':
 		output += '_frlAT'
 	if configurator.setCorrelatedSeed:
