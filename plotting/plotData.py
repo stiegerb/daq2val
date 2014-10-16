@@ -2,6 +2,12 @@
 import sys, os
 import re
 
+from os import path
+
+sys.path.insert(0,path.abspath(path.join(
+	                       path.dirname(path.realpath(__file__)),
+	                       '../daq2Control')))
+
 months_toint = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
 months_tostr = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"}
 
@@ -110,16 +116,10 @@ class daq2Plotter(object):
 		self.makePNGs = True
 
 	def processFile(self, filename):
-		from numpy import mean, std
-		from logNormalTest import averageFractionSize
-
 		###########################
 		## Process .csv file
 		f = open(filename,'r')
 		if not f: raise RuntimeError, "Cannot open "+filename+"\n"
-
-		config, builder, protocol, rms = extractConfig(filename)
-		nstreams, nrus, nbus, strperfrl = getConfig(config)
 
 		data_dict = {} ## Store everything in this dictionary of size -> rate
 		for line in f:
@@ -154,6 +154,19 @@ class daq2Plotter(object):
 				## Add to the previous samples
 				data_dict[size] = map(lambda a,b:a+b, prev_rate, rate)
 		f.close()
+		return data_dict
+	def getData(self, filename):
+		data_dict = self.processFile(filename)
+		from numpy import mean, std
+		from logNormalTest import averageFractionSize
+		config, builder, protocol, rms = extractConfig(filename)
+		nstreams, nrus, nbus, strperfrl = getConfig(config)
+
+		## Check if this is with inputemulator or mstreamio
+		## or with FRL input
+		isNxN = True if len(config.split('x')) < 3 else False
+		## I.e. True means there are only RUs and BUs, False
+		## means there are FRLs, RUs, and BUs
 
 		###########################
 		## Calculate throughput
@@ -161,11 +174,20 @@ class daq2Plotter(object):
 		# In case of mstreamio, divide the rates by the number of RUs
 		# (But don't do this for the case of nx1, want to plot throughput
 		#  per BU in that case.)
-		if strperfrl == 0:
+		if isNxN:
 			if nbus>1:
-				for size in data_dict.keys():
-					newrate = [a/nrus for a in data_dict[size]]
-					data_dict[size] = newrate
+				if builder == 'mstreamio':
+					## For msio, rate is the rate of fragments received, so
+					## have to divide by number of clients (senders)
+					for size in data_dict.keys():
+						newrate = [a/nrus for a in data_dict[size]]
+						data_dict[size] = newrate
+				else:
+					## For gevb2g rate is rate of events built in each BU,
+					## but we added them up before, so we have to divide now
+					for size in data_dict.keys():
+						newrate = [a/nbus for a in data_dict[size]]
+						data_dict[size] = newrate
 
 			## IGNORE number of RUs now:
 			if builder == 'mstreamio':
@@ -187,14 +209,15 @@ class daq2Plotter(object):
 		checked = False
 
 		for size in sorted(data_dict.keys()):
+			## Skip empty lines
 			if (abs(mean(data_dict[size])) < 0.01 and
-			    abs(std(data_dict[size])) < 0.01):
-			    continue ## skip empty lines
+			         abs(std(data_dict[size])) < 0.01):
+			    continue
 
 			## Determine what the first item in the server.csv file stands for
 			if not checked: ## only do this for the first time
 				checked = True
-				if   int(size)//self.startfragsize == 1:
+				if int(size)//self.startfragsize == 1:
 					output_case = 0 ## size = fragment size
 				elif int(size)//self.startfragsize == nstreams/nrus:
 					output_case = 1 ## size = superfragment size
@@ -202,6 +225,8 @@ class daq2Plotter(object):
 					output_case = 2 ## size = event size
 				else:
 				    output_case = 1 ## default
+				if isNxN:
+					output_case = 0
 
 			## Extract event size
 			eventsize = float(size)*nstreams ## default (output_case == 0)
@@ -211,14 +236,22 @@ class daq2Plotter(object):
 				eventsize = float(size)
 
 			## Calculate fragment and super fragment sizes
-			if strperfrl == 0:
-				fragsize    = eventsize
-				sufragsize  = eventsize
+			if isNxN:
+				if builder == 'mstreamio':
+					eventsize = float(size)
+					fragsize    = eventsize
+					sufragsize  = eventsize
 				if builder == 'gevb2g':
-					sufragsize = nrus*eventsize
+					fragsize = float(size)
+					sufragsize = nrus*fragsize
+				if builder == 'EvB':
+					fragsize = float(size)
+					sufragsize = nrus*fragsize
 			else:
 				fragsize    = eventsize/nstreams
 				sufragsize  = eventsize/nrus
+
+			## Correct for RMS:
 			if not self.args.sizeFromBU and rms is not None and rms != 0.0:
 				fragsize = averageFractionSize(eventsize/nstreams, rms*eventsize/nstreams, LOWERLIMIT, UPPERLIMIT)
 				sufragsize = fragsize*nstreams/nrus
@@ -243,7 +276,7 @@ class daq2Plotter(object):
 	def printTable(self, filename):
 		config, builder, protocol, rms = extractConfig(filename)
 		nstreams, nrus, nbus, strperfrl = getConfig(config)
-		data = self.processFile(filename)
+		data = self.getData(filename)
 		print "--------------------------------------------------------------------------------------"
 		print "Case: %s (%s/%s, RMS=%4.2f)" % (config, builder, protocol, rms)
 		print "--------------------------------------------------------------------------------------"
@@ -269,7 +302,7 @@ class daq2Plotter(object):
 		## Build caselist
 		caselist = []
 		for filename in self.filelist:
-			caselist.append(os.path.dirname(filename).split('/')[-1])
+			caselist.append(path.dirname(filename).split('/')[-1])
 
 		gROOT.SetBatch()
 		gStyle.SetOptStat(0)
@@ -365,8 +398,8 @@ class daq2Plotter(object):
 		leg.SetTextSize(0.033)
 		leg.SetBorderSize(0)
 
-		colors  = [1,2,3,4,51,95,65]
-		markers = [20,21,22,23,34,33,29]
+		colors  = [1,2,3,4,51,95,65,39,32]
+		markers = [20,21,22,23,34,33,29,24,25,26]
 
 		if (len(self.args.legends) > 0 and
 			len(self.args.legends) != len(self.filelist)):
@@ -413,7 +446,7 @@ class daq2Plotter(object):
 		# if self.makePNGs:  canv.Print(oname + '.png')
 		# if self.args.makeCFile: canv.SaveAs(oname + '.C')
 	def getGraph(self, filename):
-		data = self.processFile(filename)
+		data = self.getData(filename)
 
 		from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
 		from array import array
@@ -492,9 +525,9 @@ def addPlottingOptions(parser):
 def buildFileList(inputlist):
 	filelist = []
 	for location in inputlist:
-		if os.path.isfile(location) and os.path.splitext(location)[1] == '.csv':
+		if path.isfile(location) and path.splitext(location)[1] == '.csv':
 			filelist.append(location)
-		elif os.path.isdir(location) and 'server.csv' in os.listdir(location):
+		elif path.isdir(location) and 'server.csv' in os.listdir(location):
 			filelist.append(location+'/server.csv')
 		else: pass
 	if len(filelist) < 1:
