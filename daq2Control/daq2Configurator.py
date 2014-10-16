@@ -15,10 +15,34 @@ from daq2FEDConfiguration import daq2FEDConfiguration, FRLNode, RUNode
 
 
 FEROL_OPERATION_MODES = {
-      'ferol_emulator'  :('FEROL_EMULATOR_MODE', None),
-      'frl_autotrigger' :('FRL_EMULATOR_MODE',  'FRL_AUTO_TRIGGER_MODE'),
-      'frl_gtpe_trigger':('FRL_EMULATOR_MODE',  'FRL_GTPE_TRIGGER_MODE'),
-      'efed_slink_gtpe' :('SLINK_MODE',         'FRL_GTPE_TRIGGER_MODE')}
+      'ferol_emulator'  :('FEROL_MODE',
+      	                  'FRL_AUTO_TRIGGER_MODE',
+      	                  'GENERATOR_SOURCE'),
+      'frl_autotrigger' :('FRL_MODE',
+      	                  'FRL_AUTO_TRIGGER_MODE',
+      	                  'GENERATOR_SOURCE'),
+      'frl_gtpe_trigger':('FRL_MODE',
+      	                  'FRL_GTPE_TRIGGER_MODE',
+      	                  'GENERATOR_SOURCE'),
+      'efed_slink_gtpe' :('SLINK_MODE',
+      	                  'FRL_GTPE_TRIGGER_MODE',
+      	                  '???')}
+## New modes: FRL_MODE, FEDKIT_MODE, FEROL_MODE?
+
+RU_STARTING_TID = 10
+BU_STARTING_TID = 200
+
+######################################################################
+def getLog2SizeAndUnit(size):
+	size = float(size)
+	if size < 1024:
+		return "%d B" % int(size)
+	if size >= 1024 and size < 1024**2:
+		return "%d kB" % int(size/1024)
+	if size >= 1024**2 and size < 1024**3:
+		return "%d MB" % int(size/1024/1024)
+	if size >= 1024**3:
+		return "%d GB" % int(size/1024/1024/1024)
 
 
 ######################################################################
@@ -48,6 +72,39 @@ def split_list(alist, wanted_parts=1):
 	         for i in range(wanted_parts) ]
 
 
+######################################################################
+def propertyInApp(application, prop_name, prop_value=None):
+	try:
+		## Assume here that there is only one element, which
+		## is the properties
+		properties = application[0]
+		if not 'properties' in properties.tag:
+			raise RuntimeError(
+				  'Could not identify properties of %s application'
+				  'in %s context.'%(application.attrib['class'],
+				                 context.attrib['url']))
+		## Extract namespace
+		appns = re.match(r'\{(.*?)\}properties',
+		                 properties.tag).group(1)
+	except IndexError: ## i.e. app[0] didn't work
+		raise RuntimeError(
+			  'Application %s in context %s does not have'
+			  'properties.'%(application.attrib['class'],
+			  	             context.attrib['url']))
+
+	prop = application.find(QN(appns,'properties').text+'/'+
+		            QN(appns,prop_name).text)
+	try:
+		if prop_value is not None: # if value is given, set it
+			prop.text = str(prop_value)
+			return True
+		else: # if not, return the existing value
+			return prop.text
+	except AttributeError:
+		raise KeyError('Property %s of application %s '
+			           'not found.'%(prop_name,
+			           	             application.attrib['class']))
+
 
 ######################################################################
 class daq2Configurator(object):
@@ -65,6 +122,20 @@ class daq2Configurator(object):
 		self.xsins          = "http://www.w3.org/2001/XMLSchema-instance"
 		self.xdaqappns      = "urn:xdaq-application:%s"
 
+		self.RUSendPoolSize = None ## in MB
+		self.RUSendQPSize = None
+		self.RUComplQPSize = None
+		self.BURecvPoolSize = None ## in MB
+		self.BURecvQPSize = None
+		self.BUComplQPSize = None
+
+		self.RUIBVConfig = tuple([None]*5)
+		self.BUIBVConfig = tuple([None]*5)
+		self.EVMIBVConfig = tuple([None]*5)
+
+		self.setDynamicIBVConfig = False
+		self.maxMessageSize = None
+
 
 		## These should be passed as options
 		self.enablePauseFrame  = True
@@ -79,6 +150,7 @@ class daq2Configurator(object):
 		self.ferolRack      = 1
 
 		self.useGTPe        = False
+		self.useFMMForDAQ2  = False
 		self.useEFEDs       = False
 
 		## These should be passed as arguments
@@ -90,6 +162,133 @@ class daq2Configurator(object):
 		## Counters
 		self.eFED_crate_counter = 0
 		self.eFED_app_instance  = 0
+
+	def configureIBV(self):
+		pass
+
+	def readIBVConfig(self):
+		## This currently only works for the MSIO configurator
+		if self.evbns == 'msio':
+			RUFragmentPath = os.path.join(self.fragmentdir,
+                                 'msio/client_ibv_application.xml')
+			BUFragmentPath = os.path.join(self.fragmentdir,
+                                 'msio/server_ibv_application.xml')
+		elif self.evbns == 'gevb2g':
+			RUFragmentPath = os.path.join(self.fragmentdir,
+                               'RU/gevb2g/msio/RU_ibv_application_msio.xml')
+			BUFragmentPath = os.path.join(self.fragmentdir,
+                               'BU/gevb2g/msio/BU_ibv_application_msio.xml')
+			EVMFragmentPath = os.path.join(self.fragmentdir,
+                               'EVM/msio/EVM_ibv_application_msio.xml')
+			EVMIBVApp = elementFromFile(filename=EVMFragmentPath)
+
+		elif self.evbns == 'evb': ## TODO: Fix this
+			RUFragmentPath = os.path.join(self.fragmentdir,
+                               'RU/gevb2g/msio/RU_ibv_application_msio.xml')
+			BUFragmentPath = os.path.join(self.fragmentdir,
+                               'BU/gevb2g/msio/BU_ibv_application_msio.xml')
+			EVMFragmentPath = os.path.join(self.fragmentdir,
+                               'EVM/msio/EVM_ibv_application_msio.xml')
+			EVMIBVApp = elementFromFile(filename=EVMFragmentPath)
+
+
+		RUIBVApp = elementFromFile(filename=RUFragmentPath)
+		BUIBVApp = elementFromFile(filename=BUFragmentPath)
+
+		BUApp = elementFromFile(filename=os.path.join(self.fragmentdir,
+				                  'BU/gevb2g/msio/BU_application_msio.xml'))
+		maxResources = int(self.readPropertyFromApp(
+		                        application=BUApp,
+		                        prop_name="maxResources"))
+
+		RUMaxMSize = int(self.readPropertyFromApp(
+			                        application=RUIBVApp,
+			                        prop_name="maxMessageSize"))
+
+		BUMaxMSize = int(self.readPropertyFromApp(
+			                        application=BUIBVApp,
+			                        prop_name="maxMessageSize"))
+		self.maxMessageSize = RUMaxMSize if RUMaxMSize == BUMaxMSize else None
+
+
+		sendPoolSize = int(self.readPropertyFromApp(RUIBVApp,
+			                                    'senderPoolSize'),16)
+		recvPoolSize = int(self.readPropertyFromApp(RUIBVApp,
+			                                    'receiverPoolSize'),16)
+		complQPSize  = int(self.readPropertyFromApp(RUIBVApp,
+			                                    'completionQueueSize'))
+		sendQPSize   = int(self.readPropertyFromApp(RUIBVApp,
+			                                    'sendQueuePairSize'))
+		recvQPSize   = int(self.readPropertyFromApp(RUIBVApp,
+			                                    'recvQueuePairSize'))
+		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
+			                complQPSize, sendQPSize, recvQPSize)
+
+
+		sendPoolSize = int(self.readPropertyFromApp(BUIBVApp,
+			                                    'senderPoolSize'),16)
+		recvPoolSize = int(self.readPropertyFromApp(BUIBVApp,
+			                                    'receiverPoolSize'),16)
+		complQPSize  = int(self.readPropertyFromApp(BUIBVApp,
+			                                    'completionQueueSize'))
+		sendQPSize   = int(self.readPropertyFromApp(BUIBVApp,
+			                                    'sendQueuePairSize'))
+		recvQPSize   = int(self.readPropertyFromApp(BUIBVApp,
+			                                    'recvQueuePairSize'))
+		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
+			                complQPSize, sendQPSize, recvQPSize)
+
+		# EVM:
+		if self.evbns == 'gevb2g':
+			sendPoolSize = int(self.readPropertyFromApp(EVMIBVApp,
+				                                    'senderPoolSize'),16)
+			recvPoolSize = int(self.readPropertyFromApp(EVMIBVApp,
+				                                    'receiverPoolSize'),16)
+			complQPSize  = int(self.readPropertyFromApp(EVMIBVApp,
+				                                    'completionQueueSize'))
+			sendQPSize   = int(self.readPropertyFromApp(EVMIBVApp,
+				                                    'sendQueuePairSize'))
+			recvQPSize   = int(self.readPropertyFromApp(EVMIBVApp,
+				                                    'recvQueuePairSize'))
+			self.EVMIBVConfig = (sendPoolSize, recvPoolSize,
+				                complQPSize, sendQPSize, recvQPSize)
+	def printIBVConfig(self):
+		print 70*'-'
+		if not None in self.RUIBVConfig:
+			sPoolSize, rPoolSize, cQPSize, sQPSize,rQPSize = self.RUIBVConfig
+			print (" Buffers circulating per destination: %d" %
+				            int(sPoolSize/self.maxMessageSize/self.nrus))
+			print "  RU/client IBV config:"
+			print "    sendPoolSize: %s (%s)" % (
+				               hex(sPoolSize), getLog2SizeAndUnit(sPoolSize))
+			print "    recvPoolSize: %s (%s)" % (
+				               hex(rPoolSize), getLog2SizeAndUnit(rPoolSize))
+			print "    complQPSize", cQPSize
+			print "    sendQPSize", sQPSize
+			print "    recvQPSize", rQPSize
+
+		if not None in self.BUIBVConfig:
+			sPoolSize, rPoolSize, cQPSize, sQPSize,rQPSize = self.BUIBVConfig
+			print "  BU/server IBV config:"
+			print "    sendPoolSize: %s (%s)" % (
+				               hex(sPoolSize), getLog2SizeAndUnit(sPoolSize))
+			print "    recvPoolSize: %s (%s)" % (
+				               hex(rPoolSize), getLog2SizeAndUnit(rPoolSize))
+			print "    complQPSize", cQPSize
+			print "    sendQPSize", sQPSize
+			print "    recvQPSize", rQPSize
+
+		# EVM:
+		if not None in self.EVMIBVConfig:
+			sPoolSize, rPoolSize, cQPSize,sQPSize,rQPSize = self.EVMIBVConfig
+			print "  EVM IBV config:"
+			print "    sendPoolSize: %s (%s)" % (
+				               hex(sPoolSize), getLog2SizeAndUnit(sPoolSize))
+			print "    recvPoolSize: %s (%s)" % (
+				               hex(rPoolSize), getLog2SizeAndUnit(rPoolSize))
+			print "    complQPSize", cQPSize
+			print "    sendQPSize", sQPSize
+			print "    recvQPSize", rQPSize
 
 	def makeSkeleton(self):
 		fragmentname = 'skeleton.xml'
@@ -105,42 +304,11 @@ class daq2Configurator(object):
 			if not app.attrib['class'] == classname: continue
 			if not app.attrib['instance'] == str(instance): continue
 
-			return self.propertyInApp(app, prop_name, prop_value)
+			return propertyInApp(app, prop_name, prop_value)
 
 		else:
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
-	def propertyInApp(self, application, prop_name, prop_value=None):
-			try:
-				## Assume here that there is only one element, which
-				## is the properties
-				properties = application[0]
-				if not 'properties' in properties.tag:
-					raise RuntimeError(
-						  'Could not identify properties of %s application'
-						  'in %s context.'%(application.attrib['class'],
-						                 context.attrib['url']))
-				## Extract namespace
-				appns = re.match(r'\{(.*?)\}properties',
-				                 properties.tag).group(1)
-			except IndexError: ## i.e. app[0] didn't work
-				raise RuntimeError(
-					  'Application %s in context %s does not have'
-					  'properties.'%(application.attrib['class'],
-					  	             context.attrib['url']))
-
-			prop = application.find(QN(appns,'properties').text+'/'+
-				            QN(appns,prop_name).text)
-			try:
-				if prop_value is not None: # if value is given, set it
-					prop.text = str(prop_value)
-					return True
-				else: # if not, return the existing value
-					return prop.text
-			except AttributeError:
-				raise KeyError('Property %s of application %s '
-					           'not found.'%(prop_name,
-					           	             application.attrib['class']))
 
 	def setPropertyInAppInContext(self, context, classname,
 		                          prop_name, prop_value,
@@ -154,44 +322,46 @@ class daq2Configurator(object):
 			                               prop_name, None, instance)
 
 	def setPropertyInApp(self, application, prop_name, prop_value):
-		return self.propertyInApp(application, prop_name, prop_value)
+		return propertyInApp(application, prop_name, prop_value)
 	def readPropertyFromApp(self, application, prop_name):
-		return self.propertyInApp(application, prop_name, None)
+		return propertyInApp(application, prop_name, None)
 
+	def removePropertyInApp(self, application, prop_name):
+		try:
+			## Assume here that there is only one element, which
+			## is the properties
+			properties = application[0]
+			if not 'properties' in properties.tag:
+				raise RuntimeError(
+					      'Could not identify properties of %s'
+					      'application in %s context.'% (
+					           application.attrib['class'],
+					      	   context.attrib['url']))
+			## Extract namespace
+			appns = re.match(r'\{(.*?)\}properties',
+				             properties.tag).group(1)
+		except IndexError: ## i.e. application[0] didn't work
+			raise RuntimeError(
+				      'Application %s in context %s does not have'
+				      'properties.'%(application.attrib['class'],
+				      	             context.attrib['url']))
+
+		prop = application.find(QN(appns,'properties').text+'/'+
+			            QN(appns,prop_name).text)
+		try:
+			properties.remove(prop)
+		except AssertionError:
+			printError('Property %s of application %s not found.'%
+				       (prop_name, application.attrib['class']),
+				       instance=self)
+			return
+		except Exception, e:
+			raise e
 	def removePropertyInAppInContext(self, context, classname, prop_name):
 		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			## find correct application
 			if not app.attrib['class'] == classname: continue
-			try:
-				## Assume here that there is only one element, which
-				## is the properties
-				properties = app[0]
-				if not 'properties' in properties.tag:
-					raise RuntimeError(
-						      'Could not identify properties of %s'
-						      'application in %s context.'% (
-						           app.attrib['class'],
-						      	   context.attrib['url']))
-				## Extract namespace
-				appns = re.match(r'\{(.*?)\}properties',
-					             properties.tag).group(1)
-			except IndexError: ## i.e. app[0] didn't work
-				raise RuntimeError(
-					      'Application %s in context %s does not have'
-					      'properties.'%(app.attrib['class'],
-					      	             context.attrib['url']))
-
-			prop = app.find(QN(appns,'properties').text+'/'+
-				            QN(appns,prop_name).text)
-			try:
-				properties.remove(prop)
-			except AttributeError:
-				raise KeyError('Property %s of application %s in context'
-					           '%s not found.'%
-					               (prop_name, app.attrib['class'],
-					               	context.attrib['url']))
-			break
-
+			self.removePropertyInApp(app, prop_name)
 		else:
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
@@ -232,21 +402,19 @@ class daq2Configurator(object):
 			                      {'class':'%s::EVM'%self.evbns ,
 			                       'instance':"0", "tid":"1"}))
 		## Add RUs:
-		ru_starting_tid = 10
 		ru_instances_to_add = [n for n in range(self.nrus)]
 		if self.evbns == 'evb': ru_instances_to_add.remove(0)
 		for n in ru_instances_to_add:
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'%s::RU'%self.evbns ,
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(ru_starting_tid+n)}))
+				                   'tid':'%d'%(RU_STARTING_TID+n)}))
 		## Add BUs:
-		bu_starting_tid = 30
 		for n in xrange(self.nbus):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'%s::BU'%self.evbns ,
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(bu_starting_tid+2*n)}))
+				                   'tid':'%d'%(BU_STARTING_TID+n)}))
 
 		self.config.append(prot)
 	def makeFerolController(self, frl):
@@ -267,8 +435,10 @@ class daq2Configurator(object):
 				                           'expectedFedId_1', fedids[1])
 		except IndexError:
 			pass
-		self.setPropertyInAppInContext(ferol, classname,
-			                           'SourceIP', sourceIp)
+
+		#### This is 'auto' now
+		# self.setPropertyInAppInContext(ferol, classname,
+		# 	                           'SourceIP', sourceIp)
 
 		# if frl.nstreams == 1:
 		# 	self.setPropertyInAppInContext(ferol, classname,
@@ -342,6 +512,10 @@ class daq2Configurator(object):
 			else:
 				self.removePropertyInAppInContext(ferol, classname,
 					                              'FrlTriggerMode')
+			self.setPropertyInAppInContext(ferol, classname,
+				     'DataSource',
+				     FEROL_OPERATION_MODES[self.operation_mode][2])
+
 		except KeyError as e:
 			printError('Unknown ferol operation mode "%s"'%
 				        self.operation_mode, instance=self)
@@ -390,6 +564,9 @@ class daq2Configurator(object):
 		if self.useEFEDs:
 			bitmask += self.FEDConfig.nSlices*'1'
 			partitionId = 3
+		elif self.useFMMForDAQ2:
+			bitmask += '1'
+			partitionId = 0
 		else:
 			bitmask += '1000'
 			partitionId = 0
@@ -487,6 +664,15 @@ class daq2Configurator(object):
 				       "N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C")
 		outputlabel = "GTPe:3;N/C;N/C;N/C"
 		label       = "CSC_EFED"
+
+		if self.useFMMForDAQ2:
+			geoslot     = 5
+			inputmask   = "0x6"
+			inputlabel  = ("N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;"
+					       "N/C;N/C;N/C;N/C;N/C;N/C;1006;1005;N/C")
+			outputlabel = "GTPe:3;N/C;N/C;N/C"
+			label       = "BPIX_GTPE"
+
 		return [[geoslot, inputmask, inputlabel, outputlabel, label]]
 
 	def makeRU(self, ru):

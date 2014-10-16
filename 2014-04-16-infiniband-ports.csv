@@ -41,9 +41,9 @@ sw-ib-c2f14-44-01,2,ru-c2e15-29-01,,0,
 sw-ib-c2f14-44-01,3,ru-c2e15-30-01,,0,
 sw-ib-c2f14-44-01,4,ru-c2e15-34-01,,0,
 sw-ib-c2f14-44-01,5,ru-c2e15-35-01,,0,
-sw-ib-c2f14-44-01,6,ru-c2e15-36-01,,1,Reserved for fedbuilder network tests
-sw-ib-c2f14-44-01,7,ru-c2e15-37-01,,1,Set aside for building/testing XDAQ with OFED 2.2
-sw-ib-c2f14-44-01,8,ru-c2e15-38-01,,1,Set aside for building/testing XDAQ with OFED 2.2
+sw-ib-c2f14-44-01,6,ru-c2e15-36-01,,0,
+sw-ib-c2f14-44-01,7,ru-c2e15-37-01,,1,
+sw-ib-c2f14-44-01,8,ru-c2e15-38-01,,1,
 sw-ib-c2f14-44-01,9,bu-c2f16-39-01,,0,
 sw-ib-c2f14-44-01,10,bu-c2e18-39-01,,0,
 sw-ib-c2f14-44-01,11,bu-c2d38-37-01,,0,
@@ -258,14 +258,14 @@ sw-ib-c2f14-08-01,34,sw-ib-c2f15-29-01,14,0,
 sw-ib-c2f14-08-01,35,sw-ib-c2f15-29-01,16,0,
 sw-ib-c2f14-08-01,36,sw-ib-c2f15-29-01,18,0,
 
-sw-ib-c2f14-38-01,1,ru-c2e14-28-01,,1,Whole switch blacklisted for Andy/Luciano
+sw-ib-c2f14-38-01,1,ru-c2e14-28-01,,1,
 sw-ib-c2f14-38-01,2,ru-c2e14-29-01,,1,
 sw-ib-c2f14-38-01,3,ru-c2e14-30-01,,1,
 sw-ib-c2f14-38-01,4,ru-c2e14-34-01,,1,
 sw-ib-c2f14-38-01,5,ru-c2e14-35-01,,1,
-sw-ib-c2f14-38-01,6,ru-c2e14-36-01,,1,Reserved for chain tests
+sw-ib-c2f14-38-01,6,ru-c2e14-36-01,,0,Petr
 sw-ib-c2f14-38-01,7,ru-c2e14-37-01,,1,
-sw-ib-c2f14-38-01,8,ru-c2e14-38-01,,1,Andy/Luciano OFED tests
+sw-ib-c2f14-38-01,8,ru-c2e14-38-01,,1,
 sw-ib-c2f14-38-01,9,bu-c2f16-31-01,,1,
 sw-ib-c2f14-38-01,10,bu-c2e18-31-01,,1,
 sw-ib-c2f14-38-01,11,bu-c2d38-29-01,,1,

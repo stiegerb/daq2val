@@ -120,7 +120,7 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 		for n,bu in enumerate(d2c.config.BUs):
 			if d2c.config.useEvB:
 				nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU',
-					             str(n), 'nbEventsBuilt', 'xsd:unsignedInt',
+					             str(n), 'nbEventsBuilt', 'xsd:unsignedLong',
 					             verbose=verbose, dry=dry)
 			else:
 				nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU',
@@ -557,11 +557,13 @@ repository"""
 	## this will be /nfshome0/.../daq2val/daq2Control/
 	gitwd = os.path.dirname(os.path.realpath(__file__))
 	cmd = r"git log --pretty=format:'%H' -n 1"
-	call = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE,
-		                    cwd=gitwd)
-	out,err = call.communicate()
-	return out
-
+	try:
+		call = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE,
+			                    cwd=gitwd)
+		out,err = call.communicate()
+		return out
+	except OSError:
+		return '???'
 
 ##########################################
 ## From Petr's FEROL.py ##################

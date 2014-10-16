@@ -157,24 +157,24 @@ if __name__ == "__main__":
 	# pprint(bu_inventory)
 
 	## Which hosts to choose from:
-	full_inventory = ru_inventory
-	if not opt.useOnlyRUs:
-		full_inventory = addDictionaries(ru_inventory, bu_inventory)
+	# full_inventory = ru_inventory
+	# if not opt.useOnlyRUs:
+	# 	full_inventory = addDictionaries(ru_inventory, bu_inventory)
 
 	with open(opt.outFile, 'w') as outfile:
 		outfile.write(HEADER)
 		outfile.write('\n\n')
 
 		## How to select the hosts:
-		allMachines = getMachines(full_inventory,
-			                      splitBy=opt.splitBy,
-			                      verbose=opt.verbose)
-		# RUs = getMachines(ru_inventory)
-		# BUs = getMachines(bu_inventory)
+		# allMachines = getMachines(full_inventory,
+		# 	                      splitBy=opt.splitBy,
+		# 	                      verbose=opt.verbose)
+		RUs = getMachines(ru_inventory)
+		BUs = getMachines(bu_inventory)
 		if opt.shuffle:
-			allMachines = getMachinesShuffled(full_inventory)
-			# RUs = getMachinesShuffled(ru_inventory)
-			# BUs = getMachinesShuffled(bu_inventory)
+			# allMachines = getMachinesShuffled(full_inventory)
+			RUs = getMachinesShuffled(ru_inventory)
+			BUs = getMachinesShuffled(bu_inventory)
 
 		## Write the symbolmap
 		ru_counter, bu_counter = 0,0
@@ -182,7 +182,8 @@ if __name__ == "__main__":
 		## RUs:
 		try:
 			for n in range(opt.nRUs):
-				writeEntry(outfile, 'RU', allMachines.next(), n)
+				writeEntry(outfile, 'RU', RUs.next(), n)
+				# writeEntry(outfile, 'RU', allMachines.next(), n)
 				ru_counter += 1
 			outfile.write('\n')
 		except StopIteration:
@@ -192,7 +193,8 @@ if __name__ == "__main__":
 		## BUs:
 		try:
 			for n in range(opt.nBUs):
-				writeEntry(outfile, 'BU', allMachines.next(), n)
+				writeEntry(outfile, 'BU', BUs.next(), n)
+				# writeEntry(outfile, 'BU', allMachines.next(), n)
 				bu_counter += 1
 			outfile.write('\n')
 		except StopIteration:
@@ -202,7 +204,8 @@ if __name__ == "__main__":
 		## EVMs:
 		if opt.addEVM:
 			try:
-				writeEntry(outfile, 'EVM', allMachines.next(), 0)
+				writeEntry(outfile, 'EVM', RUs.next(), 0)
+				# writeEntry(outfile, 'EVM', allMachines.next(), 0)
 				outfile.write('\n')
 			except StopIteration:
 				print ("No machine left for an EVM! Have %d RU's "

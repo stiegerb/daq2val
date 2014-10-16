@@ -2,7 +2,9 @@
 	<properties xmlns="urn:xdaq-application:evb::EVM" xsi:type="soapenc:Struct">
 		<inputSource xsi:type="xsd:string">FEROL</inputSource>
 		<dropInputData xsi:type="xsd:boolean">false</dropInputData>
-		<blockSize xsi:type="xsd:unsignedInt">256000</blockSize>
+		<blockSize xsi:type="xsd:unsignedInt">130000</blockSize>
+		<checkCRC xsi:type="xsd:unsignedInt">0</checkCRC>
+		<computeCRC xsi:type="xsd:boolean">false</computeCRC>
 		<numberOfResponders xsi:type="xsd:unsignedInt">3</numberOfResponders>
 		<fragmentFIFOCapacity xsi:type="xsd:unsignedInt">128</fragmentFIFOCapacity>
 		<fedSourceIds soapenc:arrayType="xsd:ur-type[%d]" xsi:type="soapenc:Array">

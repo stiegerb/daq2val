@@ -2,7 +2,7 @@
 	<properties xmlns="urn:xdaq-application:gevb2g::BU" xsi:type="soapenc:Struct">
 		<availableFrameSize xsi:type="xsd:unsignedLong">1024</availableFrameSize>
 		<maxResources xsi:type="xsd:unsignedLong">128</maxResources>
-		<maxDataFrameSize xsi:type="xsd:unsignedLong">262144</maxDataFrameSize>
+		<maxDataFrameSize xsi:type="xsd:unsignedLong">131072</maxDataFrameSize>
 		<filterDisable xsi:type="xsd:boolean">true</filterDisable>
 		<numberOfSamples xsi:type="xsd:unsignedLong">50</numberOfSamples>
 		<sampleTime xsi:type="xsd:string">PT5S</sampleTime>

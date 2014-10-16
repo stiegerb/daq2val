@@ -1,7 +1,10 @@
 <xc:Application class="evb::BU" id="43" instance="0" network="infini" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<properties xmlns="urn:xdaq-application:evb::BU" xsi:type="soapenc:Struct">
 		<dropEventData xsi:type="xsd:boolean">true</dropEventData>
-		<maxEvtsUnderConstruction xsi:type="xsd:unsignedInt">1024</maxEvtsUnderConstruction>
-		<eventsPerRequest xsi:type="xsd:unsignedInt">32</eventsPerRequest>
+		<maxEvtsUnderConstruction xsi:type="xsd:unsignedInt">288</maxEvtsUnderConstruction>
+		<eventsPerRequest xsi:type="xsd:unsignedInt">16</eventsPerRequest>
+		<lumiSectionTimeout xsi:type="xsd:unsignedInt">0</lumiSectionTimeout>
+		<numberOfBuilders xsi:type="xsd:unsignedInt">6</numberOfBuilders>
+		<checkCRC xsi:type="xsd:unsignedInt">0</checkCRC>
 	</properties>
 </xc:Application>

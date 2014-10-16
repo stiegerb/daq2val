@@ -10,8 +10,9 @@ from xml.etree.ElementTree import SubElement
 from xml.etree.ElementTree import QName as QN
 from xml.parsers.expat import ExpatError
 
-from daq2Utils import printError
 from daq2Configurator import elementFromFile, addFragmentFromFile
+from daq2Configurator import RU_STARTING_TID, BU_STARTING_TID
+
 
 ######################################################################
 from daq2Configurator import daq2Configurator
@@ -29,38 +30,26 @@ class daq2MSIOConfigurator(daq2Configurator):
 		self.evbns          = 'msio' ## 'msio' or 'gevb2g'
 		self.ptprot         = 'ibv' ## or 'ibv' or 'udapl'
 
-		self.useGTPe        = False
-		self.useEFEDs       = False
-
-		self.clientSendPoolSize = None ## in MB
-		self.setDynamicIBVConfig = False
-
-		self.RUIBVConfig = tuple([None]*5)
-		self.BUIBVConfig = tuple([None]*5)
-		self.EVMIBVConfig = tuple([None]*5)
-
 		## These should be passed as arguments
-		self.nclients = 1
-		self.nservers = 1
+		self.nrus = 1
+		self.nbus = 1
 
 	def addMSIOI2OProtocol(self):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
 		prot = Element(QN(i2ons, 'protocol').text)
 
 		## Add Clients:
-		cl_starting_tid = 20
-		for n in xrange(self.nclients):
+		for n in xrange(self.nrus):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'Client',
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(cl_starting_tid+n)}))
+				                   'tid':'%d'%(RU_STARTING_TID+n)}))
 		## Add Servers:
-		se_starting_tid = 50
-		for n in xrange(self.nservers):
+		for n in xrange(self.nbus):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'Server',
 				                   'instance':"%d"%n,
-				                   'tid':'%d'%(se_starting_tid+2*n)}))
+				                   'tid':'%d'%(BU_STARTING_TID+2*n)}))
 
 		self.config.append(prot)
 	def addInputEmulatorProtocol(self):
@@ -68,31 +57,87 @@ class daq2MSIOConfigurator(daq2Configurator):
 		prot = self.config.find(QN(i2ons, 'protocol').text)
 
 		## Add Inputemulators
-		starting_tid = 55
-		for n in range(self.nclients):
+		starting_tid = BU_STARTING_TID + 200
+		for n in range(self.nrus):
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'gevb2g::InputEmulator',
 				                   'instance':"%d"%n,
 				                   'tid':'%d'%(starting_tid+n)}))
 
-	def configureIBV(self):
-		if self.evbns == 'msio':
-			RUFragmentPath = os.path.join(self.fragmentdir,
-                                 'msio/client_ibv_application.xml')
-			BUFragmentPath = os.path.join(self.fragmentdir,
-                                 'msio/server_ibv_application.xml')
-		elif self.evbns == 'gevb2g':
-			RUFragmentPath = os.path.join(self.fragmentdir,
-                               'RU/gevb2g/msio/RU_ibv_application_msio.xml')
-			BUFragmentPath = os.path.join(self.fragmentdir,
-                               'BU/gevb2g/msio/BU_ibv_application_msio.xml')
-			EVMFragmentPath = os.path.join(self.fragmentdir,
-                               'EVM/msio/EVM_ibv_application_msio.xml')
-			EVMIBVApp = elementFromFile(filename=EVMFragmentPath)
+	def configureIBVforMSIO(self):
+		fragmentPath = os.path.join(self.fragmentdir,
+                          'msio/%s_ibv_application.xml')
+		RUIBVApp = elementFromFile(filename=fragmentPath%'client')
+		BUIBVApp = elementFromFile(filename=fragmentPath%'server')
 
+		BUApp = elementFromFile(filename=os.path.join(self.fragmentdir,
+				                  'BU/gevb2g/msio/BU_application_msio.xml'))
+
+		RUMaxMSize = int(self.readPropertyFromApp(
+			                        application=RUIBVApp,
+			                        prop_name="maxMessageSize"))
+
+		BUMaxMSize = int(self.readPropertyFromApp(
+			                        application=BUIBVApp,
+			                        prop_name="maxMessageSize"))
+		self.maxMessageSize = RUMaxMSize if RUMaxMSize == BUMaxMSize else None
+
+		# Client:
+		if self.clientSendQPSize is not None:
+			sendQPSize = self.clientSendQPSize
+		else:
+			sendQPSize = int(self.readPropertyFromApp(
+		                              application=RUIBVApp,
+		                              prop_name="sendQueuePairSize"))
+
+		if self.clientSendPoolSize is not None:
+			sendPoolSize = 1024*1024*self.clientSendPoolSize
+		else:
+			sendPoolSize = (sendQPSize/16)*RUMaxMSize*self.nrus
+
+		if self.clientComplQPSize is not None:
+			complQPSize = self.clientComplQPSize
+		else:
+			complQPSize = (sendQPSize/16)*self.nrus
+
+		recvPoolSize = 0x800000
+		recvQPSize = 1
+
+		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
+			                complQPSize, sendQPSize, recvQPSize)
+
+		# Server:
+		if self.serverRecvPoolSize is not None:
+			recvPoolSize = 1024*1024*self.serverRecvPoolSize
+		else:
+			recvPoolSize = (recvQPSize*2)*self.nrus*BUMaxMSize
+
+
+		if self.serverRecvQPSize is not None:
+			recvQPSize = self.serverRecvQPSize
+		else:
+			recvQPSize = int(self.RUIBVConfig[0]*2/self.nrus/BUMaxMSize)
+
+		if self.serverComplQPSize is not None:
+			complQPSize = self.serverComplQPSize
+		else:
+			complQPSize = recvQPSize*self.nrus
+
+		sendPoolSize = 0x800000
+		sendQPSize = 1
+		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
+			                complQPSize, sendQPSize, recvQPSize)
+	def configureIBVforGevb2gIE(self):
+		RUFragmentPath = os.path.join(self.fragmentdir,
+                           'RU/gevb2g/msio/RU_ibv_application_msio.xml')
+		BUFragmentPath = os.path.join(self.fragmentdir,
+                           'BU/gevb2g/msio/BU_ibv_application_msio.xml')
+		EVMFragmentPath = os.path.join(self.fragmentdir,
+                           'EVM/msio/EVM_ibv_application_msio.xml')
 
 		RUIBVApp = elementFromFile(filename=RUFragmentPath)
 		BUIBVApp = elementFromFile(filename=BUFragmentPath)
+		EVMIBVApp = elementFromFile(filename=EVMFragmentPath)
 
 		BUApp = elementFromFile(filename=os.path.join(self.fragmentdir,
 				                  'BU/gevb2g/msio/BU_application_msio.xml'))
@@ -107,89 +152,64 @@ class daq2MSIOConfigurator(daq2Configurator):
 		BUMaxMSize = int(self.readPropertyFromApp(
 			                        application=BUIBVApp,
 			                        prop_name="maxMessageSize"))
+		self.maxMessageSize = RUMaxMSize if RUMaxMSize == BUMaxMSize else None
 
 		# RU/Client:
-		if self.evbns == 'msio':
-			if self.clientSendPoolSize is not None:
-				sendPoolSize = self.clientSendPoolSize*1024*1024
-			else:
-				sendPoolSize = int(self.readPropertyFromApp(
-			                              application=RUIBVApp,
-			                              prop_name="senderPoolSize"))
+		if self.clientSendQPSize is not None:
+			sendQPSize = self.clientSendQPSize
+		else:
+			sendQPSize = maxResources*self.nbus
 
-			recvPoolSize = 0x40000
-			complQPSize = max(sendPoolSize, recvPoolSize) / RUMaxMSize
-			sendQPSize = sendPoolSize / RUMaxMSize / self.nservers
-			recvQPSize = 2
-		elif self.evbns == 'gevb2g':
-			sendQPSize = maxResources
-			sendPoolSize = RUMaxMSize * self.nservers * sendQPSize * 2
-			recvPoolSize = maxResources*256*1024
-			complQPSize = max(sendPoolSize, recvPoolSize) / RUMaxMSize
-			recvQPSize = maxResources
+		if self.clientSendPoolSize is not None:
+			sendPoolSize = 1024*1024*self.clientSendPoolSize
+		else:
+			sendPoolSize = sendQPSize*RUMaxMSize
+
+		if self.clientComplQPSize is not None:
+			complQPSize = self.clientComplQPSize
+		else:
+			complQPSize = 8192
+
+		recvPoolSize = 0x2000000
+		recvQPSize = 64
 
 		self.RUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
 
-		if self.verbose > 1:
-			print "  RU/client IBV config:"
-			print "    sendPoolSize: %s (%d MB)" % (
-				                   hex(sendPoolSize), sendPoolSize/1024/1024)
-			print "    recvPoolSize: %s (%d kB)" % (
-				                   hex(recvPoolSize), recvPoolSize/1024)
-			print "    complQPSize: ", complQPSize
-			print "    sendQPSize: ", sendQPSize
-			print "    recvQPSize: ", recvQPSize
-
 		# BU/Server:
-		if self.evbns == 'msio':
-			sendPoolSize = 0x40000
-			recvQPSize = sendQPSize # still the one from the client
-			recvPoolSize = recvQPSize * BUMaxMSize * self.nclients * 2
-			complQPSize = max(sendPoolSize, recvPoolSize) / BUMaxMSize
-			sendQPSize = 2
-		elif self.evbns == 'gevb2g':
-			sendPoolSize = 0x40000
-			recvQPSize = maxResources
-			recvPoolSize = BUMaxMSize*self.nclients*recvQPSize*2
-			sendQPSize = maxResources
-			complQPSize = max(sendPoolSize, recvPoolSize) / BUMaxMSize
+		if self.serverRecvQPSize is not None:
+			recvQPSize = self.serverRecvQPSize
+		else:
+			recvQPSize = int(self.RUIBVConfig[0]*2/self.nrus/BUMaxMSize)
+
+		if self.serverRecvPoolSize is not None:
+			recvPoolSize = 1024*1024*self.serverRecvPoolSize
+		else:
+			recvPoolSize = int((recvQPSize+maxResources)*self.nrus*BUMaxMSize)
+			# recvPoolSize = int(recvQPSize*self.nrus*BUMaxMSize*1.4)
+
+		if self.serverComplQPSize is not None:
+			complQPSize = self.serverComplQPSize
+		else:
+			complQPSize = recvQPSize*self.nrus
+
+		sendPoolSize = 0x2000000
+		sendQPSize = 64
 
 
 		self.BUIBVConfig = (sendPoolSize, recvPoolSize,
 			                complQPSize, sendQPSize, recvQPSize)
 
-		if self.verbose > 1:
-			print "  BU/server IBV config:"
-			print "    sendPoolSize: %s (%d kB)" % (
-				                   hex(sendPoolSize), sendPoolSize/1024)
-			print "    recvPoolSize: %s (%d MB)" % (
-				                   hex(recvPoolSize), recvPoolSize/1024/1024)
-			print "    complQPSize", complQPSize
-			print "    sendQPSize", sendQPSize
-			print "    recvQPSize", recvQPSize
-
 		# EVM:
-		if self.evbns == 'gevb2g':
-			sendPoolSize = maxResources*256*1024
-			recvPoolSize = maxResources*256*1024
-			recvQPSize = maxResources
-			sendQPSize = maxResources
-			complQPSize = maxResources * self.nservers
+		sendPoolSize = maxResources*256*1024*self.nbus*2
+		recvPoolSize = maxResources*256*1024*self.nbus*2
+		recvQPSize = maxResources*2
+		sendQPSize = maxResources
+		complQPSize = maxResources*2*self.nbus
 
 
-			self.EVMIBVConfig = (sendPoolSize, recvPoolSize,
-				                complQPSize, sendQPSize, recvQPSize)
-
-			if self.verbose > 1:
-				print "  EVM IBV config:"
-				print "    sendPoolSize: %s (%d kB)" % (
-					                   hex(sendPoolSize), sendPoolSize/1024)
-				print "    recvPoolSize: %s (%d MB)" % (
-					                   hex(recvPoolSize), recvPoolSize/1024/1024)
-				print "    complQPSize", complQPSize
-				print "    sendQPSize", sendQPSize
-				print "    recvQPSize", recvQPSize
+		self.EVMIBVConfig = (sendPoolSize, recvPoolSize,
+			                complQPSize, sendQPSize, recvQPSize)
 
 	## MStreamIO
 	def makeClient(self, index):
@@ -302,7 +322,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 	## Gevb2g
 	def makeRU(self, ruindex):
 		fragmentname = 'RU/gevb2g/msio/RU_context_msio.xml'
-		context = elementFromFile(self.fragmentdir+fragmentname)
+		context = elementFromFile(os.path.join(self.fragmentdir,fragmentname))
 
 		## Add policy
 		addFragmentFromFile(target=context,
@@ -465,38 +485,44 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		return context
 
-	def makeMSIOConfig(self, nclients=1, nservers=1,
-		           destination='configuration.template.xml'):
-		self.nclients = nclients
-		self.nrus = nclients
-		self.nservers = nservers
-		self.nbus = nservers
+	def makeMSIOConfig(self, nrus=1, nbus=1,
+		               destination='configuration.template.xml'):
+		self.nrus = nrus
+		self.nbus = nbus
 
 		##
 		self.makeSkeleton()
 
 		if "ibv" in self.ptprot and self.setDynamicIBVConfig:
-			self.configureIBV()
+			if self.evbns == 'msio':
+				self.configureIBVforMSIO()
+			else:
+				self.configureIBVforGevb2gIE()
+		else:
+			self.readIBVConfig()
+
+		if self.verbose > 1:
+			self.printIBVConfig()
+
 
 		## mstreamio
 		if self.evbns == 'msio':
 			self.addMSIOI2OProtocol()
-			for index in xrange(self.nclients):
+			for index in xrange(self.nrus):
 				self.config.append(self.makeClient(index))
 
-			for index in xrange(self.nservers):
+			for index in xrange(self.nbus):
 				self.config.append(self.makeServer(index))
 
 		## gevb2g with input emulator
-		else:
+		if self.evbns == 'gevb2g':
 			self.addI2OProtocol()
 			self.addInputEmulatorProtocol()
 			self.config.append(self.makeEVM())
-			for index in xrange(self.nclients):
+			for index in xrange(self.nrus):
 				self.config.append(self.makeRU(index))
-			for index in xrange(self.nservers):
+			for index in xrange(self.nbus):
 				self.config.append(self.makeBU(index))
-
 
 		self.writeConfig(destination)
 		if self.verbose>0: print 70*'-'
