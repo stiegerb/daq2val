@@ -118,7 +118,13 @@ if __name__ == "__main__":
 		               help=("Output directory [default: %default]"))
 	parser.add_option("--nBUs", default=2, action="store", type="int",
 		               dest="nBUs",
-		               help=("Output directory [default: %default]"))
+		               help=("Number of BUs [default: %default]"))
+	# parser.add_option("--nRUs", default=1, action="store", type="int",
+	# 	               dest="nRUs",
+	# 	               help=("Number of RUs [default: %default]"))
+	parser.add_option("--nFRLs", default=4, action="store", type="int",
+		               dest="nFRLs",
+		               help=("Number of FRLs [default: %default]"))
 	parser.add_option("-v", "--verbose", default=False,
 		               action="store_true", dest="verbose",
 		               help=("Verbose mode"))
@@ -145,9 +151,13 @@ if __name__ == "__main__":
 	symbolMaps = []
 
 	## Generate the FRL - RU - BU links
-	bus = dict((ibsw,getBUs(ibsw, bunchBy=opt.nBUs)) for ibsw in switch_cabling.keys())
-	rus = dict((ethsw,getRUs(ethsw))          for ethsw in ETHSW2DEVICES.keys())
-	frls = dict((frlpc,getFRLBunches(frlpc))  for ethsw in ETHSW2DEVICES.keys() for frlpc in getListOfFRLPCs(ethsw))
+	bus = dict((ibsw,getBUs(ibsw, bunchBy=opt.nBUs))
+		                  for ibsw in switch_cabling.keys())
+	rus = dict((ethsw,getRUs(ethsw))
+		                  for ethsw in ETHSW2DEVICES.keys())
+	frls = dict((frlpc,getFRLBunches(frlpc, bunchBy=opt.nFRLs))
+		                  for ethsw in ETHSW2DEVICES.keys()
+		                  for frlpc in getListOfFRLPCs(ethsw))
 
 	## loop on eth switches:
 	for switch in ETHSW2DEVICES.keys():
@@ -207,7 +217,7 @@ if __name__ == "__main__":
 
 			for n,frl in enumerate(frls):
 				writeEntry(outfile, 'FEROLCONTROLLER', FEROL2FRLPC[frl], n)
-				outfile.write('\n')
+			outfile.write('\n')
 
 			writeEntry(outfile, 'RU', ru, 0, addFRLHN=True)
 			outfile.write('\n')
