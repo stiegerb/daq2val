@@ -36,11 +36,14 @@ def getMachinesShuffled(inventory):
 			except IndexError:
 				continue
 
-def writeEntry(filehandle, classifier, hostname, index):
+def writeEntry(filehandle, classifier, hostname, index, addFRLHN=False):
 	filehandle.write('%s%d_SOAP_HOST_NAME %s.cms\n' %
 		                  (classifier, index, hostname))
 	filehandle.write('%s%d_I2O_HOST_NAME %s.ebs0v0.cms\n' %
 		                  (classifier, index, hostname))
+	if addFRLHN:
+		filehandle.write('%s%d_FRL_HOST_NAME %s.fbs0v0.cms\n' %
+			                  (classifier, index, hostname))
 
 def addDictionaries(original, to_be_added):
 	"""
