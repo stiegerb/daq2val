@@ -16,7 +16,7 @@ FEROL2FRLPC = {}
 IBHOSTCABLING = {}
 SW2BUS = {}
 
-def getFRLBunches(frlpc,bunchBy=4,verbose=False):
+def getFRLBunches(frlpc,bunchBy=4,canonical=False,verbose=False):
 	"""
 	Return a bunch of FRLs from one frlpc
 	"""
@@ -31,15 +31,16 @@ def getFRLBunches(frlpc,bunchBy=4,verbose=False):
 			bunch = []
 			counter = 0
 	## Yield the remaining ferols before giving up
-	if len(bunch) > 0:
-		yield bunch
+	if not canonical:
+		if len(bunch) > 0:
+			yield bunch
 
 def getRUs(switch,verbose=False):
 	"""
 	Return a RU on the same ETH switch as the frlpc, as long as there are any
 	"""
-	for ru in cycle(ETHSW2DEVICES[switch]):
-		if not ru.startswith('ru-'): continue
+	allrus = [ru for ru in ETHSW2DEVICES[switch] if ru.startswith('ru-')]
+	for ru in cycle(allrus):
 		yield ru
 
 def getBUs(ibswitch,bunchBy=4,verbose=False):
@@ -98,10 +99,12 @@ def readFEDRUCabling(csvFname="2014-10-13-ru-network.csv",verbose=0):
 			FEROL2FRLPC[device] = frlpc
 	return missingFEROLS
 
-def getListOfFRLPCs(ethswitch):
+def getListOfFRLPCs(ethswitch, canonical=False):
 	result = []
 	for device in ETHSW2DEVICES[ethswitch]:
 		if device.startswith('frlpc-'):
+			if canonical and len(FRLPC2FEROLS[device]) < 8:
+				continue
 			result.append(device)
 	return result
 
@@ -131,6 +134,9 @@ if __name__ == "__main__":
 	parser.add_option("-u", "--uniqueOnly", default=False,
 		               action="store_true", dest="uniqueOnly",
 		               help=("Only write symbolmaps with unique hosts"))
+	parser.add_option("-c", "--canonical", default=False,
+		               action="store_true", dest="canonical",
+		               help=("Only use exact numbers of FRLs"))
 	(opt, args) = parser.parse_args()
 
 	switch_cabling, sw2rus, SW2BUS, IBHOSTCABLING = getDAQ2Inventory(
@@ -142,7 +148,7 @@ if __name__ == "__main__":
 	if opt.verbose:
 		for switch in ETHSW2DEVICES.keys():
 			print switch
-			for frlpc in getListOfFRLPCs(switch):
+			for frlpc in getListOfFRLPCs(switch, canonical=opt.canonical):
 				print "%s with %2d FEROLs" % (frlpc, len(FRLPC2FEROLS[frlpc]))
 			for ru in [ru for ru in ETHSW2DEVICES[switch] if ru.startswith('ru-')]:
 				print ru
@@ -155,18 +161,21 @@ if __name__ == "__main__":
 		                  for ibsw in switch_cabling.keys())
 	rus = dict((ethsw,getRUs(ethsw))
 		                  for ethsw in ETHSW2DEVICES.keys())
-	frls = dict((frlpc,getFRLBunches(frlpc, bunchBy=opt.nFRLs))
+	frls = dict((frlpc,getFRLBunches(frlpc, bunchBy=opt.nFRLs,
+		         canonical=opt.canonical))
 		                  for ethsw in ETHSW2DEVICES.keys()
-		                  for frlpc in getListOfFRLPCs(ethsw))
+		                  for frlpc in getListOfFRLPCs(ethsw,
+		                  	                           canonical=opt.canonical))
 
 	## loop on eth switches:
 	for switch in ETHSW2DEVICES.keys():
-		for frlpc in getListOfFRLPCs(switch):
+		for frlpc in getListOfFRLPCs(switch, canonical=opt.canonical):
 			totalfrls = len(FRLPC2FEROLS[frlpc])
 			while(True):
 				try:
 					frlbunch = frls[frlpc].next()
-
+					if opt.canonical and len(frlbunch) != opt.nFRLs:
+						print "Mooooooep"
 					try:
 						ru = rus[switch].next()
 
