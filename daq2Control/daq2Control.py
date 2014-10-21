@@ -897,6 +897,12 @@ class daq2Control(object):
 					           fragSize,
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
+				if self.options.useRate != 'max':
+					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
+						           str(n), 'maxTriggerRate', 'unsignedInt',
+						           int(self.options.useRate),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
 
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## --stopRestart option or eFEROLs: stop everything, set new size, start again

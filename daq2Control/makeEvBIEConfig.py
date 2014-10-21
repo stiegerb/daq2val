@@ -57,6 +57,10 @@ def addConfiguratorOption(parser):
 	parser.add_option("-o", "--output", default='', action="store",
 		              type='string', dest="output",
 		              help="Where to put the output file")
+	parser.add_option("-r", "--setRate", default=0,
+		              action="store", type="int", dest="setRate",
+		              help="Set maxTriggerRate parameter (in Hz) "
+		                   "[default %default]")
 
 def main(options, args):
 	nRUs, nBUs = getNxNConfig(args[0])
@@ -81,6 +85,7 @@ def main(options, args):
 
 	configurator.maxEvtsUnderConstruction = options.maxEvtsUnderConstruction
 	configurator.numberOfBuilders = options.numberOfBuilders
+	configurator.setRate = options.setRate
 
 	configurator.setDynamicIBVConfig = options.setDynamicIBVConfig
 
