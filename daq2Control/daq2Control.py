@@ -489,6 +489,17 @@ class daq2Control(object):
 						                     dry=self.options.dry)
 				sleep(2, self.options.verbose, self.options.dry)
 			self.sendCmdToEVMRUBU('Configure')
+
+			if self.config.useEvB:
+				utils.sendSimpleCmdToApp(
+					         self.config.RUs[0].host,
+					         self.config.RUs[0].port,
+		                     'pt::ibv::Application', 0,
+		                     'connect',
+		                     verbose=self.options.verbose,
+		                     dry=self.options.dry)
+				sleep(5, self.options.verbose, self.options.dry)
+
 			return
 
 		## In case of mstreamio configurations:
@@ -497,7 +508,7 @@ class daq2Control(object):
 				pool = Pool(len(self.config.RUs))
 
 				tasklist = [(ru.host, ru.port, 'pt::ibv::Application', 0,
-					         'init',
+					         'connect',
 					         self.options.verbose,
 					         self.options.dry) for ru in self.config.RUs]
 				pool.map(utils.sendSimpleCmdToAppPacked, tasklist)
@@ -524,7 +535,7 @@ class daq2Control(object):
 					print "Sending init to", h.name
 					utils.sendSimpleCmdToApp(h.host, h.port,
 						                     "pt::ibv::Application", 0,
-						                     "init",
+						                     'connect',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
 				sleep(2, self.options.verbose, self.options.dry)
@@ -553,7 +564,7 @@ class daq2Control(object):
 					print "Sending init to", h.name
 					utils.sendSimpleCmdToApp(h.host, h.port,
 						                     "pt::ibv::Application", 0,
-						                     "init",
+						                     'connect',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
 				sleep(2, self.options.verbose, self.options.dry)
@@ -886,6 +897,12 @@ class daq2Control(object):
 					           fragSize,
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
+				if self.options.useRate != 'max':
+					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
+						           str(n), 'maxTriggerRate', 'unsignedInt',
+						           int(self.options.useRate),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
 
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## --stopRestart option or eFEROLs: stop everything, set new size, start again

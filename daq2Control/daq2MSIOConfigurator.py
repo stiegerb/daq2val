@@ -243,17 +243,22 @@ class daq2MSIOConfigurator(daq2Configurator):
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
 		context.insert(3,module)
 
+		## Add corresponding module
+		module = Element(QN(self.xdaqns, 'Module').text)
+		module.text = "$XDAQ_ROOT/lib/libxdaq2rc.so"
+		context.insert(4,module)
+
 		## Client application
 		ru_app = elementFromFile(filename=os.path.join(self.fragmentdir,
 			                     'msio/client_application.xml'))
-		context.insert(4,ru_app)
+		context.insert(5,ru_app)
 		ru_app.set('instance',str(index))
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
 		if self.evbns == 'msio':
 			module.text = "$XDAQ_ROOT/lib/libmstreamio2g.so"
-		context.insert(5,module)
+		context.insert(6,module)
 
 		## Set instance and url
 		for app in context.findall(QN(self.xdaqns, 'Endpoint').text):
@@ -291,17 +296,22 @@ class daq2MSIOConfigurator(daq2Configurator):
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
 		context.insert(3,module)
 
+		## Add corresponding module
+		module = Element(QN(self.xdaqns, 'Module').text)
+		module.text = "$XDAQ_ROOT/lib/libxdaq2rc.so"
+		context.insert(4,module)
+
 		## Server application
 		bu_app = elementFromFile(filename=os.path.join(self.fragmentdir,
 			                     'msio/server_application.xml'))
-		context.insert(4,bu_app)
+		context.insert(5,bu_app)
 		bu_app.set('instance',str(index))
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
 		if self.evbns == 'msio':
 			module.text = "$XDAQ_ROOT/lib/libmstreamio2g.so"
-		context.insert(5,module)
+		context.insert(6,module)
 
 		## Set instance and url
 		for app in context.findall(QN(self.xdaqns, 'Endpoint').text):
@@ -359,17 +369,22 @@ class daq2MSIOConfigurator(daq2Configurator):
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
 		context.insert(3,module)
 
+		## Add corresponding module
+		module = Element(QN(self.xdaqns, 'Module').text)
+		module.text = "$XDAQ_ROOT/lib/libxdaq2rc.so"
+		context.insert(4,module)
+
 		## Add Inputemulator application
 		inputemu_app = elementFromFile(filename=os.path.join(
 			                    self.fragmentdir,
 		                       'RU/gevb2g/msio/RU_inputemulator.xml'))
 		inputemu_app.set('instance',str(ruindex))
-		context.insert(4,inputemu_app)
+		context.insert(5,inputemu_app)
 
 		## RU application
 		ru_app = elementFromFile(filename=os.path.join(self.fragmentdir,
 			                     'RU/gevb2g/msio/RU_application_msio.xml'))
-		context.insert(5,ru_app)
+		context.insert(6,ru_app)
 		ru_app.set('instance',str(ruindex))
 
 		## Set instance and url
@@ -420,6 +435,11 @@ class daq2MSIOConfigurator(daq2Configurator):
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
 		context.insert(5,module)
 
+		## Add corresponding module
+		module = Element(QN(self.xdaqns, 'Module').text)
+		module.text = "$XDAQ_ROOT/lib/libxdaq2rc.so"
+		context.insert(6,module)
+
 		## Set instance and url
 		for app in context.findall(QN(self.xdaqns, 'Application').text):
 			if app.attrib['class'] != "%s::EVM"%self.evbns: continue
@@ -466,10 +486,15 @@ class daq2MSIOConfigurator(daq2Configurator):
 		module.text = "$XDAQ_ROOT/lib/libpt%s.so"%self.ptprot
 		context.insert(3,module)
 
+		## Add corresponding module
+		module = Element(QN(self.xdaqns, 'Module').text)
+		module.text = "$XDAQ_ROOT/lib/libxdaq2rc.so"
+		context.insert(4,module)
+
 		## BU application
 		bu_app = elementFromFile(filename=os.path.join(self.fragmentdir,
 			                     'BU/gevb2g/msio/BU_application_msio.xml'))
-		context.insert(4,bu_app)
+		context.insert(5,bu_app)
 		bu_app.set('instance',str(index))
 
 		## Set instance and url
@@ -481,7 +506,7 @@ class daq2MSIOConfigurator(daq2Configurator):
 
 		module = Element(QN(self.xdaqns, 'Module').text)
 		module.text = "$XDAQ_ROOT/lib/libgevb2g.so"
-		context.insert(5,module)
+		context.insert(6,module)
 
 		return context
 

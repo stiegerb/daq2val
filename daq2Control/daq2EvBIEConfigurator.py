@@ -32,6 +32,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		self.maxEvtsUnderConstruction = None
 		self.numberOfBuilders = None
+		self.setRate = 0
 
 	def configureIBVforEvBIE(self):
 		## TODO: Update!
@@ -173,6 +174,10 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		## Set inputSource to Local:
 		self.setPropertyInApp(ru_app, 'inputSource', 'Local')
+
+		## Set maxTriggerRate (in Hz, 0 is unlimited):
+		if not self.setRate == 0:
+			self.setPropertyInApp(ru_app, 'maxTriggerRate', self.setRate)
 
 		## fedSourceIds are created automatically, remove them
 		self.removePropertyInApp(ru_app, 'fedSourceIds')

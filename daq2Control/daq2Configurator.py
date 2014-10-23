@@ -667,9 +667,9 @@ class daq2Configurator(object):
 
 		if self.useFMMForDAQ2:
 			geoslot     = 5
-			inputmask   = "0x6"
-			inputlabel  = ("N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;"
-					       "N/C;N/C;N/C;N/C;N/C;N/C;1006;1005;N/C")
+			inputmask   = "0x1" ## for crate 32
+			inputlabel  = ("N/C;1005;1006;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;"
+					       "N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C")
 			outputlabel = "GTPe:3;N/C;N/C;N/C"
 			label       = "BPIX_GTPE"
 
