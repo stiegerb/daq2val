@@ -36,11 +36,14 @@ def getMachinesShuffled(inventory):
 			except IndexError:
 				continue
 
-def writeEntry(filehandle, classifier, hostname, index):
+def writeEntry(filehandle, classifier, hostname, index, addFRLHN=False):
 	filehandle.write('%s%d_SOAP_HOST_NAME %s.cms\n' %
 		                  (classifier, index, hostname))
 	filehandle.write('%s%d_I2O_HOST_NAME %s.ebs0v0.cms\n' %
 		                  (classifier, index, hostname))
+	if addFRLHN:
+		filehandle.write('%s%d_FRL_HOST_NAME %s.fbs0v0.cms\n' %
+			                  (classifier, index, hostname))
 
 def addDictionaries(original, to_be_added):
 	"""
@@ -55,7 +58,7 @@ def addDictionaries(original, to_be_added):
 			print "Could not find key", key, "in second dict"
 	return newdict
 
-def getDAQ2Inventory(filename):
+def getDAQ2Inventory(filename,onlySwitch=''):
 	"""
 	Reads a file with lines formatted like:
 	switch,port,peerDevice,peerPort,blacklist,comment
@@ -84,6 +87,11 @@ def getDAQ2Inventory(filename):
 
 			switch,port,device,dport,blisted,comment = [
 			                 _.strip() for _ in line.split(',')]
+
+			## mask switches
+			if not onlySwitch=='':
+				if not onlySwitch in switch: continue
+
 			if port is not '': port = int(port)
 			if dport is not '': dport = int(dport)
 			if blisted is not '': blisted = bool(int(blisted))
@@ -119,7 +127,7 @@ if __name__ == "__main__":
 	usage = """"""
 	parser = OptionParser(usage=usage)
 	parser.add_option("-i", "--inventoryFile",
-		               default="2014-04-16-infiniband-ports.csv",
+		               default="2014-10-15-infiniband-ports.csv",
 		               action="store", type="string", dest="inventoryFile",
 		               help=("Inventory file [default: %default]"))
 	parser.add_option("-o", "--outFile", default="customSymbolmap.txt",
@@ -130,6 +138,10 @@ if __name__ == "__main__":
 		               help=("Take only N machines from a switch before "
 		               	     "moving to the next switch. [default: %default "
 		               	     "(no splitting)]"))
+	parser.add_option("-s", "--switch", default="",
+		               action="store", type="string", dest="switch",
+		               help=("Use only machines from this switch "
+		               	     "[default: use all]"))
 	parser.add_option("--nRUs", default=4,
 		               action="store", type="int", dest="nRUs",
 		               help=("Number of RUs [default: %default]"))
@@ -151,7 +163,8 @@ if __name__ == "__main__":
 	(opt, args) = parser.parse_args()
 
 	switch_cabling, ru_inventory, bu_inventory, _ = getDAQ2Inventory(
-		                                              opt.inventoryFile)
+		                                              opt.inventoryFile,
+		                                              onlySwitch=opt.switch)
 
 	# pprint(ru_inventory)
 	# pprint(bu_inventory)

@@ -150,6 +150,7 @@ class daq2Configurator(object):
 		self.ferolRack      = 1
 
 		self.useGTPe        = False
+		self.useFMMForDAQ2  = False
 		self.useEFEDs       = False
 
 		## These should be passed as arguments
@@ -365,7 +366,8 @@ class daq2Configurator(object):
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
 
-	def configureIBVApplication(self, context, ibvConfig):
+	def configureIBVApplication(self, context, ibvConfig,
+		                        maxMessageSize=None):
 		sPoolSize, rPoolSize, cQPSize, sQPSize, rQPSize = ibvConfig
 		try:
 			self.setPropertyInAppInContext(context,
@@ -388,6 +390,11 @@ class daq2Configurator(object):
 				                  classname='pt::ibv::Application',
 				                  prop_name='recvQueuePairSize',
 				                  prop_value=str(rQPSize))
+			if maxMessageSize:
+				self.setPropertyInAppInContext(context,
+					                  classname='pt::ibv::Application',
+					                  prop_name='maxMessageSize',
+					                  prop_value=str(maxMessageSize))
 		except RuntimeError, e:
 			if "not found in context" in e.strerror: pass
 			else: raise e
@@ -563,6 +570,9 @@ class daq2Configurator(object):
 		if self.useEFEDs:
 			bitmask += self.FEDConfig.nSlices*'1'
 			partitionId = 3
+		elif self.useFMMForDAQ2:
+			bitmask += '1'
+			partitionId = 0
 		else:
 			bitmask += '1000'
 			partitionId = 0
@@ -660,6 +670,15 @@ class daq2Configurator(object):
 				       "N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C")
 		outputlabel = "GTPe:3;N/C;N/C;N/C"
 		label       = "CSC_EFED"
+
+		if self.useFMMForDAQ2:
+			geoslot     = 5
+			inputmask   = "0x1" ## for crate 32
+			inputlabel  = ("N/C;1005;1006;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;"
+					       "N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C;N/C")
+			outputlabel = "GTPe:3;N/C;N/C;N/C"
+			label       = "BPIX_GTPE"
+
 		return [[geoslot, inputmask, inputlabel, outputlabel, label]]
 
 	def makeRU(self, ru):

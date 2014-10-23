@@ -6,6 +6,7 @@
 		<checkCRC xsi:type="xsd:unsignedInt">0</checkCRC>
 		<computeCRC xsi:type="xsd:boolean">false</computeCRC>
 		<numberOfResponders xsi:type="xsd:unsignedInt">3</numberOfResponders>
+		<maxTriggerRate xsi:type="xsd:unsignedInt">0</maxTriggerRate>
 		<fragmentFIFOCapacity xsi:type="xsd:unsignedInt">128</fragmentFIFOCapacity>
 		<fedSourceIds soapenc:arrayType="xsd:ur-type[%d]" xsi:type="soapenc:Array">
 			<item soapenc:position="[0]" xsi:type="xsd:unsignedInt">0</item>

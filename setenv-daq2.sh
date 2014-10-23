@@ -18,7 +18,7 @@ export PATH=${PATH}:${XDAQ_RUBUILDER}/bin:${XDAQ_ROOT}/bin
 # RU builder tester
 WORKINGDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # get location of this file
 export RUB_TESTER_HOME=${WORKINGDIR}
-export TESTS_SYMBOL_MAP=${RUB_TESTER_HOME}/daq2SymbolMap.txt
+export TESTS_SYMBOL_MAP=${RUB_TESTER_HOME}/daq2SymbolMap_Oct7.txt
 export TEST_TYPE=daq2
 
 export PATH=${PATH}:${RUB_TESTER_HOME}/daq2Control
