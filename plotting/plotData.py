@@ -111,7 +111,7 @@ class daq2Plotter(object):
 
 	def processFile(self, filename):
 		from numpy import mean, std
-		from logNormalTest import averageFractionSize
+		# from logNormalTest import averageFractionSize
 
 		###########################
 		## Process .csv file
@@ -447,8 +447,6 @@ def addPlottingOptions(parser):
 		                dest="titleX", help="X axis title")
 	parser.add_argument("-yt", "--titleY", default="", action="store", type=str,
 		                dest="titleY", help="Y axis title")
-	parser.add_argument("--outdir", default="", action="store",  type=str,
-		                dest="outdir", help="Output directory for the plots")
 	parser.add_argument('--legend', default=[], action="append", type=str,
 		                dest="legend", nargs='*',
 		                help='Give a list of custom legend entries to be used')
@@ -529,10 +527,13 @@ if __name__ == "__main__":
 		d2P = daq2Plotter(filelist, args)
 		if not args.quiet:
 			d2P.printTables()
-		if args.outdir:
-			if not os.path.exists(args.outdir):
-				os.system('mkdir -p %s' % args.outdir)
-			args.outputName = args.outdir + '/' + args.outputName
+
+		name, ext = os.path.splitext(args.outputName)
+		if ext == '': ## no filename given, interpret as directory
+			args.outputName = os.path.join(args.outputName, 'plot.pdf')
+
+		os.system('mkdir -p %s' %os.path.dirname(args.outputName))
+
 		args.legends=[]
 		if len(args.legend)>0: args.legends=args.legend[0]
 		d2P.makeMultiPlot()

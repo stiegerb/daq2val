@@ -4,7 +4,8 @@ def stripTrailingZeros(filename, removeAlsoLeading=False, inPlace=False):
 	print '... processing', filename
 	if inPlace:
 		call(['cp', filename, filename.replace('.csv', '_original.csv')])
-	with open(filename, 'r') as f, open(filename.replace('.csv','_stripped.csv'), 'w') as o:
+	with open(filename, 'r') as f, \
+	     open(filename.replace('.csv','_stripped.csv'), 'w') as o:
 		for line in f:
 			if len(line.strip()) == 0 or line.strip()[0] == '#':
 				o.write(line)
@@ -20,7 +21,8 @@ def stripTrailingZeros(filename, removeAlsoLeading=False, inPlace=False):
 
 				# print data
 				if removeAlsoLeading:
-					data.reverse() # 0's now at the end, can use same code as above
+					data.reverse() # 0's now at the end
+					               # can use same code as above
 					for x in reversed(data):
 						if x == 0: data.pop()
 						else: break
@@ -28,7 +30,6 @@ def stripTrailingZeros(filename, removeAlsoLeading=False, inPlace=False):
 
 				data = map(int, data)
 				newline = ','.join([str(_) for _ in data])
-				# newline = reduce(lambda x,y: str(x)+','+str(y), data) if len(data) > 0 else ''
 				o.write(newline)
 				o.write('\n')
 		f.close()
@@ -36,8 +37,46 @@ def stripTrailingZeros(filename, removeAlsoLeading=False, inPlace=False):
 	if inPlace:
 		call(['mv', filename.replace('.csv', '_stripped.csv'), filename])
 
+def truncatePoints(filename, firstN, lastN=None, inPlace=False):
+	from subprocess import call
+	print '... processing', filename
+	if inPlace:
+		call(['cp', filename, filename.replace('.csv', '_original.csv')])
+	with open(filename, 'r') as f, \
+	     open(filename.replace('.csv','_trunc.csv'), 'w') as o:
+		for line in f:
+			if len(line.strip()) == 0 or line.strip()[0] == '#':
+				o.write(line)
+				continue
+			spline = line.strip('\n').split(',')
+			if len(spline) > 1 and spline[1] != '':
+				data = map(lambda x: int(float(x)), spline[1:])
+				o.write(spline[0])
+				o.write(',')
 
-##---------------------------------------------------------------------------------
+				data.reverse() # can use same code as above
+				for n,x in enumerate(reversed(data)):
+					if n < firstN: data.pop()
+					else: break
+				data.reverse() # reverse back
+
+				if not lastN==None:
+					for n,x in enumerate(reversed(data)):
+						if n < lastN: data.pop()
+						else: break
+
+
+				data = map(int, data)
+				newline = ','.join([str(_) for _ in data])
+				o.write(newline)
+				o.write('\n')
+		f.close()
+		o.close()
+	if inPlace:
+		call(['mv', filename.replace('.csv', '_trunc.csv'), filename])
+
+
+##---------------------------------------------------------------------------
 ## User interface
 if __name__ == "__main__":
 	from optparse import OptionParser
@@ -46,14 +85,36 @@ if __name__ == "__main__":
 	%prog  --outDir plots/ data.root
 	"""
 	parser = OptionParser(usage=usage)
-	# parser.add_option("-o", "--outDir", default="plots/", action="store", type="string", dest="outDir", help="Output directory for the plots [default: %default]")
-	parser.add_option("-l", "--removeAlsoLeading", default=False, action="store_true", dest="removeAlsoLeading", help="Remove also leading zeros [default: %default]")
-	parser.add_option("-i", "--inPlace", default=False, action="store_true", dest="inPlace", help="Move original file to filename_original.csv, and store output in filename.csv [default: %default]")
+	parser.add_option("-t", "--truncate", type='string', default='',
+		              action="store", dest="truncate",
+		              help=("Remove n leading entries, m trailing entries "
+		                    "[default: %default]"))
+	parser.add_option("-l", "--removeAlsoLeading", default=False,
+		              action="store_true", dest="removeAlsoLeading",
+		              help="Remove also leading zeros [default: %default]")
+	parser.add_option("-i", "--inPlace", default=False,
+		              action="store_true", dest="inPlace",
+		              help=("Move original file to filename_original.csv, "
+		              	    "and store output in filename.csv "
+		              	    "[default: %default]"))
 	(options, args) = parser.parse_args()
 
 	if len(args) > 0:
 		for filename in args:
-			stripTrailingZeros(filename, removeAlsoLeading=options.removeAlsoLeading, inPlace=options.inPlace)
+			if options.truncate:
+				if ',' in options.truncate:
+					firstN, lastN = options.truncate.split(',')
+					firstN, lastN = int(firstN), int(lastN)
+				else:
+					firstN = int(options.truncate)
+					lastN = None
+				truncatePoints(filename, firstN=firstN, lastN=lastN,
+					           inPlace=options.inPlace)
+			else:
+				stripTrailingZeros(filename,
+				               removeAlsoLeading=options.removeAlsoLeading,
+				               inPlace=options.inPlace)
+
 		exit(0)
 
 	parser.print_help()
