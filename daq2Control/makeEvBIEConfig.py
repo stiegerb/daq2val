@@ -14,6 +14,10 @@ def addConfiguratorOption(parser):
 		                   "pt::ibv::Application dynamically according "
 		                   "to an algorithm. If not set, take everything "
 		                   "from fragment.")
+	parser.add_option("--mS", "--maxMessageSize", default=None,
+		              action="store", type="int", dest="maxMessageSize",
+		              help="Set the maxMessageSize parameter in the IBV "
+		                   "configuration (in Bytes, default: 128kB)")
 	parser.add_option("--cP", "--RUSendPoolSize", default=None,
 		              action="store", type="int", dest="RUSendPoolSize",
 		              help="Set the sendPoolSize parameter on the MStreamIO "
@@ -86,6 +90,7 @@ def main(options, args):
 	configurator.maxEvtsUnderConstruction = options.maxEvtsUnderConstruction
 	configurator.numberOfBuilders = options.numberOfBuilders
 	configurator.setRate = options.setRate
+	configurator.maxMessageSize = options.maxMessageSize
 
 	configurator.setDynamicIBVConfig = options.setDynamicIBVConfig
 

@@ -50,18 +50,20 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		                        application=BUApp,
 		                        prop_name="maxEvtsUnderConstruction")) #??
 
-		RUMaxMSize = int(self.readPropertyFromApp(
-			                        application=RUIBVApp,
-			                        prop_name="maxMessageSize"))
+		if not self.maxMessageSize:
+			RUMaxMSize = int(self.readPropertyFromApp(
+				                        application=RUIBVApp,
+				                        prop_name="maxMessageSize"))
 
-		BUMaxMSize = int(self.readPropertyFromApp(
-			                        application=BUIBVApp,
-			                        prop_name="maxMessageSize"))
-		if RUMaxMSize == BUMaxMSize:
-			self.maxMessageSize = RUMaxMSize
-		else:
-			printWarningWithWait('Differing maxMessageSize on RU and BU',
-				                 waittime=2)
+			BUMaxMSize = int(self.readPropertyFromApp(
+				                        application=BUIBVApp,
+				                        prop_name="maxMessageSize"))
+
+			if not RUMaxMSize == BUMaxMSize:
+				printWarningWithWait('Differing maxMessageSize on RU and BU',
+					                 waittime=2)
+			else:
+				self.maxMessageSize = RUMaxMSize
 
 		# RU:
 		if self.RUSendQPSize is not None:
@@ -150,9 +152,11 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## Configure IBV application:
 		if self.setDynamicIBVConfig:
 			if ruindex == 0:
-				self.configureIBVApplication(context, self.EVMIBVConfig)
+				self.configureIBVApplication(context, self.EVMIBVConfig,
+					                         maxMessageSize=self.maxMessageSize)
 			else:
-				self.configureIBVApplication(context, self.RUIBVConfig)
+				self.configureIBVApplication(context, self.RUIBVConfig,
+					                         maxMessageSize=self.maxMessageSize)
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
@@ -175,12 +179,25 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## Set inputSource to Local:
 		self.setPropertyInApp(ru_app, 'inputSource', 'Local')
 
+		## Set blockSize
+		if self.maxMessageSize:
+			newBlockSize = self.maxMessageSize/2**10*1000
+			self.setPropertyInApp(ru_app, 'blockSize', str(newBlockSize))
+
 		## Set maxTriggerRate (in Hz, 0 is unlimited):
 		if not self.setRate == 0:
 			self.setPropertyInApp(ru_app, 'maxTriggerRate', self.setRate)
 
 		## fedSourceIds are created automatically, remove them
-		self.removePropertyInApp(ru_app, 'fedSourceIds')
+		# self.removePropertyInApp(ru_app, 'fedSourceIds')
+		ruevbappns = (self.xdaqappns%'evb::RU' if
+			          ruindex>0 else self.xdaqappns%'evb::EVM')
+		fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+
+			                       QN(ruevbappns, 'fedSourceIds').text)
+		fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = (
+			                       "xsd:ur-type[1]")
+		item_element = fedSourceIds.find(QN(ruevbappns,'item').text)
+		item_element.text = str(ruindex)
 
 		# ## In case of EvB, add expected fedids
 		# if self.evbns == 'evb':
@@ -239,7 +256,8 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		## Configure IBV application:
 		if self.setDynamicIBVConfig:
-			self.configureIBVApplication(context, self.BUIBVConfig)
+			self.configureIBVApplication(context, self.BUIBVConfig,
+				                         maxMessageSize=self.maxMessageSize)
 
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
@@ -257,6 +275,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		if self.numberOfBuilders is not None:
 			self.setPropertyInApp(bu_app, 'numberOfBuilders',
 				                  self.numberOfBuilders)
+
 		context.insert(4,bu_app)
 		bu_app.set('instance',str(index))
 

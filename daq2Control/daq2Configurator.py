@@ -366,7 +366,8 @@ class daq2Configurator(object):
 			raise RuntimeError('Application %s not found in context %s.'%
 				               (classname, context.attrib['url']))
 
-	def configureIBVApplication(self, context, ibvConfig):
+	def configureIBVApplication(self, context, ibvConfig,
+		                        maxMessageSize=None):
 		sPoolSize, rPoolSize, cQPSize, sQPSize, rQPSize = ibvConfig
 		try:
 			self.setPropertyInAppInContext(context,
@@ -389,6 +390,11 @@ class daq2Configurator(object):
 				                  classname='pt::ibv::Application',
 				                  prop_name='recvQueuePairSize',
 				                  prop_value=str(rQPSize))
+			if maxMessageSize:
+				self.setPropertyInAppInContext(context,
+					                  classname='pt::ibv::Application',
+					                  prop_name='maxMessageSize',
+					                  prop_value=str(maxMessageSize))
 		except RuntimeError, e:
 			if "not found in context" in e.strerror: pass
 			else: raise e
