@@ -190,6 +190,8 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		## fedSourceIds are created automatically, remove them
 		# self.removePropertyInApp(ru_app, 'fedSourceIds')
+
+		## Put one fedSourceId
 		ruevbappns = (self.xdaqappns%'evb::RU' if
 			          ruindex>0 else self.xdaqappns%'evb::EVM')
 		fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+
