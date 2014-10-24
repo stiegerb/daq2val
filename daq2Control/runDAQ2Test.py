@@ -3,27 +3,36 @@
 import daq2Utils as utils
 from daq2Control import daq2Control
 from daq2SymbolMap import daq2SymbolMap
-from daq2Utils import sleep, printError, printWarningWithWait, testBuilding, SIZE_LIMIT_TABLE
+from daq2Utils import sleep, printError, printWarningWithWait
+from daq2Utils import testBuilding, SIZE_LIMIT_TABLE
 
 separator = 70*'-'
 
 ## Run a single test
 def runTest(configfile, fragSize, options, relRMS=0.0):
-	"""Usage: runTest(configfile, fragSize)
-	Run a test reading the setup from configfile and using fragment size fragSize"""
 	d2c = daq2Control(configfile, options)
 	d2c.setup()
 
-	utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+	utils.stopXDAQs(d2c.symbolMap,
+		            verbose=options.verbose,
+	                dry=options.dry)
 	d2c.start(fragSize, relRMS*fragSize, rate=options.useRate)
 
-	if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
-		if options.verbose > 0: print 'Test failed, built less than 1000 events!'
-		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+	if not testBuilding(d2c, 1000, options.testTime,
+		                verbose=options.verbose,
+		                dry=options.dry):
+		if options.verbose > 0:
+			print 'Test failed, built less than 1000 events!'
+		utils.stopXDAQs(d2c.symbolMap,
+			            verbose=options.verbose,
+		                dry=options.dry)
 		exit(-1)
-	if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
+	if options.verbose > 0:
+		print ('Test successful (built more than 1000 events '
+			   'in each BU), continuing...')
 
-	if options.verbose > 0: print "Building events for %d seconds..." % options.duration
+	if options.verbose > 0:
+		print "Building events for %d seconds..." % options.duration
 	if options.useIfstat:
 		## Get throughput directly from RU using ifstat script
 		d2c.getResultsFromIfstat(options.duration)
@@ -97,19 +106,22 @@ def addOptions(parser):
 		              help="Attach a tag after the standard output dir")
 
 	## Debugging options:
-	parser.add_option("--dry", default=False, action="store_true", dest="dry",
-		              help="Just print the commands without sending anything")
-	parser.add_option("--storeInfoSpaces", default=False, action="store_true",
+	parser.add_option("--dry", default=False,
+		              action="store_true", dest="dry",
+		              help=("Just print the commands without "
+		              	    "sending anything"))
+	parser.add_option("--storeInfoSpaces", default=False,
+		              action="store_true",
 		              dest="storeInfoSpaces",
 		              help="Dump the FEROL infospaces.")
 	parser.add_option("-w", "--waitBeforeStop", default=False,
 		              action="store_true", dest="waitBeforeStop",
-		              help="Wait for key press before stopping the event\
-		                    building")
-	parser.add_option("-v", "--verbose", default=1, action="store", type='int',
-		              dest="verbose",
-		              help="Set the verbose level, [default: %default\
-		                    (semi-quiet)]")
+		              help=("Wait for key press before stopping the "
+		              	    "event building"))
+	parser.add_option("-v", "--verbose", default=1, action="store",
+		              type='int', dest="verbose",
+		              help=("Set the verbose level, "
+		              	    "[default: %default (semi-quiet)]"))
 
 	parser.add_option("--maskHost", default=None, action="store",
 					  type="string", dest="maskHost",
@@ -118,19 +130,19 @@ def addOptions(parser):
 
 	parser.add_option("--setCWND", default=-1, action="store", type='int',
 		              dest="setCWND",
-		              help="Set the TCP_CWND_FEDX parameter in the FEROL\
-		                    config, overriding the configuration file\
-		                    [default: %default]")
-	parser.add_option("--disablePauseFrame", default=False, action="store_true",
-		              dest="disablePauseFrame",
-		              help="Set the ENA_PAUSE_FRAME parameter in the FEROL\
-		                    config to 'false', overriding the configuration\
-		                    file")
-	parser.add_option("--enablePauseFrame", default=False, action="store_true",
-		              dest="enablePauseFrame",
-		              help="Set the ENA_PAUSE_FRAME parameter in the FEROL\
-		                    config to 'true', overriding the configuration\
-		                    file")
+		              help=("Set the TCP_CWND_FEDX parameter in the FEROL "
+		              	    "config, overriding the configuration file "
+		              	    "[default: %default]"))
+	parser.add_option("--disablePauseFrame", default=False,
+		              action="store_true", dest="disablePauseFrame",
+		              help=("Set the ENA_PAUSE_FRAME parameter in the FEROL "
+		              	    "config to 'false', overriding the "
+		              	    "configuration file"))
+	parser.add_option("--enablePauseFrame", default=False,
+		              action="store_true", dest="enablePauseFrame",
+		              help=("Set the ENA_PAUSE_FRAME parameter in the FEROL "
+		              	"config to 'true', overriding the "
+		              	"configuration file"))
 
 def setCurrentSizeFromArgs(d2c, args, options):
 	if len(args) > 1: ## if given, set also fragsize and relRMS
@@ -160,23 +172,49 @@ if __name__ == "__main__":
 	%prog [options] --runTest config.xml fragsize
 	%prog [options] --runTest config.xml fragsize fragsizerms
 
+	%prog [options] --start configdir/ fragsize fragsizerms
+
 	Examples:
-	%prog [options] --runTest --duration 30 /nfshome0/mommsen/daq/dev/daq/evb/test/cases/daq2val/FEROLs/16s8fx1x4/configuration.template.xml 1024
-	%prog [options] --runTest ~/andrea_test/cases/eFEROLs/gevb2g/dummyFerol/16x2x2/configuration.template.xml 1024 0.5
-	%prog [options] --runTest --useRate 100 config.template.xml 1024 0.5
+	%prog [options] --runTest --duration 30 config.xml 1024
+	%prog [options] --start --useRate 100 config.xml 1024 0.5
 	"""
 	parser = OptionParser()
 	parser.usage = usage
 	addOptions(parser)
-	parser.add_option("--runTest",    default=False, action="store_true", dest="runTest",    help="Run a test setup, needs two arguments: config and fragment size")
-	parser.add_option("--start",      default=False, action="store_true", dest="start",      help="Read a config, set up and start running. Needs config, size, optionally rms as arguments.")
-	parser.add_option("--changeSize", default=False, action="store_true", dest="changeSize", help="Halt, change size and resume. Needs config and new size as arguments.")
-	parser.add_option("--kill",       default=False, action="store_true", dest="kill",       help="Kill all the XDAQ processes and exit")
-	parser.add_option("--stop",       default=False, action="store_true", dest="stop",       help="Stop all applications, should reach 'Configured' state.")
-	parser.add_option("--test",       default=False, action="store_true", dest="test",       help="Test event building. Use --testTime option to set duration.")
-	parser.add_option("--configure",  default=False, action="store_true", dest="configure",  help="Configure")
-	parser.add_option("--enable",     default=False, action="store_true", dest="enable",     help="Enable")
-	parser.add_option("--prepare",    default=False, action="store_true", dest="prepare",    help="Start XDAQ processes, send configuration files, set size and run number, but don't configure and enable")
+	parser.add_option("--runTest", default=False, action="store_true",
+		               dest="runTest",
+		               help=("Run a test setup, needs two arguments: "
+		               	     "config and fragment size"))
+	parser.add_option("--start", default=False, action="store_true",
+		               dest="start",
+		               help=("Read a config, set up and start running. Needs"
+		               	     " config, size, optionally rms as arguments."))
+	parser.add_option("--changeSize", default=False, action="store_true",
+		               dest="changeSize",
+		               help=("Halt, change size and resume. Needs config "
+		               	     "and new size as arguments."))
+	parser.add_option("--kill", default=False, action="store_true",
+		               dest="kill",
+		               help=("Kill all the XDAQ processes and exit"))
+	parser.add_option("--stop", default=False, action="store_true",
+		               dest="stop",
+		               help=("Stop all applications, should reach "
+		               	     "'Configured' state."))
+	parser.add_option("--test", default=False, action="store_true",
+		               dest="test",
+		               help=("Test event building. Use --testTime option "
+		               	     "to set duration."))
+	parser.add_option("--configure", default=False, action="store_true",
+		               dest="configure",
+		               help=("Configure"))
+	parser.add_option("--enable", default=False, action="store_true",
+		               dest="enable",
+		               help=("Enable"))
+	parser.add_option("--prepare", default=False, action="store_true",
+		               dest="prepare",
+		               help=("Start XDAQ processes, send configuration "
+		               	     "files, set size and run number, but don't "
+		               	     "configure and enable"))
 	(options, args) = parser.parse_args()
 
 	if options.useRate == 0: options.useRate = 'max'
@@ -185,14 +223,17 @@ if __name__ == "__main__":
 	## --test
 	if options.test and len(args)>0:
 		d2c = daq2Control(args[0], options)
-		testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry)
+		testBuilding(d2c, 1000, options.testTime,
+			         verbose=options.verbose,
+			         dry=options.dry)
 		exit(0)
 
 	######################
 	## --kill
 	if options.kill:
 		d2SM  = daq2SymbolMap(options.symbolMap)
-		utils.stopXDAQs(d2SM, verbose=options.verbose, dry=options.dry)
+		utils.stopXDAQs(d2SM, verbose=options.verbose,
+			                  dry=options.dry)
 		exit(0)
 
 	######################
@@ -221,10 +262,14 @@ if __name__ == "__main__":
 		d2c.currentRate        = options.useRate
 
 		## Stop previously running things
-		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+		utils.stopXDAQs(d2c.symbolMap,
+			            verbose=options.verbose,
+			            dry=options.dry)
 
 		d2c.setup()
-		d2c.start(fragSize, relRMS*fragSize, rate=options.useRate, onlyPrepare=True)
+		d2c.start(fragSize, relRMS*fragSize,
+			      rate=options.useRate,
+			      onlyPrepare=True)
 		exit(0)
 
 	######################
@@ -259,15 +304,23 @@ if __name__ == "__main__":
 		d2c = daq2Control(args[0], options)
 
 		## Stop previously running things
-		utils.stopXDAQs(d2c.symbolMap, verbose=options.verbose, dry=options.dry)
+		utils.stopXDAQs(d2c.symbolMap,
+			            verbose=options.verbose,
+			            dry=options.dry)
 
 		d2c.setup()
-		d2c.start(fragSize, relRMS*fragSize, rate=options.useRate)
+		d2c.start(fragSize, relRMS*fragSize,
+			      rate=options.useRate)
 
-		if not testBuilding(d2c, 1000, options.testTime, verbose=options.verbose, dry=options.dry):
-			if options.verbose > 0: print 'Test failed, built less than 1000 events!'
+		if not testBuilding(d2c, 1000, options.testTime,
+			                verbose=options.verbose,
+			                dry=options.dry):
+			if options.verbose > 0:
+				print 'Test failed, built less than 1000 events!'
 			exit(-1)
-		if options.verbose > 0: print 'Test successful (built more than 1000 events in each BU), continuing...'
+		if options.verbose > 0:
+			print ('Test successful (built more than 1000 '
+				   'events in each BU), continuing...')
 		exit(0)
 
 	######################
@@ -284,7 +337,8 @@ if __name__ == "__main__":
 			options.relRMS = None
 
 		d2c = daq2Control(args[0], options)
-		d2c.changeSize(fragSize, relRMS*fragSize, rate=options.useRate)
+		d2c.changeSize(fragSize, relRMS*fragSize,
+			           rate=options.useRate)
 		exit(0)
 
 	######################
