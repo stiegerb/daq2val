@@ -375,8 +375,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
 
-	def makeSplitEvBIEConfig(self, nrus=1, nbus=1,
-		               destination='configdir/'):
+	def makeSplitEvBIEConfig(self, nrus=1, nbus=1):
 		self.nrus = nrus
 		self.nbus = nbus
 		# self.outPutDir = destination
@@ -397,7 +396,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 
 		if self.verbose>0: print 70*'-'
-		if self.verbose>0: print ' Wrote configs to %s' % destination
+		if self.verbose>0: print ' Wrote configs to %s' % self.outPutDir
 		if self.verbose>0: print 70*'-'
 
 	def makeEvBIEConfig(self, nrus=1, nbus=1,
