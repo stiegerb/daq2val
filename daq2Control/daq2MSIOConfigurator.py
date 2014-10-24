@@ -549,7 +549,9 @@ class daq2MSIOConfigurator(daq2Configurator):
 			for index in xrange(self.nbus):
 				self.config.append(self.makeBU(index))
 
+		if self.verbose>0: print 70*'-'
 		self.writeConfig(destination)
+		if self.verbose>0: print ' Wrote config to %s' % destination
 		if self.verbose>0: print 70*'-'
 
 

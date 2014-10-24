@@ -50,6 +50,15 @@ def addConfiguratorOption(parser):
 		              action="store", type="int", dest="numberOfBuilders",
 		              help="Set the numberOfBuilders parameter on the "
 		                   "EvB BU [default %default]")
+	parser.add_option("-r", "--setRate", default=0,
+		              action="store", type="int", dest="setRate",
+		              help="Set maxTriggerRate parameter (in Hz) "
+		                   "[default %default]")
+	parser.add_option("-s", "--splitConfig", default=False,
+		              action="store_true", dest="splitConfig",
+		              help="Split the config into separate files for RU, BU "
+		                   "and EVM to minimize IBV connections.")
+
 	parser.add_option("--fragmentDir", default='', action="store",
 		              type="string", dest="fragmentDir",
 		              help=("Use config fragments from a directory other "
@@ -61,10 +70,6 @@ def addConfiguratorOption(parser):
 	parser.add_option("-o", "--output", default='', action="store",
 		              type='string', dest="output",
 		              help="Where to put the output file")
-	parser.add_option("-r", "--setRate", default=0,
-		              action="store", type="int", dest="setRate",
-		              help="Set maxTriggerRate parameter (in Hz) "
-		                   "[default %default]")
 
 def main(options, args):
 	nRUs, nBUs = getNxNConfig(args[0])
@@ -115,7 +120,11 @@ def main(options, args):
 		elif ext == '':
 			output = os.path.join(name, output)
 
-	configurator.makeEvBIEConfig(nRUs, nBUs, output)
+	if options.splitConfig:
+		configurator.outPutDir = options.output
+		configurator.makeSplitEvBIEConfig(nRUs, nBUs, output)
+	else:
+		configurator.makeEvBIEConfig(nRUs, nBUs, output)
 
 	return True
 

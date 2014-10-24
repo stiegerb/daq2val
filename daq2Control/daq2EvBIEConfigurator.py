@@ -33,6 +33,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		self.maxEvtsUnderConstruction = None
 		self.numberOfBuilders = None
 		self.setRate = 0
+		self.outPutDir = None
 
 	def configureIBVforEvBIE(self):
 		## TODO: Update!
@@ -294,6 +295,102 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		return context
 
+	def addRUContextWithEndpoint(self, index):
+		fragmentname = 'RU/evb/RU_context_with_IBendpoint.xml'
+		context = elementFromFile(os.path.join(self.fragmentdir,
+			                                      fragmentname))
+		classname = 'evb::EVM' if index == 0 else 'evb::RU'
+		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
+			                        'class': classname,
+			                        'id':'43',
+			                        'instance':str(index),
+			                        'network':'infini'}))
+		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
+			                        'protocol': 'ibv',
+			                        'service':'i2o',
+			                        'hostname':'RU%d_I2O_HOST_NAME'%(index),
+			                        'port':'RU%d_I2O_PORT'%(index),
+			                        'network':'infini'}))
+		context.set('url', context.get('url')%(index, index))
+		self.config.append(context)
+
+
+	def addBUContextWithEndpoint(self, index):
+		fragmentname = 'BU/BU_context_with_IBendpoint.xml'
+		context = elementFromFile(os.path.join(self.fragmentdir,
+			                                      fragmentname))
+		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
+			                        'class': 'evb::BU',
+			                        'id':'43',
+			                        'instance':str(index),
+			                        'network':'infini'}))
+		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
+			                        'protocol': 'ibv',
+			                        'service':'i2o',
+			                        'hostname':'BU%d_I2O_HOST_NAME'%(index),
+			                        'port':'BU%d_I2O_PORT'%(index),
+			                        'network':'infini'}))
+		context.set('url', context.get('url')%(index, index))
+		self.config.append(context)
+
+	def makeEVMConfig(self):
+		self.makeSkeleton()
+		## Everything
+		self.addI2OProtocol()
+		self.config.append(self.makeRU(0))
+		outputname = 'daq2config_EVM.xml'
+		for index in xrange(1,self.nrus):
+			self.addRUContextWithEndpoint(index)
+		for index in xrange(self.nbus):
+			self.addBUContextWithEndpoint(index)
+		self.writeConfig(os.path.join(self.outPutDir,outputname))
+
+	def makeRUConfig(self, ruindex):
+		self.makeSkeleton()
+		## only one RU, all the BUs
+		self.addI2OProtocol(rus_to_add=[ruindex])
+		self.config.append(self.makeRU(ruindex))
+		for index in xrange(self.nbus):
+			self.addBUContextWithEndpoint(index)
+		outputname = 'daq2config_RU%d.xml' % ruindex
+		self.writeConfig(os.path.join(self.outPutDir,outputname))
+
+
+	def makeBUConfig(self, buindex):
+		self.makeSkeleton()
+		## no RU, only one BU
+		self.addI2OProtocol(rus_to_add=[], bus_to_add=[buindex])
+		self.config.append(self.makeBU(buindex))
+		self.addRUContextWithEndpoint(0)
+		outputname = 'daq2config_BU%d.xml' % buindex
+		self.writeConfig(os.path.join(self.outPutDir,outputname))
+
+
+	def makeSplitEvBIEConfig(self, nrus=1, nbus=1,
+		               destination='configdir/'):
+		self.nrus = nrus
+		self.nbus = nbus
+		# self.outPutDir = destination
+
+		if "ibv" in self.ptprot and self.setDynamicIBVConfig:
+			self.configureIBVforEvBIE()
+		else:
+			self.readIBVConfig()
+
+		if self.verbose > 1:
+			self.printIBVConfig()
+
+		self.makeEVMConfig()
+		for index in xrange(1,self.nrus):
+			self.makeRUConfig(index)
+		for index in xrange(self.nbus):
+			self.makeBUConfig(index)
+
+
+		if self.verbose>0: print 70*'-'
+		if self.verbose>0: print ' Wrote configs to %s' % destination
+		if self.verbose>0: print 70*'-'
+
 	def makeEvBIEConfig(self, nrus=1, nbus=1,
 		               destination='configuration.template.xml'):
 		self.nrus = nrus
@@ -317,7 +414,9 @@ class daq2EvBIEConfigurator(daq2Configurator):
 			self.config.append(self.makeBU(index))
 
 
+		if self.verbose>0: print 70*'-'
 		self.writeConfig(destination)
+		if self.verbose>0: print ' Wrote config to %s' % destination
 		if self.verbose>0: print 70*'-'
 
 

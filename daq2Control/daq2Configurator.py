@@ -399,7 +399,7 @@ class daq2Configurator(object):
 			if "not found in context" in e.strerror: pass
 			else: raise e
 
-	def addI2OProtocol(self):
+	def addI2OProtocol(self, rus_to_add=None, bus_to_add=None):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
 		prot = Element(QN(i2ons, 'protocol').text)
 
@@ -408,15 +408,22 @@ class daq2Configurator(object):
 			                      {'class':'%s::EVM'%self.evbns ,
 			                       'instance':"0", "tid":"1"}))
 		## Add RUs:
-		ru_instances_to_add = [n for n in range(self.nrus)]
-		if self.evbns == 'evb': ru_instances_to_add.remove(0)
+		if rus_to_add != None:
+			ru_instances_to_add = rus_to_add
+		else:
+			ru_instances_to_add = [n for n in range(self.nrus)]
+			if self.evbns == 'evb': ru_instances_to_add.remove(0)
 		for n in ru_instances_to_add:
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'%s::RU'%self.evbns ,
 				                   'instance':"%d"%n,
 				                   'tid':'%d'%(RU_STARTING_TID+n)}))
 		## Add BUs:
-		for n in xrange(self.nbus):
+		if bus_to_add != None:
+			bu_instances_to_add = bus_to_add
+		else:
+			bu_instances_to_add = [n for n in range(self.nbus)]
+		for n in bu_instances_to_add:
 			prot.append(Element(QN(i2ons, 'target').text,
 				                  {'class':'%s::BU'%self.evbns ,
 				                   'instance':"%d"%n,
@@ -901,8 +908,6 @@ class daq2Configurator(object):
 				for line in lines:
 					newfile.write(line)
 		subprocess.call(['mv', '-f', destination+'temp', destination])
-		if self.verbose>0: print 70*'-'
-		if self.verbose>0: print ' Wrote config to %s' % destination
 
 	def makeConfig(self, nferols=8, streams_per_ferol=2, nrus=1, nbus=2,
 		           destination='configuration.template.xml'):
@@ -937,7 +942,9 @@ class daq2Configurator(object):
 		if self.evbns == 'gevb2g': self.addEVM()
 		self.addBUs(nbus=nbus)
 
+		if self.verbose>0: print 70*'-'
 		self.writeConfig(destination)
+		if self.verbose>0: print ' Wrote config to %s' % destination
 		if self.verbose>0: print 70*'-'
 
 
