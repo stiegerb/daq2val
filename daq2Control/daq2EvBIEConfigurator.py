@@ -296,9 +296,14 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		return context
 
 	def addRUContextWithEndpoint(self, index):
-		fragmentname = 'RU/evb/RU_context_with_IBendpoint.xml'
+		fragmentname = 'RU/evb/RU_context_bare.xml'
 		context = elementFromFile(os.path.join(self.fragmentdir,
 			                                      fragmentname))
+		app = context.find(QN(self.xdaqns,'Application').text)
+		context.remove(app)
+		for mod in context.findall(QN(self.xdaqns,'Module').text):
+			context.remove(mod)
+
 		classname = 'evb::EVM' if index == 0 else 'evb::RU'
 		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
 			                        'class': classname,
@@ -316,9 +321,13 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 
 	def addBUContextWithEndpoint(self, index):
-		fragmentname = 'BU/BU_context_with_IBendpoint.xml'
+		fragmentname = 'BU/BU_context.xml'
 		context = elementFromFile(os.path.join(self.fragmentdir,
 			                                      fragmentname))
+		app = context.find(QN(self.xdaqns,'Application').text)
+		context.remove(app)
+		for mod in context.findall(QN(self.xdaqns,'Module').text):
+			context.remove(mod)
 		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
 			                        'class': 'evb::BU',
 			                        'id':'43',
