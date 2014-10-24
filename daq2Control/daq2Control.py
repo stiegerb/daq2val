@@ -891,12 +891,20 @@ class daq2Control(object):
 		elif self.config.useInputEmulator and self.config.useEvB:
 			for n,ru in enumerate(self.config.RUs):
 				classname = 'RU'
-				if n==0: classname = 'EVM'
-				utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
-					           str(n), 'dummyFedSize', 'unsignedInt',
-					           fragSize,
-					           verbose=self.options.verbose,
-					           dry=self.options.dry)
+				if n==0:
+					classname = 'EVM'
+					## HACK:
+					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
+						           str(n), 'dummyFedSize', 'unsignedInt',
+						           1024,
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+				else:
+					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
+						           str(n), 'dummyFedSize', 'unsignedInt',
+						           fragSize,
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
 				if self.options.useRate != 'max':
 					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
 						           str(n), 'maxTriggerRate', 'unsignedInt',
