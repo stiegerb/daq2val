@@ -111,7 +111,7 @@ class daq2Control(object):
 	def fillConfig(self, filename):
 		basename = os.path.split(filename)[1]
 		runconfig = os.path.join(self._runDir,basename)
-		if self.options.verbose > 0:
+		if self.options.verbose > 5:
 			print 'Filling configuration template in ' + runconfig
 		if not self.options.dry:
 			## write out the parsed xml to a file (still templated)
@@ -124,7 +124,7 @@ class daq2Control(object):
 
 		## Produce configure command file
 		cfg_cmd_file = '%s/%s.configure.cmd.xml' % (self._runDir, basename)
-		if self.options.verbose > 0:
+		if self.options.verbose > 5:
 			print 'Producing configuration command file in', cfg_cmd_file
 		if not self.options.dry:
 			with open(cfg_cmd_file, 'w') as file:
@@ -176,6 +176,29 @@ class daq2Control(object):
 		for n,bu in enumerate(self.config.BUs):
 			utils.sendSimpleCmdToApp(bu.host, bu.port,
 				                     self.config.namespace+'BU', str(n),
+				                     cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
+	def sendCmdToBUEVMRU(self, cmd): ## ordering for enable
+		if self.options.verbose > 0: print separator
+		for n,bu in enumerate(self.config.BUs):
+			utils.sendSimpleCmdToApp(bu.host, bu.port,
+				                     self.config.namespace+'BU', str(n),
+				                     cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
+		for n,evm in enumerate(self.config.EVM):
+			utils.sendSimpleCmdToApp(evm.host, evm.port,
+				                     self.config.namespace+'EVM', str(n),
+				                     cmd,
+				                     verbose=self.options.verbose,
+				                     dry=self.options.dry)
+		sleep(2, self.options.verbose, self.options.dry)
+		for n,ru in enumerate(self.config.RUs):
+			classname = 'RU'
+			if self.config.useEvB and n==0: classname = 'EVM'
+			utils.sendSimpleCmdToApp(ru.host, ru.port,
+				                     self.config.namespace+classname, str(n),
 				                     cmd,
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
@@ -535,10 +558,10 @@ class daq2Control(object):
 					configureCmd = utils.SOAPEnvelope % configureBody
 					file.write(configureCmd)
 		else:
+			print 'Producing configuration command files in',self._runDir
 			for filename in os.listdir(self.configDir):
 				if not os.path.splitext(filename)[1] == '.xml':
 					continue
-				print os.path.join(self.configDir,filename)
 				self.fillConfig(os.path.join(self.configDir,filename))
 	def start(self, fragSize, fragSizeRMS=0, rate='max', onlyPrepare=False):
 		"""
@@ -840,7 +863,10 @@ class daq2Control(object):
 
 		## In case of EvB/gevb2g InputEmulator:
 		if self.config.useInputEmulator:
-			self.sendCmdToRUEVMBU('Enable')
+			if self.config.useEvB:
+				self.sendCmdToBUEVMRU('Enable')
+			else:
+				self.sendCmdToRUEVMBU('Enable')
 			sleep(2, self.options.verbose, self.options.dry)
 
 			# Enable InputEmulator application in Gevb2g case

@@ -166,6 +166,14 @@ WARNING: Your maximum size for scanning doesn't seem to
 				                verbose=0, dry=options.dry):
 				d2c.retry('GTPe does not seem to be running, will stop and '
 					      'restart.')
+		## Also do a test when running with EvB/inputemulator:
+		if (d2c.config.useInputEmulator and
+			d2c.config.useEvB and
+			options.stopRestart):
+			if not testBuilding(d2c, minevents=1000, waittime=5,
+				                verbose=0, dry=options.dry):
+				d2c.retry('GTPe does not seem to be running, will stop and '
+					      'restart.')
 
 		if options.verbose > 0:
 			print separator
