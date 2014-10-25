@@ -124,7 +124,7 @@ def main(options, args):
 		configurator.outPutDir = options.output
 		configurator.makeSplitEvBIEConfig(nRUs, nBUs)
 		# Make also a full config
-		output = os.path.join(options.output, 'daq2config_full.xml')
+		output = os.path.join(options.output, 'full.xml')
 		configurator.makeEvBIEConfig(nRUs, nBUs, output)
 	else:
 		configurator.makeEvBIEConfig(nRUs, nBUs, output)

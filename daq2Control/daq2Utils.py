@@ -503,6 +503,22 @@ def sendToHostListInParallel(hostlist, func, commonargs):
 	except RuntimeError:
 		return False
 
+def sendToHostListInParallel(hostlist, func, individualargs, commonargs):
+	if not len(hostlist) == len(individualargs):
+		printWarningWithWait("sendToHostListInParallel: Different length of "
+			       "hostlist and argument list!", waittime=1)
+	hostarglist = zip(hostlist, individualargs)
+	tasklist = [(host.host, host.port, iarg)+tuple(commonargs)
+	                                   for host,iarg in hostarglist]
+
+	from multiprocessing import Pool
+	pool = Pool(len(hostlist))
+	try:
+		pool.map(func, tasklist)
+		return True
+	except RuntimeError:
+		return False
+
 
 def getFerolDelay(fragSize, rate='max'):
 	"""Calculates the Event_Delay_ns parameter for the FEROLs, for a given

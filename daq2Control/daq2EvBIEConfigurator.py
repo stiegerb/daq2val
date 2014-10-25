@@ -347,7 +347,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## Everything
 		self.addI2OProtocol()
 		self.config.append(self.makeRU(0))
-		outputname = 'daq2config_EVM.xml'
+		outputname = 'EVM.xml'
 		for index in xrange(1,self.nrus):
 			self.addRUContextWithEndpoint(index)
 		for index in xrange(self.nbus):
@@ -359,9 +359,10 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## only one RU, all the BUs
 		self.addI2OProtocol(rus_to_add=[ruindex])
 		self.config.append(self.makeRU(ruindex))
+		self.addRUContextWithEndpoint(0)
 		for index in xrange(self.nbus):
 			self.addBUContextWithEndpoint(index)
-		outputname = 'daq2config_RU%d.xml' % ruindex
+		outputname = 'RU%d.xml' % ruindex
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
 
@@ -371,7 +372,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		self.addI2OProtocol(rus_to_add=[], bus_to_add=[buindex])
 		self.config.append(self.makeBU(buindex))
 		self.addRUContextWithEndpoint(0)
-		outputname = 'daq2config_BU%d.xml' % buindex
+		outputname = 'BU%d.xml' % buindex
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
 

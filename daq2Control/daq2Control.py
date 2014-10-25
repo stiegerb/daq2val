@@ -25,6 +25,8 @@ from daq2Utils import printError, printWarningWithWait, sleep
 from logNormalTest import averageFractionSize
 import daq2Utils as utils
 
+import xml.etree.ElementTree as ET
+
 ######################################################################
 class daq2Control(object):
 	'''
@@ -86,8 +88,15 @@ class daq2Control(object):
 		"""Reset counters."""
 		self.__RETRY_COUNTER = 0
 	def setupConfig(self, configFile):
-		self.config = daq2Config(configFile)
-		# self.config = daq2Config(configFile, verbose=self.options.verbose)
+		try:
+			self.config = daq2Config(configFile)
+			self.splitConfig = False
+		except IOError: ## TODO fix this
+			self.configDir = configFile
+			configFile = os.path.join(configFile, 'full.xml')
+			self.config = daq2Config(configFile)
+			self.splitConfig = True
+
 		self.config.fillFromSymbolMap(self.symbolMap)
 		if self.options.enablePauseFrame:
 			self.config.setFerolParameter('ENA_PAUSE_FRAME', 'true')
@@ -99,6 +108,32 @@ class daq2Control(object):
 			self.config.setFerolParameter('TCP_CWND_FED1',
 				                          self.options.setCWND)
 		if self.options.verbose>1: self.config.printHosts()
+	def fillConfig(self, filename):
+		basename = os.path.split(filename)[1]
+		runconfig = os.path.join(self._runDir,basename)
+		if self.options.verbose > 0:
+			print 'Filling configuration template in ' + runconfig
+		if not self.options.dry:
+			## write out the parsed xml to a file (still templated)
+			parsedconfig = ET.parse(filename)
+			parsedconfig.write(runconfig)
+			## fill the template with actual hosts and port numbers
+			filledconfig = self.symbolMap.fillTemplate(runconfig)
+			with open(runconfig, 'w') as configfile:
+				configfile.write(filledconfig)
+
+		## Produce configure command file
+		cfg_cmd_file = '%s/%s.configure.cmd.xml' % (self._runDir, basename)
+		if self.options.verbose > 0:
+			print 'Producing configuration command file in', cfg_cmd_file
+		if not self.options.dry:
+			with open(cfg_cmd_file, 'w') as file:
+				configureBody =  '<xdaq:Configure xmlns:xdaq=\"'
+				configureBody += 'urn:xdaq-soap:3.0\">\n\n\n'
+				configureBody += filledconfig
+				configureBody += '\n\n\n</xdaq:Configure>\n'
+				configureCmd = utils.SOAPEnvelope % configureBody
+				file.write(configureCmd)
 
 	## Multi-commands
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
@@ -474,33 +509,41 @@ class daq2Control(object):
 		## Clean up and create output dir
 		self.prepareOutputDir()
 
-		## Fill configuration template
-		runconfig = self._runDir + '/configuration.xml'
-		if self.options.verbose > 0:
-			print 'Filling configuration template in ' + runconfig
-		if not self.options.dry:
-			## write out the parsed xml to a file (still templated)
-			tempconfig = self.config.writeConfig(runconfig)
-			## fill the template with actual hosts and port numbers
-			filledconfig = self.symbolMap.fillTemplate(runconfig)
-			with open(runconfig, 'w') as file:
-				file.write(filledconfig)
+		## Fill configuration template(s)
+		if not self.splitConfig:
+			runconfig = self._runDir + '/configuration.xml'
+			if self.options.verbose > 0:
+				print 'Filling configuration template in ' + runconfig
+			if not self.options.dry:
+				## write out the parsed xml to a file (still templated)
+				self.config.writeConfig(runconfig)
+				## fill the template with actual hosts and port numbers
+				filledconfig = self.symbolMap.fillTemplate(runconfig)
+				with open(runconfig, 'w') as configfile:
+					configfile.write(filledconfig)
 
-		## Produce configure command file
-		if self.options.verbose > 0:
-			print ('Producing configuration command file in ' +
-				    self._runDir + '/configure.cmd.xml')
-		if not self.options.dry:
-			with open(self._runDir+'/configure.cmd.xml', 'w') as file:
-				configureBody =  '<xdaq:Configure xmlns:xdaq=\"'
-				configureBody += 'urn:xdaq-soap:3.0\">\n\n\n'
-				configureBody += filledconfig
-				configureBody += '\n\n\n</xdaq:Configure>\n'
-				configureCmd = utils.SOAPEnvelope % configureBody
-				file.write(configureCmd)
+			## Produce configure command file
+			if self.options.verbose > 0:
+				print ('Producing configuration command file in ' +
+					    self._runDir + '/configure.cmd.xml')
+			if not self.options.dry:
+				with open(self._runDir+'/configure.cmd.xml', 'w') as file:
+					configureBody =  '<xdaq:Configure xmlns:xdaq=\"'
+					configureBody += 'urn:xdaq-soap:3.0\">\n\n\n'
+					configureBody += filledconfig
+					configureBody += '\n\n\n</xdaq:Configure>\n'
+					configureCmd = utils.SOAPEnvelope % configureBody
+					file.write(configureCmd)
+		else:
+			for filename in os.listdir(self.configDir):
+				if not os.path.splitext(filename)[1] == '.xml':
+					continue
+				print os.path.join(self.configDir,filename)
+				self.fillConfig(os.path.join(self.configDir,filename))
 	def start(self, fragSize, fragSizeRMS=0, rate='max', onlyPrepare=False):
-		"""Start all XDAQ processes, set configuration for fragSize and start
-		   running onlyPrepare=True will stop before configuring and enabling
+		"""
+		Start all XDAQ processes, set configuration for fragSize and start
+		running onlyPrepare=True will stop before configuring and enabling
 		"""
 		self.setCurrentSize(fragSize, fragSizeRMS, rate)
 
@@ -532,13 +575,33 @@ class daq2Control(object):
 		## Send the configuration file to each host
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Configuring XDAQ processes"
-		if not utils.sendToHostListInParallel(
-			          self.config.hosts,
-                      utils.sendCmdFileToExecutivePacked,
-			          (self._runDir+'/configure.cmd.xml',
-			           self.options.verbose, self.options.dry)):
-			self.retry("Failed to send command file to all hosts")
-			return
+
+		configfilelist = []
+		for host in self.config.hosts:
+			if host.type == 'RU' and host.index == 0:
+				filename = '%s/EVM.xml.configure.cmd.xml'%self._runDir
+			else:
+				filename = '%s/%s%d.xml.configure.cmd.xml'%(self._runDir,
+				                                            host.type,
+				                                            host.index)
+			configfilelist.append(filename)
+
+		if not self.splitConfig:
+			if not utils.sendToHostListInParallel(
+				          self.config.hosts,
+	                      utils.sendCmdFileToExecutivePacked,
+				          (self._runDir+'/configure.cmd.xml',
+				           self.options.verbose, self.options.dry)):
+				self.retry("Failed to send command file to all hosts")
+				return
+		else:
+			if not utils.sendToHostListInParallel(
+				          self.config.hosts,
+	                      utils.sendCmdFileToExecutivePacked,
+	                      configfilelist,
+				          (self.options.verbose, self.options.dry)):
+				self.retry("Failed to send command file to all hosts")
+				return
 		sleep(2, self.options.verbose, self.options.dry)
 
 		## Set the fragment size, rms, and rate
@@ -810,7 +873,7 @@ class daq2Control(object):
 			if not utils.checkStates(self.config.FEROLs, 'Enabled',
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry):
-			return False
+				return False
 
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print 'ENABLED'
@@ -957,12 +1020,12 @@ class daq2Control(object):
 						           dry=self.options.dry)
 				if not self.options.dry:
 					for n,bu in enumerate(self.config.BUs):
-						print "%s dummyFedPayloadSize %d " %
-						      (bu.name, int(utils.getParam(bu.host, bu.port,
-						      	                  'gevb2g::BU',
-						      	                  str(n),
-						      	                  'currentSize',
-						      	                  'xsd:unsignedLong')))
+						print ("%s dummyFedPayloadSize %d " %
+			                   (bu.name, int(utils.getParam(bu.host, bu.port,
+			                   	                  'gevb2g::BU',
+			                   	                  str(n),
+			                   	                  'currentSize',
+			                   	                  'xsd:unsignedLong'))))
 
 			return
 
@@ -982,7 +1045,7 @@ class daq2Control(object):
 			if self.options.verbose > 0: print separator
 			for n,efrl in enumerate(self.config.eFEROLs):
 				utils.sendSimpleCmdToApp(efrl.host, efrl.port,
-					                     'pt::frl::Application', n, 'Enable'
+					                     'pt::frl::Application', n, 'Enable',
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
 			sleep(2, self.options.verbose, self.options.dry)
@@ -1031,12 +1094,12 @@ class daq2Control(object):
 						           dry=self.options.dry)
 				if not self.options.dry:
 					for n,bu in enumerate(self.config.BUs):
-						print "%s dummyFedPayloadSize %d " %
-						      (bu.name, int(utils.getParam(bu.host, bu.port,
+						print ("%s dummyFedPayloadSize %d " %
+						       (bu.name, int(utils.getParam(bu.host, bu.port,
 						      	                  'gevb2g::BU',
 						      	                  str(n),
 						      	                  'currentSize',
-						      	                  'xsd:unsignedLong')))
+						      	                  'xsd:unsignedLong'))))
 
 			if self.options.verbose > 0: print separator
 
@@ -1210,12 +1273,12 @@ class daq2Control(object):
 			if self.options.verbose > 0: print separator
 			for n,bu in enumerate(self.config.BUs):
 				if not self.options.dry:
-					print "%s dummyFedPayloadSize %d " %
+					print ("%s dummyFedPayloadSize %d " %
 					      (bu.name, int(utils.getParam(bu.host, bu.port,
 					      	                  'gevb2g::BU',
 					      	                  str(n),
 					      	                  'currentSize',
-					      	                  'xsd:unsignedLong')))
+					      	                  'xsd:unsignedLong'))))
 
 			self.sendCmdToEVMRUBU('Configure')
 			self.sendCmdToRUEVMBU('Enable')
