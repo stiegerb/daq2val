@@ -70,17 +70,17 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		if self.RUSendQPSize is not None:
 			sendQPSize = self.RUSendQPSize
 		else:
-			sendQPSize = 1024
+			sendQPSize = 256
 
 		if self.RUSendPoolSize is not None:
 			sendPoolSize = 1024*1024*self.RUSendPoolSize
 		else:
-			sendPoolSize = 7*1024**3
+			sendPoolSize = 2*1024**3
 
 		if self.RUComplQPSize is not None:
 			complQPSize = self.RUComplQPSize
 		else:
-			complQPSize = 64*1024
+			complQPSize = 12800
 
 		recvPoolSize = 1*1024**3
 		recvQPSize = 2048
@@ -92,17 +92,17 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		if self.BURecvQPSize is not None:
 			recvQPSize = self.BURecvQPSize
 		else:
-			recvQPSize = 512
+			recvQPSize = 256
 
 		if self.BURecvPoolSize is not None:
 			recvPoolSize = 1024*1024*self.BURecvPoolSize
 		else:
-			recvPoolSize = 10*1024**3
+			recvPoolSize = 3584*1024**2
 
 		if self.BUComplQPSize is not None:
 			complQPSize = self.BUComplQPSize
 		else:
-			complQPSize = 64*1024
+			complQPSize = 12800
 
 		sendPoolSize = 1536*1024**2
 		sendQPSize = 128

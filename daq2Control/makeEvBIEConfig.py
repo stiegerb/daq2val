@@ -14,10 +14,10 @@ def addConfiguratorOption(parser):
 		                   "pt::ibv::Application dynamically according "
 		                   "to an algorithm. If not set, take everything "
 		                   "from fragment.")
-	parser.add_option("--mS", "--maxMessageSize", default=None,
+	parser.add_option("--mS", "--maxMessageSize", default=65536,
 		              action="store", type="int", dest="maxMessageSize",
 		              help="Set the maxMessageSize parameter in the IBV "
-		                   "configuration (in Bytes, default: 128kB)")
+		                   "configuration (in Bytes, default: %default)")
 	parser.add_option("--cP", "--RUSendPoolSize", default=None,
 		              action="store", type="int", dest="RUSendPoolSize",
 		              help="Set the sendPoolSize parameter on the MStreamIO "
