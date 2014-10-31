@@ -1197,7 +1197,7 @@ class daq2Control(object):
 				classname = 'RU'
 				if n==0:
 					classname = 'EVM'
-					## HACK:
+					## Set a separate, smaller size for the EVM
 					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
 						           str(n), 'dummyFedSize', 'unsignedInt',
 						           1024,
@@ -1206,9 +1206,22 @@ class daq2Control(object):
 				else:
 					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
 						           str(n), 'dummyFedSize', 'unsignedInt',
-						           fragSize,
+						           int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
+					if fragSizeRMS>0:
+						utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
+							           str(n), 'dummyFedSizeStdDev',
+							           'unsignedInt',
+							           int(fragSizeRMS),
+							           verbose=self.options.verbose,
+							           dry=self.options.dry)
+						utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
+							           str(n), 'useLogNormal',
+							           'boolean',
+							           'true',
+							           verbose=self.options.verbose,
+							           dry=self.options.dry)
 				if self.options.useRate != 'max':
 					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
 						           str(n), 'maxTriggerRate', 'unsignedInt',
