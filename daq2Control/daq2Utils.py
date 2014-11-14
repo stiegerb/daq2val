@@ -1,9 +1,4 @@
 #! /usr/bin/env python
-######################################################################
-#  ToDo-List:                                                        #
-#   - Fix order of stopping xdaqs to prevent log spamming            #
-######################################################################
-
 import os, subprocess, shlex, re
 from sys import stdout
 
@@ -470,6 +465,22 @@ def sleep(naptime=0.5,verbose=1,dry=False):
 		stdout.write('\r')
 		stdout.flush()
 
+
+def sendSSHCommandPacked(packedargs):
+	host,_,cmd,verbose,dry = packedargs
+	return sendSSHCommand(host,cmd,verbose=verbose,dry=dry)
+def sendSSHCommand(host,cmd,verbose=1,dry=False):
+	cmd = 'ssh %s "%s"' % (host,cmd)
+	if dry:
+		if verbose>0: print cmd
+		return
+	call = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
+	out,err = call.communicate()
+	if verbose>3:
+		print out.strip()
+	return out
+
+
 def printError(message, instance=None):
 	errordelim = 40*'>>'
 	print errordelim
@@ -491,7 +502,7 @@ def printWarningWithWait(message, waitfunc=sleep, waittime=10,
 		else: waitfunc(waittime)
 	print errordelim
 
-def sendToHostListInParallel(hostlist, func, commonargs):
+def sendToHostListInParallel2(hostlist, func, commonargs):
 	tasklist = [(host.host, host.port,)+tuple(commonargs)
 	                                   for host in hostlist]
 

@@ -563,6 +563,9 @@ class daq2Control(object):
 				if not os.path.splitext(filename)[1] == '.xml':
 					continue
 				self.fillConfig(os.path.join(self.configDir,filename))
+		if self.config.useInputEmulator and self.config.useEvB:
+			self.dropBUCaches()
+			sleep(5, self.options.verbose, self.options.dry)
 	def start(self, fragSize, fragSizeRMS=0, rate='max', onlyPrepare=False):
 		"""
 		Start all XDAQ processes, set configuration for fragSize and start
@@ -1228,7 +1231,6 @@ class daq2Control(object):
 						           int(self.options.useRate),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-
 	def changeSize(self, fragSize, fragSizeRMS=0, rate='max'):
 		## --stopRestart option or eFEROLs:
 		##   stop everything, set new size, start again
@@ -1353,7 +1355,6 @@ class daq2Control(object):
 		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
 		av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
 		return av_size, av_rate
-
 	def getResultsEvB(self, duration, interval=5):
 		"""
 		Python implementation of testRubuilder.pl script
@@ -1530,5 +1531,19 @@ class daq2Control(object):
 				stdout.flush()
 				return False
 		return True
+	def dropBUCaches(self):
+		if self.options.verbose > 0:
+ 			print separator
+ 			print 'Dropping caches in the BUs'
+ 		cmd = 'echo 3 | sudo tee /proc/sys/vm/drop_caches'
+		utils.sendToHostListInParallel2(self.config.BUs,
+			                           utils.sendSSHCommandPacked,
+			                           [cmd,
+			                            self.options.verbose,
+			                            self.options.dry])
+		# for bu in self.config.BUs:
+		# 	utils.sendSSHCommand(bu.host,'whoami',
+		# 		                 verbose=self.options.verbose,
+		# 		                 dry=self.options.dry)
 
 
