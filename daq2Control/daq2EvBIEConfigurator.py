@@ -102,7 +102,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		if self.BUComplQPSize is not None:
 			complQPSize = self.BUComplQPSize
 		else:
-			complQPSize = 12800
+			complQPSize = 25600
 
 		sendPoolSize = 1536*1024**2
 		sendQPSize = 128
