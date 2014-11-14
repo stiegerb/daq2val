@@ -44,6 +44,10 @@ def addScanningOptions(parser):
 	parser.add_option("--short", default=False, action="store_true",
 		               dest="short",
 		               help=("Run a short scan with only a few points"))
+	parser.add_option("--sizes", default='', action="store", type="string",
+		               dest="sizes",
+		               help=("Specify single sizes to be tested "
+		               	     "(comma separated list)"))
 	parser.add_option("--setEventSize", default=False, action="store_true",
 		               dest="setEventSize",
 		               help=("Scanning steps are event sizes, not "
@@ -85,9 +89,12 @@ def runScan(options, args):
 
 	#####################################
 	## Get the scanning steps
-	steps = getListOfSizes(options.maxSize, minSize=options.minSize,
-	                       short=options.short,
-	                       stepSize=options.stepSize)
+	if not options.sizes:
+		steps = getListOfSizes(options.maxSize, minSize=options.minSize,
+		                       short=options.short,
+		                       stepSize=options.stepSize)
+	else:
+		steps = [int(x) for x in options.sizes.split(',')]
 
 	# Divide by number of RUs if we want to scan event sizes
 	if options.setEventSize:
@@ -170,9 +177,9 @@ WARNING: Your maximum size for scanning doesn't seem to
 		if (d2c.config.useInputEmulator and
 			d2c.config.useEvB and
 			options.stopRestart):
-			if not testBuilding(d2c, minevents=1000, waittime=5,
+			if not testBuilding(d2c, minevents=100, waittime=10,
 				                verbose=0, dry=options.dry):
-				d2c.retry('GTPe does not seem to be running, will stop and '
+				d2c.retry('EvB does not seem to be running, will stop and '
 					      'restart.')
 
 		if options.verbose > 0:
