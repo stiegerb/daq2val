@@ -8,8 +8,10 @@ sys.path.insert(0,path.abspath(path.join(
 	                       path.dirname(path.realpath(__file__)),
 	                       '../daq2Control')))
 
-months_toint = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
-months_tostr = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"}
+months_toint = {"Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6,
+                "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12}
+months_tostr = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun",
+                7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"}
 
 ##---------------------------------------------------------------------------------
 ## Utilities
@@ -307,6 +309,7 @@ class daq2Plotter(object):
 			caselist.append(path.dirname(filename).split('/')[-1])
 
 		gROOT.SetBatch()
+		gStyle.SetOptTitle(0)
 		gStyle.SetOptStat(0)
 
 		oname = self.args.outputName
@@ -439,6 +442,18 @@ class daq2Plotter(object):
 					leg.AddEntry(func, '%.0f kHz'% (self.args.rate), 'l')
 
 		leg.Draw()
+
+		## Draw CMS Prelim
+		pave = TPave(0.62, 0.80, 0.899, 0.899, 0, 'NDC')
+		pave.SetFillStyle(1001)
+		pave.SetFillColor(0)
+		pave.Draw()
+		tl.SetTextFont(62)
+		tl.SetTextSize(0.05)
+		tl.DrawLatex(0.625, 0.83, "CMS")
+		tl.SetTextFont(52)
+		tl.DrawLatex(0.71, 0.83, "Preliminary")
+
 
 		for graph in graphs:
 			graph.Draw("PL")
