@@ -391,8 +391,12 @@ class daq2Plotter(object):
 		nlegentries = len(self.filelist)
 		# nlegentries = len(caselist) if not self.args.daq1 else len(caselist) + 1
 		legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
+		maxentrylength = 0.04
+		if self.args.legend:
+			maxentrylength = max(len(x) for x in self.args.legends)
+			legxlength = min(max(maxentrylength*0.013, 0.18),0.6)
 		if strperfrl == 0:
-			legendpos = (0.13, 0.73, 0.31, 0.73-nlegentries*0.045)
+			legendpos = (0.13, 0.73, 0.13+legxlength, 0.73-nlegentries*0.045)
 		# if self.args.legendPos == 'TL':
 		# 	legendpos = (0.12, 0.82-nlegentries*0.05, 0.579, 0.898)
 		# 	# legendpos = (0.12, 0.71-nlegentries*0.05, 0.579, 0.78)
