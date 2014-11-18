@@ -1,5 +1,5 @@
-#! /usr/bin/env python
 from itertools import cycle
+from pprint import pprint
 
 def addDictionaries(original, to_be_added):
 	"""
@@ -16,10 +16,22 @@ def addDictionaries(original, to_be_added):
 
 
 ######################################################################
-class daq2CablingInfo(object):
+class FEROL(object):
+	def __init__(self, frlpc, slot, fedid1, fedid2, system, crate, switch):
+		self.frlpc  = frlpc
+		self.slot   = slot
+		self.fedid1 = fedid1
+		self.fedid2 = fedid2
+		self.system = system
+		self.crate  = crate
+		self.switch = switch
+
+
+######################################################################
+class daq2HardwareInfo(object):
 	'''
 ---------------------------------------------------------------------
-  class daq2CablingInfo
+  class daq2HardwareInfo
 
  - Reads and stores information about the network cabling in the
    40GE and IB Clos networks
@@ -30,32 +42,34 @@ class daq2CablingInfo(object):
 		         ibcabling="2014-10-15-infiniband-ports.csv",
 		         geswitchmask="", ibswitchmask="",
 		         verbose=0):
-		super(daq2CablingInfo, self).__init__()
+		super(daq2HardwareInfo, self).__init__()
 		self.verbose = verbose
 		self.ibswitchmask = ibswitchmask
 		self.geswitchmask = geswitchmask
 		self.ge_switch_cabling = {} ## ge switch to list of conn. devices
-		self.frlpc_cabling = {} ## frlpc to list of ferols
-		self.ferol_cabling = {} ## ferol to corresponding frlpc
+		self.frlpc_cabling     = {} ## frlpc to list of ferols
+		self.ferol_cabling     = {} ## ferol to corresponding frlpc
+		self.missingFEROLs     = [] ## ferols with unknown frlpc
 
-		self.switch_cabling = {} ## ib switch to port to list of conn. devices
-		self.ru_inventory   = {} ## ib switch to list of RUs
-		self.bu_inventory   = {} ## ib switch to list of BUs
-		self.host_cabling   = {} ## hostname to ib switch, port
+		self.ib_switch_cabling = {} ## ib switch to port to list of conn. devices
+		self.ru_inventory      = {} ## ib switch to list of RUs
+		self.bu_inventory      = {} ## ib switch to list of BUs
+		self.host_cabling      = {} ## hostname to ib switch, port
 
-		self.missingFEROLS = [] ## ferols with unknown frlpc
+		self.FEROLs = []
+		self.fedid_cabling = {} ## fedid to frlpc
 
 		self.readFEDRUCabling(gecabling)
 		self.readDAQ2Inventory(ibcabling)
 
-	def readFEDRUCabling(self, csvFname="2014-10-13-ru-network.csv"):
+	def readFEDRUCabling(self, filename):
 		"""
 		Fill dictionaries for:
 		   ethswitch -> list of devices (rus, FEROLs)
 		   frlpc -> list of FEROLs
 		"""
 
-		with open(csvFname, 'r') as infile:
+		with open(filename, 'r') as infile:
 			for line in infile:
 				switch,device = line.strip().split(';')
 
@@ -68,7 +82,7 @@ class daq2CablingInfo(object):
 					self.ge_switch_cabling[switch] = []
 
 				if not 'frlpc' in device and not device.startswith('ru'):
-					self.missingFEROLS.append((switch, device))
+					self.missingFEROLs.append((switch, device))
 					if self.verbose>0:
 						print "Missing frlpc for:",switch, device
 					continue
@@ -77,23 +91,37 @@ class daq2CablingInfo(object):
 				if len(spdevice) == 1 and device.startswith('ru-'):
 					self.ge_switch_cabling[switch].append(device)
 					continue
-				elif len(spdevice) == 3: ## no frlpc?
-					name, crate, ferolid = spdevice
 				elif len(spdevice) == 4: ## no fedids
-					name, crate, ferolid, frlpc = spdevice
+					name, crate, slop, frlpc = spdevice
+					fedid1, fedid2 = None, None
 				elif len(spdevice) == 5: ## one fedid
-					name, crate, ferolid, fedid, frlpc = spdevice
+					name, crate, slop, fedid1, frlpc = spdevice
+					fedid2 = None
 				elif len(spdevice) == 6: ## two fedid
-					name, crate, ferolid, fed1id, fed2id, frlpc = spdevice
+					name, crate, slop, fedid1, fedid2, frlpc = spdevice
+
+				slot = slop.lstrip('FEROL ')
+				crate = crate.lstrip('crate ')
+				if fedid1:
+					if fedid2:
+						fedid1 = fedid1.lstrip('FEDs ')
+					else:
+						fedid1 = fedid1.lstrip('FED ')
+
+				ferol = FEROL(frlpc, int(slot), fedid1, fedid2, name, crate, switch)
+				self.FEROLs.append(ferol)
+				if fedid1:
+					self.fedid_cabling[fedid1] = frlpc
+				if fedid2:
+					self.fedid_cabling[fedid2] = frlpc
 
 				if not frlpc in self.ge_switch_cabling[switch]:
 					self.ge_switch_cabling[switch].append(frlpc)
 				if not frlpc in self.frlpc_cabling:
 					self.frlpc_cabling[frlpc] = []
-				self.frlpc_cabling[frlpc].append(device)
-				self.ferol_cabling[device] = frlpc
+				self.frlpc_cabling[frlpc].append(ferol)
+				self.ferol_cabling[ferol] = frlpc
 		return True
-
 	def readDAQ2Inventory(self, filename):
 		"""
 		Reads a file with lines formatted like:
@@ -130,9 +158,9 @@ class daq2CablingInfo(object):
 				if blisted is not '': blisted = bool(int(blisted))
 				# print switch,port,device,dport,blisted,comment
 
-				if not switch in self.switch_cabling.keys():
-					self.switch_cabling[switch] = {}
-				self.switch_cabling[switch][port] = (device,dport)
+				if not switch in self.ib_switch_cabling.keys():
+					self.ib_switch_cabling[switch] = {}
+				self.ib_switch_cabling[switch][port] = (device,dport)
 
 				if device is None or blisted: continue
 				if device.startswith('ru'):
@@ -146,7 +174,7 @@ class daq2CablingInfo(object):
 					self.bu_inventory[switch].append(device)
 
 		## Get also the inverted dictionary, hostname to switch, port
-		for switch, ports in self.switch_cabling.iteritems():
+		for switch, ports in self.ib_switch_cabling.iteritems():
 			for port, (hostname,_) in ports.iteritems():
 				self.host_cabling[hostname] = (switch, port)
 

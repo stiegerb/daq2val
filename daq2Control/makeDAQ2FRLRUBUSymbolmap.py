@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from daq2CablingInfo import daq2CablingInfo, addDictionaries
+from daq2HardwareInfo import daq2HardwareInfo
 
 from makeDAQ2Symbolmap import writeEntry
 import os
@@ -53,24 +53,20 @@ if __name__ == "__main__":
 		               help=("Only use exact numbers of FRLs"))
 	(opt, args) = parser.parse_args()
 
-	daq2Cabling = daq2CablingInfo(gecabling=opt.geInventoryFile,
-		                          ibcabling=opt.ibInventoryFile,
-                                  geswitchmask=opt.whiteListGE,
-                                  ibswitchmask=opt.whiteListIB,
-		                          verbose=opt.verbose)
-
-	# switch_cabling, sw2rus, SW2BUS, IBHOSTCABLING = getDAQ2Inventory(
-	# 	                                              opt.ibInventoryFile)
-	# missingFEROLs = readFEDRUCabling(verbose=0)
+	daq2HWInfo = daq2HardwareInfo(gecabling=opt.geInventoryFile,
+		                           ibcabling=opt.ibInventoryFile,
+                                   geswitchmask=opt.whiteListGE,
+                                   ibswitchmask=opt.whiteListIB,
+		                           verbose=opt.verbose)
 
 	## Print out what we have
 	print  50*'-'
 	if opt.verbose:
-		for switch in daq2Cabling.ge_switch_cabling.keys():
+		for switch in daq2HWInfo.ge_switch_cabling.keys():
 			print switch
-			for frlpc in daq2Cabling.getListOfFRLPCs(switch, canonical=opt.canonical):
-				print "%s with %2d FEROLs" % (frlpc, len(daq2Cabling.frlpc_cabling[frlpc]))
-			for ru in [ru for ru in daq2Cabling.ge_switch_cabling[switch]
+			for frlpc in daq2HWInfo.getListOfFRLPCs(switch, canonical=opt.canonical):
+				print "%s with %2d FEROLs" % (frlpc, len(daq2HWInfo.frlpc_cabling[frlpc]))
+			for ru in [ru for ru in daq2HWInfo.ge_switch_cabling[switch]
 			                              if ru.startswith('ru-')]:
 				print ru
 			print 50*'-'
@@ -78,20 +74,20 @@ if __name__ == "__main__":
 	symbolMaps = []
 
 	## Generate the FRL - RU - BU links
-	bus = dict((ibsw,daq2Cabling.getBUs(ibsw, bunchBy=opt.nBUs))
-		                  for ibsw in daq2Cabling.switch_cabling.keys())
-	rus = dict((ethsw,daq2Cabling.getRUs(ethsw))
-		                  for ethsw in daq2Cabling.ge_switch_cabling.keys())
-	frls = dict((frlpc,daq2Cabling.getFRLBunches(frlpc, bunchBy=opt.nFRLs,
+	bus = dict((ibsw,daq2HWInfo.getBUs(ibsw, bunchBy=opt.nBUs))
+		                  for ibsw in daq2HWInfo.ib_switch_cabling.keys())
+	rus = dict((ethsw,daq2HWInfo.getRUs(ethsw))
+		                  for ethsw in daq2HWInfo.ge_switch_cabling.keys())
+	frls = dict((frlpc,daq2HWInfo.getFRLBunches(frlpc, bunchBy=opt.nFRLs,
 		         canonical=opt.canonical))
-		                  for ethsw in daq2Cabling.ge_switch_cabling.keys()
-		                  for frlpc in daq2Cabling.getListOfFRLPCs(ethsw,
+		                  for ethsw in daq2HWInfo.ge_switch_cabling.keys()
+		                  for frlpc in daq2HWInfo.getListOfFRLPCs(ethsw,
 		                  	                    canonical=opt.canonical))
 
 	## loop on eth switches:
-	for switch in daq2Cabling.ge_switch_cabling.keys():
-		for frlpc in daq2Cabling.getListOfFRLPCs(switch, canonical=opt.canonical):
-			totalfrls = len(daq2Cabling.frlpc_cabling[frlpc])
+	for switch in daq2HWInfo.ge_switch_cabling.keys():
+		for frlpc in daq2HWInfo.getListOfFRLPCs(switch, canonical=opt.canonical):
+			totalfrls = len(daq2HWInfo.frlpc_cabling[frlpc])
 			while(True):
 				try:
 					frlbunch = frls[frlpc].next()
@@ -101,7 +97,7 @@ if __name__ == "__main__":
 						ru = rus[switch].next()
 
 						try:
-							bubunch = bus[daq2Cabling.host_cabling[ru][0]].next()
+							bubunch = bus[daq2HWInfo.host_cabling[ru][0]].next()
 						except StopIteration:
 							if opt.verbose:
 								print ("   Missing %2d FEROLs of %s "
@@ -125,7 +121,7 @@ if __name__ == "__main__":
 		print "Generated %d symbolmaps" % len(symbolMaps)
 		print "Covered %d FEROLs total" % len([x for m in symbolMaps
 			                                          for x in m[0]])
-		print "Missing frlpc for %d FEROLs" % len(daq2Cabling.missingFEROLs)
+		print "Missing frlpc for %d FEROLs" % len(daq2HWInfo.missingFEROLs)
 		print 50*'-'
 
 	## Now write the symbolmaps:
@@ -142,14 +138,14 @@ if __name__ == "__main__":
 			usedBUs += bus
 		nMaps += 1
 
-		outtag = "%s_%s" % (daq2Cabling.ferol_cabling[frls[0]][6:-3], ru[3:-3])
+		outtag = "%s_%s" % (frls[0].crate.lower(), ru[3:-3])
 		outputFile = '%s/daq2Symbolmap_%s.txt' % (opt.outDir, outtag)
 		with open(outputFile, 'w') as outfile:
 			outfile.write(HEADER)
 			outfile.write('\n\n')
 
 			for n,frl in enumerate(frls):
-				writeEntry(outfile, 'FEROLCONTROLLER', daq2Cabling.ferol_cabling[frl], n)
+				writeEntry(outfile, 'FEROLCONTROLLER', frl.frlpc, n)
 			outfile.write('\n')
 
 			writeEntry(outfile, 'RU', ru, 0, addFRLHN=True)
