@@ -2,6 +2,7 @@
 import sys, os
 import re
 
+from pprint import pprint
 from os import path
 
 sys.path.insert(0,path.abspath(path.join(
@@ -184,9 +185,16 @@ class daq2Plotter(object):
 					for size in data_dict.keys():
 						newrate = [a/nrus for a in data_dict[size]]
 						data_dict[size] = newrate
+				elif builder == 'EvB': ## EvB input emulator
+					## rate is rate from EVM, size is superfrag size from BU
+					for size in data_dict.keys():
+						# print builder, nbus
+						newrate = [a for a in data_dict[size]]
+						data_dict[size] = newrate
 				else:
 					## For gevb2g rate is rate of events built in each BU,
 					## but we added them up before, so we have to divide now
+					## to get the average
 					for size in data_dict.keys():
 						newrate = [a/nbus for a in data_dict[size]]
 						data_dict[size] = newrate
@@ -247,8 +255,8 @@ class daq2Plotter(object):
 					fragsize = float(size)
 					sufragsize = nrus*fragsize
 				if builder == 'EvB':
-					fragsize = float(size)
-					sufragsize = nrus*fragsize
+					sufragsize = float(size)
+					fragsize = sufragsize
 			else:
 				fragsize    = eventsize/nstreams
 				sufragsize  = eventsize/nrus
