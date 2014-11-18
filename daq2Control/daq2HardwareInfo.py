@@ -17,14 +17,28 @@ def addDictionaries(original, to_be_added):
 
 ######################################################################
 class FEROL(object):
-	def __init__(self, frlpc, slot, fedid1, fedid2, system, crate, switch):
-		self.frlpc  = frlpc
-		self.slot   = slot
-		self.fedid1 = fedid1
-		self.fedid2 = fedid2
+	def __init__(self, frlpc, slot, fedIds, system, crate, switch):
+		self.frlpc      = frlpc
+		self.slotNumber = int(slot)
+		self.fedIds = fedIds
 		self.system = system
 		self.crate  = crate
 		self.switch = switch
+		self.sourceIp = None
+		self.nstreams = 0
+
+		fed1, fed2 = fedIds
+		if fed1: self.nstreams = 2
+		if fed2: self.nstreams = 1
+		self.ruindex = -1
+
+	def __str__(self):
+		string = "PC %17s Slot: %2d RU: %d FEDs:"
+		if self.nstreams == 2:
+			string += '%s, %s' % (self.fedIds[0], self.fedIds[1])
+		if self.nstreams == 1:
+			string += '%s'     % (self.fedIds[0])
+		return string % (self.frlpc, self.slotNumber, self.ruindex)
 
 
 ######################################################################
@@ -50,17 +64,20 @@ class daq2HardwareInfo(object):
 		self.frlpc_cabling     = {} ## frlpc to list of ferols
 		self.ferol_cabling     = {} ## ferol to corresponding frlpc
 		self.missingFEROLs     = [] ## ferols with unknown frlpc
+		self.ge_host_cabling   = {} ## hostname to ge switch
 
 		self.ib_switch_cabling = {} ## ib switch to port to list of conn. devices
 		self.ru_inventory      = {} ## ib switch to list of RUs
 		self.bu_inventory      = {} ## ib switch to list of BUs
-		self.host_cabling      = {} ## hostname to ib switch, port
+		self.ib_host_cabling   = {} ## hostname to ib switch, port
 
 		self.FEROLs = []
 		self.fedid_cabling = {} ## fedid to frlpc
 
 		self.readFEDRUCabling(gecabling)
 		self.readDAQ2Inventory(ibcabling)
+
+		# for frl in sorted(self.FEROLs): print frl
 
 	def readFEDRUCabling(self, filename):
 		"""
@@ -90,6 +107,7 @@ class daq2HardwareInfo(object):
 				spdevice = device.split(',')
 				if len(spdevice) == 1 and device.startswith('ru-'):
 					self.ge_switch_cabling[switch].append(device)
+					self.ge_host_cabling[device] = switch
 					continue
 				elif len(spdevice) == 4: ## no fedids
 					name, crate, slop, frlpc = spdevice
@@ -108,7 +126,7 @@ class daq2HardwareInfo(object):
 					else:
 						fedid1 = fedid1.lstrip('FED ')
 
-				ferol = FEROL(frlpc, int(slot), fedid1, fedid2, name, crate, switch)
+				ferol = FEROL(frlpc, int(slot), (fedid1, fedid2), name, crate, switch)
 				self.FEROLs.append(ferol)
 				if fedid1:
 					self.fedid_cabling[fedid1] = frlpc
@@ -119,6 +137,7 @@ class daq2HardwareInfo(object):
 					self.ge_switch_cabling[switch].append(frlpc)
 				if not frlpc in self.frlpc_cabling:
 					self.frlpc_cabling[frlpc] = []
+				self.ge_host_cabling[device] = switch
 				self.frlpc_cabling[frlpc].append(ferol)
 				self.ferol_cabling[ferol] = frlpc
 		return True
@@ -176,7 +195,7 @@ class daq2HardwareInfo(object):
 		## Get also the inverted dictionary, hostname to switch, port
 		for switch, ports in self.ib_switch_cabling.iteritems():
 			for port, (hostname,_) in ports.iteritems():
-				self.host_cabling[hostname] = (switch, port)
+				self.ib_host_cabling[hostname] = (switch, port)
 
 	def getFRLBunches(self, frlpc, bunchBy=4, canonical=False):
 		"""
@@ -196,6 +215,9 @@ class daq2HardwareInfo(object):
 		if not canonical:
 			if len(bunch) > 0:
 				yield bunch
+	def getAllRUs(self, switch):
+		return [ru for ru in self.ge_switch_cabling[switch]
+		                            if ru.startswith('ru-')]
 	def getRUs(self, switch):
 		"""
 		Return a RU on the same ETH switch as the frlpc, as long as there are any
