@@ -1,40 +1,12 @@
 #! /usr/bin/env python
 from pprint import pprint
+from daq2CablingInfo import daq2CablingInfo, addDictionaries
+from daq2CablingInfo import getMachines, getMachinesShuffled
 
 HEADER = ("LAUNCHER_BASE_PORT 17777\n"
           "SOAP_BASE_PORT 2000\n"
           "I2O_BASE_PORT 54320\n"
           "FRL_BASE_PORT 55320\n")
-
-def getMachines(inventory,splitBy=-1,verbose=False):
-	"""
-	First take all machines from one switch, then move to the next
-	"""
-	counter = 0
-	for switch in inventory.keys():
-		if verbose: print switch
-		for device in inventory[switch]:
-			if counter == splitBy:
-				if verbose: print 'next switch'
-				counter = 0
-				break
-			if verbose: print '   taking', device
-			yield device
-			counter += 1
-		counter = 0
-def getMachinesShuffled(inventory):
-	"""
-	Take one machine from first switch, second from second,
-	third from third, etc.
-	"""
-	maxlength = max([len(_) for _ in inventory.values()])
-
-	for index in xrange(maxlength):
-		for switch in inventory.keys():
-			try:
-				yield inventory[switch][index]
-			except IndexError:
-				continue
 
 def writeEntry(filehandle, classifier, hostname, index, addFRLHN=False):
 	filehandle.write('%s%d_SOAP_HOST_NAME %s.cms\n' %
@@ -44,83 +16,6 @@ def writeEntry(filehandle, classifier, hostname, index, addFRLHN=False):
 	if addFRLHN:
 		filehandle.write('%s%d_FRL_HOST_NAME %s.fbs0v0.cms\n' %
 			                  (classifier, index, hostname))
-
-def addDictionaries(original, to_be_added):
-	"""
-	Adds two dictionaries of key -> list such that
-	key -> list1 + list2.
-	"""
-	newdict = {}
-	for key,original_list in original.iteritems():
-		try:
-			newdict[key] = sorted(list(set(original_list + to_be_added[key])))
-		except KeyError:
-			print "Could not find key", key, "in second dict"
-	return newdict
-
-def getDAQ2Inventory(filename,onlySwitch=''):
-	"""
-	Reads a file with lines formatted like:
-	switch,port,peerDevice,peerPort,blacklist,comment
-	or
-	switch,port,peerDevice
-	or
-	switch,port
-
-	And returns dictionaries formatted like:
-	switch : {port: (peerDevice, peerPort)},
-	...
-
-	hostname : {(switch, port)}
-
-	Also return two dictionaries for RU's and BU's formatted like:
-	switch : [list of connected RU/BU machines]
-	"""
-	switch_cabling = {} ## switch to port to list of connected devices
-	ru_inventory = {} ## switch to list of RUs
-	bu_inventory = {} ## switch to list of BUs
-
-	with open(filename, 'r') as infile:
-		for line in infile:
-			if line.strip().startswith('#') or len(line.strip()) == 0:
-				continue
-
-			switch,port,device,dport,blisted,comment = [
-			                 _.strip() for _ in line.split(',')]
-
-			## mask switches
-			if not onlySwitch=='':
-				if not onlySwitch in switch: continue
-
-			if port is not '': port = int(port)
-			if dport is not '': dport = int(dport)
-			if blisted is not '': blisted = bool(int(blisted))
-			# print switch,port,device,dport,blisted,comment
-
-			if not switch in switch_cabling.keys():
-				switch_cabling[switch] = {}
-			switch_cabling[switch][port] = (device,dport)
-
-			if device is None or blisted: continue
-			if device.startswith('ru'):
-				if not switch in ru_inventory.keys():
-					ru_inventory[switch] = []
-				ru_inventory[switch].append(device)
-
-			if device.startswith('bu'):
-				if not switch in bu_inventory.keys():
-					bu_inventory[switch] = []
-				bu_inventory[switch].append(device)
-
-	## Get also the inverted dictionary, hostname to switch, port
-	host_cabling = {}
-	for switch, ports in switch_cabling.iteritems():
-		for port, (hostname,_) in ports.iteritems():
-			host_cabling[hostname] = (switch, port)
-
-
-	return switch_cabling, ru_inventory, bu_inventory, host_cabling
-
 
 if __name__ == "__main__":
 	from optparse import OptionParser
@@ -162,9 +57,13 @@ if __name__ == "__main__":
 		               help=("Verbose mode"))
 	(opt, args) = parser.parse_args()
 
-	switch_cabling, ru_inventory, bu_inventory, _ = getDAQ2Inventory(
-		                                              opt.inventoryFile,
-		                                              onlySwitch=opt.switch)
+	daq2Cabling = daq2CablingInfo(ibcabling=opt.inventoryFile,
+		                          ibswitchmask=opt.switch,
+		                          verbose=opt.verbose)
+
+	# switch_cabling, ru_inventory, bu_inventory, _ = getDAQ2Inventory(
+	# 	                                              opt.inventoryFile,
+	# 	                                              onlySwitch=opt.switch)
 
 	# pprint(ru_inventory)
 	# pprint(bu_inventory)
@@ -182,12 +81,12 @@ if __name__ == "__main__":
 		# allMachines = getMachines(full_inventory,
 		# 	                      splitBy=opt.splitBy,
 		# 	                      verbose=opt.verbose)
-		RUs = getMachines(ru_inventory)
-		BUs = getMachines(bu_inventory)
+		RUs = getMachines(daq2Cabling.ru_inventory)
+		BUs = getMachines(daq2Cabling.bu_inventory)
 		if opt.shuffle:
 			# allMachines = getMachinesShuffled(full_inventory)
-			RUs = getMachinesShuffled(ru_inventory)
-			BUs = getMachinesShuffled(bu_inventory)
+			RUs = getMachinesShuffled(daq2Cabling.ru_inventory)
+			BUs = getMachinesShuffled(daq2Cabling.bu_inventory)
 
 		## Write the symbolmap
 		ru_counter, bu_counter = 0,0
@@ -227,6 +126,7 @@ if __name__ == "__main__":
 
 
 		outfile.write('\n\n')
+	print "Wrote symbolmap to", opt.outFile
 
 	exit(0)
 

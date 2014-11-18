@@ -1,7 +1,7 @@
 #! /usr/bin/env python
-from pprint import pprint
-from itertools import cycle
-from makeDAQ2Symbolmap import getDAQ2Inventory, addDictionaries, writeEntry
+from daq2CablingInfo import daq2CablingInfo, addDictionaries
+
+from makeDAQ2Symbolmap import writeEntry
 import os
 
 
@@ -10,112 +10,18 @@ HEADER = ("LAUNCHER_BASE_PORT 17777\n"
           "I2O_BASE_PORT 54320\n"
           "FRL_BASE_PORT 55320\n")
 
-ETHSW2DEVICES = {}
-FRLPC2FEROLS = {}
-FEROL2FRLPC = {}
-IBHOSTCABLING = {}
-SW2BUS = {}
-
-def getFRLBunches(frlpc,bunchBy=4,canonical=False,verbose=False):
-	"""
-	Return a bunch of FRLs from one frlpc
-	"""
-	counter = 0
-	bunch = []
-	for frl in FRLPC2FEROLS[frlpc]:
-		# print frl
-		bunch.append(frl)
-		counter += 1
-		if counter == bunchBy:
-			yield bunch
-			bunch = []
-			counter = 0
-	## Yield the remaining ferols before giving up
-	if not canonical:
-		if len(bunch) > 0:
-			yield bunch
-
-def getRUs(switch,verbose=False):
-	"""
-	Return a RU on the same ETH switch as the frlpc, as long as there are any
-	"""
-	allrus = [ru for ru in ETHSW2DEVICES[switch] if ru.startswith('ru-')]
-	for ru in cycle(allrus):
-		yield ru
-
-def getBUs(ibswitch,bunchBy=4,verbose=False):
-	"""
-	Return a bunch of BUs on the same IB switch as the RU, as
-	long as there are any
-	"""
-	counter = 0
-	bunch = []
-	for bu in cycle(SW2BUS[ibswitch]):
-		# print bu
-		bunch.append(bu)
-		counter += 1
-		if counter == bunchBy:
-			yield bunch
-			bunch = []
-			counter = 0
-
-def readFEDRUCabling(csvFname="2014-10-13-ru-network.csv",verbose=0):
-	"""
-	Fill dictionaries for:
-	   ethswitch -> list of devices (rus, FEROLs)
-	   frlpc -> list of FEROLs
-	"""
-	missingFEROLS = []
-	with open(csvFname, 'r') as infile:
-		for line in infile:
-			switch,device = line.strip().split(';')
-			if not switch in ETHSW2DEVICES:
-				ETHSW2DEVICES[switch] = []
-
-			if not 'frlpc' in device and not device.startswith('ru'):
-				missingFEROLS.append((switch, device))
-				if verbose>0:
-					print "Missing frlpc for:",switch, device
-				continue
-
-			spdevice = device.split(',')
-			if len(spdevice) == 1 and device.startswith('ru-'):
-				ETHSW2DEVICES[switch].append(device)
-				continue
-			elif len(spdevice) == 3: ## no frlpc?
-				name, crate, ferolid = spdevice
-			elif len(spdevice) == 4: ## no fedids
-				name, crate, ferolid, frlpc = spdevice
-			elif len(spdevice) == 5: ## one fedid
-				name, crate, ferolid, fedid, frlpc = spdevice
-			elif len(spdevice) == 6: ## two fedid
-				name, crate, ferolid, fed1id, fed2id, frlpc = spdevice
-
-			if not frlpc in ETHSW2DEVICES[switch]:
-				ETHSW2DEVICES[switch].append(frlpc)
-			if not frlpc in FRLPC2FEROLS:
-				FRLPC2FEROLS[frlpc] = []
-			FRLPC2FEROLS[frlpc].append(device)
-			FEROL2FRLPC[device] = frlpc
-	return missingFEROLS
-
-def getListOfFRLPCs(ethswitch, canonical=False):
-	result = []
-	for device in ETHSW2DEVICES[ethswitch]:
-		if device.startswith('frlpc-'):
-			if canonical and len(FRLPC2FEROLS[device]) < 8:
-				continue
-			result.append(device)
-	return result
-
 if __name__ == "__main__":
 	from optparse import OptionParser
 	usage = """[prog] """
 	parser = OptionParser(usage=usage)
-	parser.add_option("-i", "--inventoryFile",
+	parser.add_option("--ibInventoryFile",
 		               default="2014-10-15-infiniband-ports.csv",
-		               action="store", type="string", dest="inventoryFile",
-		               help=("Inventory file [default: %default]"))
+		               action="store", type="string", dest="ibInventoryFile",
+		               help=("IB inventory file [default: %default]"))
+	parser.add_option("--geInventoryFile",
+		               default="2014-10-13-ru-network.csv",
+		               action="store", type="string", dest="geInventoryFile",
+		               help=("40 GE inventory file [default: %default]"))
 	parser.add_option("-o", "--outDir", default="daq2FRLRUBUMaps/",
 		               action="store", type="string", dest="outDir",
 		               help=("Output directory [default: %default]"))
@@ -128,6 +34,14 @@ if __name__ == "__main__":
 	parser.add_option("--nFRLs", default=4, action="store", type="int",
 		               dest="nFRLs",
 		               help=("Number of FRLs [default: %default]"))
+	parser.add_option("--whiteListGESwitch", default="",
+		               action="store", type="string", dest="whiteListGE",
+		               help=("Use only machines from these 40GE switches "
+		               	     "[default: use all]"))
+	parser.add_option("--whiteListIBSwitch", default="",
+		               action="store", type="string", dest="whiteListIB",
+		               help=("Use only machines from these IB switches "
+		               	     "[default: use all]"))
 	parser.add_option("-v", "--verbose", default=False,
 		               action="store_true", dest="verbose",
 		               help=("Verbose mode"))
@@ -139,18 +53,24 @@ if __name__ == "__main__":
 		               help=("Only use exact numbers of FRLs"))
 	(opt, args) = parser.parse_args()
 
-	switch_cabling, sw2rus, SW2BUS, IBHOSTCABLING = getDAQ2Inventory(
-		                                              opt.inventoryFile)
-	missingFEROLs = readFEDRUCabling(verbose=0)
+	daq2Cabling = daq2CablingInfo(gecabling=opt.geInventoryFile,
+		                          ibcabling=opt.ibInventoryFile,
+                                  geswitchmask=opt.whiteListGE,
+                                  ibswitchmask=opt.whiteListIB,
+		                          verbose=opt.verbose)
+
+	# switch_cabling, sw2rus, SW2BUS, IBHOSTCABLING = getDAQ2Inventory(
+	# 	                                              opt.ibInventoryFile)
+	# missingFEROLs = readFEDRUCabling(verbose=0)
 
 	## Print out what we have
 	print  50*'-'
 	if opt.verbose:
-		for switch in ETHSW2DEVICES.keys():
+		for switch in daq2Cabling.ge_switch_cabling.keys():
 			print switch
-			for frlpc in getListOfFRLPCs(switch, canonical=opt.canonical):
-				print "%s with %2d FEROLs" % (frlpc, len(FRLPC2FEROLS[frlpc]))
-			for ru in [ru for ru in ETHSW2DEVICES[switch]
+			for frlpc in daq2Cabling.getListOfFRLPCs(switch, canonical=opt.canonical):
+				print "%s with %2d FEROLs" % (frlpc, len(daq2Cabling.frlpc_cabling[frlpc]))
+			for ru in [ru for ru in daq2Cabling.ge_switch_cabling[switch]
 			                              if ru.startswith('ru-')]:
 				print ru
 			print 50*'-'
@@ -158,20 +78,20 @@ if __name__ == "__main__":
 	symbolMaps = []
 
 	## Generate the FRL - RU - BU links
-	bus = dict((ibsw,getBUs(ibsw, bunchBy=opt.nBUs))
-		                  for ibsw in switch_cabling.keys())
-	rus = dict((ethsw,getRUs(ethsw))
-		                  for ethsw in ETHSW2DEVICES.keys())
-	frls = dict((frlpc,getFRLBunches(frlpc, bunchBy=opt.nFRLs,
+	bus = dict((ibsw,daq2Cabling.getBUs(ibsw, bunchBy=opt.nBUs))
+		                  for ibsw in daq2Cabling.switch_cabling.keys())
+	rus = dict((ethsw,daq2Cabling.getRUs(ethsw))
+		                  for ethsw in daq2Cabling.ge_switch_cabling.keys())
+	frls = dict((frlpc,daq2Cabling.getFRLBunches(frlpc, bunchBy=opt.nFRLs,
 		         canonical=opt.canonical))
-		                  for ethsw in ETHSW2DEVICES.keys()
-		                  for frlpc in getListOfFRLPCs(ethsw,
+		                  for ethsw in daq2Cabling.ge_switch_cabling.keys()
+		                  for frlpc in daq2Cabling.getListOfFRLPCs(ethsw,
 		                  	                    canonical=opt.canonical))
 
 	## loop on eth switches:
-	for switch in ETHSW2DEVICES.keys():
-		for frlpc in getListOfFRLPCs(switch, canonical=opt.canonical):
-			totalfrls = len(FRLPC2FEROLS[frlpc])
+	for switch in daq2Cabling.ge_switch_cabling.keys():
+		for frlpc in daq2Cabling.getListOfFRLPCs(switch, canonical=opt.canonical):
+			totalfrls = len(daq2Cabling.frlpc_cabling[frlpc])
 			while(True):
 				try:
 					frlbunch = frls[frlpc].next()
@@ -181,7 +101,7 @@ if __name__ == "__main__":
 						ru = rus[switch].next()
 
 						try:
-							bubunch = bus[IBHOSTCABLING[ru][0]].next()
+							bubunch = bus[daq2Cabling.host_cabling[ru][0]].next()
 						except StopIteration:
 							if opt.verbose:
 								print ("   Missing %2d FEROLs of %s "
@@ -205,7 +125,7 @@ if __name__ == "__main__":
 		print "Generated %d symbolmaps" % len(symbolMaps)
 		print "Covered %d FEROLs total" % len([x for m in symbolMaps
 			                                          for x in m[0]])
-		print "Missing frlpc for %d FEROLs" % len(missingFEROLs)
+		print "Missing frlpc for %d FEROLs" % len(daq2Cabling.missingFEROLs)
 		print 50*'-'
 
 	## Now write the symbolmaps:
@@ -222,14 +142,14 @@ if __name__ == "__main__":
 			usedBUs += bus
 		nMaps += 1
 
-		outtag = "%s_%s" % (FEROL2FRLPC[frls[0]][6:-3], ru[3:-3])
+		outtag = "%s_%s" % (daq2Cabling.ferol_cabling[frls[0]][6:-3], ru[3:-3])
 		outputFile = '%s/daq2Symbolmap_%s.txt' % (opt.outDir, outtag)
 		with open(outputFile, 'w') as outfile:
 			outfile.write(HEADER)
 			outfile.write('\n\n')
 
 			for n,frl in enumerate(frls):
-				writeEntry(outfile, 'FEROLCONTROLLER', FEROL2FRLPC[frl], n)
+				writeEntry(outfile, 'FEROLCONTROLLER', daq2Cabling.ferol_cabling[frl], n)
 			outfile.write('\n')
 
 			writeEntry(outfile, 'RU', ru, 0, addFRLHN=True)
