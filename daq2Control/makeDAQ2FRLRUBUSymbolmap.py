@@ -97,7 +97,7 @@ if __name__ == "__main__":
 						ru = rus[switch].next()
 
 						try:
-							bubunch = bus[daq2HWInfo.host_cabling[ru][0]].next()
+							bubunch = bus[daq2HWInfo.ib_host_cabling[ru][0]].next()
 						except StopIteration:
 							if opt.verbose:
 								print ("   Missing %2d FEROLs of %s "
