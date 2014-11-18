@@ -10,7 +10,9 @@ def fedIdGenerator(maxstreams, startid=600):
 
 def split_list(alist, wanted_parts=1):
 	length = len(alist)
-	return [ alist[i*length // wanted_parts: (i+1)*length // wanted_parts] for i in range(wanted_parts) ]
+	start = alist[i*length // wanted_parts
+	end = (i+1)*length // wanted_parts
+	return [start:end] for i in range(wanted_parts) ]
 
 ######################################################################
 class FRLNode(object):
@@ -55,32 +57,44 @@ class FRLNode(object):
 		rack_to_host = {1:19,2:28,3:37}
 		if self.rack == 0:
 			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[1], (index+1)))
 			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[2], (index-15)))
 			if index >= 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-31))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[3], (index-31)))
 		elif self.rack == 1:
 			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[1], (index+1)))
 			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index-15))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[2], (index-15)))
 			if index >= 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-31))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[3], (index-31)))
 		elif self.rack == 2:
 			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[2], (index+1))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[2], (index+1)))
 			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[3], (index-15)))
 		elif self.rack == 13:
 			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[1], (index+1))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[1], (index+1)))
 			if index >= 16 and index < 32:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[3], (index-15))
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[3], (index-15)))
 		else:
 			if index < 16:
-				return 'dvferol-c2f32-%d-%02d.dvfbs2v0.cms' % (rack_to_host[self.rack], (index+1))
-		## TODO Automatize retrieving of basename and datanet name, see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
+				return ('dvferol-c2f32-%d-%02d.dvfbs2v0.cms' %
+					                     (rack_to_host[self.rack], (index+1)))
+		## TODO Automatize retrieving of basename and datanet name,
+		## see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
 
 ######################################################################
 class RUNode(object):
@@ -122,7 +136,8 @@ class daq2FEDConfiguration(object):
 		try:
 			ru = self.rus[self.frl_index_to_ru_index[index]]
 		except KeyError:
-			printError("Missing RU assignment: could not find RU for FRL with index %d"%index, self)
+			printError("Missing RU assignment: could not find RU for FRL "
+				       "with index %d"%index, self)
 		ru.addFRL(frl)
 		frl.ruindex = ru.index
 
@@ -134,7 +149,9 @@ class daq2FEDConfiguration(object):
 
 		## Add the ferols, assigning each to a RU
 		for index in range(self.nfrls):
-			frl = FRLNode(index=index, rack=self.ferolRack, nstreams=self.strpfrl)
+			frl = FRLNode(index=index,
+				          rack=self.ferolRack,
+				          nstreams=self.strpfrl)
 			self.assignFRLToRU(index, frl)
 			self.frls.append(frl)
 
@@ -143,16 +160,22 @@ class daq2FEDConfiguration(object):
 		fed_to_efedslot = {}
 		for n,fed in enumerate(self.getAllFedIds()):
 			if fed >  fedid0+23: break
-			if fed <  fedid0+8:                      fed_to_efedslot[fed] = 2*(n+1)
-			if fed >= fedid0+8  and fed < fedid0+16: fed_to_efedslot[fed] = 2*(n+1)-16
-			if fed >= fedid0+16 and fed < fedid0+24: fed_to_efedslot[fed] = 2*(n+1)-32
+			if fed <  fedid0+8:
+				fed_to_efedslot[fed] = 2*(n+1)
+			if fed >= fedid0+8  and fed < fedid0+16:
+				fed_to_efedslot[fed] = 2*(n+1)-16
+			if fed >= fedid0+16 and fed < fedid0+24:
+				fed_to_efedslot[fed] = 2*(n+1)-32
 
 		## FED to eFED/FMM slice distribution
 		allfedids = self.getAllFedIds()
 		FEDs = []
-		FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids if fed <  fedid0+8 ]
-		FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids if fed >= fedid0+8  and fed < fedid0+16]
-		FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids if fed >= fedid0+16 and fed < fedid0+24]
+		FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids
+		                              if fed <  fedid0+8 ]
+		FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids
+		                              if fed >= fedid0+8  and fed < fedid0+16]
+		FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids
+		                              if fed >= fedid0+16 and fed < fedid0+24]
 
 		if self.verbose>1: print 70*'-'
 		if self.verbose>1:
@@ -161,9 +184,12 @@ class daq2FEDConfiguration(object):
 				print ' %3d | %d     | %2d' %(fed,slice,efed_slot)
 		self.FEDConfiguration = FEDs
 		efeds = []
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 0])
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 1])
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration if slice == 2])
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		                                                      if slice == 0])
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		                                                      if slice == 1])
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		                                                      if slice == 2])
 		self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
 		self.nSlices = len(self.eFEDs)
 

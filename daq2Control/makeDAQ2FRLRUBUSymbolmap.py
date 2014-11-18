@@ -45,7 +45,8 @@ def getRUs(switch,verbose=False):
 
 def getBUs(ibswitch,bunchBy=4,verbose=False):
 	"""
-	Return a bunch of BUs on the same IB switch as the RU, as long as there are any
+	Return a bunch of BUs on the same IB switch as the RU, as
+	long as there are any
 	"""
 	counter = 0
 	bunch = []
@@ -71,7 +72,6 @@ def readFEDRUCabling(csvFname="2014-10-13-ru-network.csv",verbose=0):
 			if not switch in ETHSW2DEVICES:
 				ETHSW2DEVICES[switch] = []
 
-			# sw-eth-c2e24-38-01 - TK TEC+,crate S1C07c,FEROL 4,FEDs 287,321,frlpc-s1d06-24-01
 			if not 'frlpc' in device and not device.startswith('ru'):
 				missingFEROLS.append((switch, device))
 				if verbose>0:
@@ -150,7 +150,8 @@ if __name__ == "__main__":
 			print switch
 			for frlpc in getListOfFRLPCs(switch, canonical=opt.canonical):
 				print "%s with %2d FEROLs" % (frlpc, len(FRLPC2FEROLS[frlpc]))
-			for ru in [ru for ru in ETHSW2DEVICES[switch] if ru.startswith('ru-')]:
+			for ru in [ru for ru in ETHSW2DEVICES[switch]
+			                              if ru.startswith('ru-')]:
 				print ru
 			print 50*'-'
 
@@ -165,7 +166,7 @@ if __name__ == "__main__":
 		         canonical=opt.canonical))
 		                  for ethsw in ETHSW2DEVICES.keys()
 		                  for frlpc in getListOfFRLPCs(ethsw,
-		                  	                           canonical=opt.canonical))
+		                  	                    canonical=opt.canonical))
 
 	## loop on eth switches:
 	for switch in ETHSW2DEVICES.keys():
@@ -183,12 +184,14 @@ if __name__ == "__main__":
 							bubunch = bus[IBHOSTCABLING[ru][0]].next()
 						except StopIteration:
 							if opt.verbose:
-								print "   Missing %2d FEROLs of %s (out of BUs):" % (totalfrls, frlpc)
+								print ("   Missing %2d FEROLs of %s "
+									   "(out of BUs):" % (totalfrls, frlpc))
 							break
 
 					except StopIteration:
 						if opt.verbose:
-							print "   Missing %2d FEROLs of %s: (out of RUs)" % (totalfrls, frlpc)
+							print ("   Missing %2d FEROLs of %s: "
+								   "(out of RUs)" % (totalfrls, frlpc))
 						break
 
 				except StopIteration:
@@ -200,7 +203,8 @@ if __name__ == "__main__":
 
 	if opt.verbose:
 		print "Generated %d symbolmaps" % len(symbolMaps)
-		print "Covered %d FEROLs total" % len([x for m in symbolMaps for x in m[0]])
+		print "Covered %d FEROLs total" % len([x for m in symbolMaps
+			                                          for x in m[0]])
 		print "Missing frlpc for %d FEROLs" % len(missingFEROLs)
 		print 50*'-'
 
