@@ -97,9 +97,26 @@ class FRLNode(object):
 		## see ~pzejdl/src/ferol/dvfrlpc-C2F32-09-01/feroltest/getFerolIP.sh
 
 ######################################################################
-class RUNode(object):
-	def __init__(self, index):
+class FRLProdNode(FRLNode):
+	def __init__(self, index, rack, fedid1, fedid2):
 		self.index = index
+		self.frlpc = rack
+		self.nstreams = len([x for x in [fedid1, fedid2] if x is not None])
+
+		self.sourceIp   = 'dvferol-%s.dvfbs2v0.cms'%rack.lstrip('frlpc-')
+		self.slotNumber = index
+		self.fedIds     = (fedid1, fedid2)
+		self.ruindex = -1
+	def getSourceIp(self, index):
+		return self.sourceIp
+	def getSlotNumber(self, index):
+		return self.slotNumber
+
+######################################################################
+class RUNode(object):
+	def __init__(self, index, hostname=''):
+		self.index = index
+		self.hostname = hostname
 		self.frls = []
 
 	def addFRL(self, frl):
@@ -202,4 +219,104 @@ class daq2FEDConfiguration(object):
 
 	def getAllFedIds(self):
 		return [fed for frl in self.frls for fed in frl.fedIds]
+
+######################################################################
+from daq2HardwareInfo import daq2HardwareInfo
+
+class daq2ProdFEDConfiguration(daq2FEDConfiguration):
+	"""Helper class to distribute FEDs to RUs"""
+	def __init__(self, frlpc, hwInfo, nfrls=16, nrus=2, verbose=0):
+		self.verbose=verbose
+		self.nfrls = nfrls
+		self.nrus = nrus
+		self.frlpc = frlpc
+		try:
+			self.allFerols = hwInfo.frlpc_cabling[frlpc]
+			self.allRUs = hwInfo.getAllRUs(hwInfo.ge_host_cabling[frlpc])
+		except KeyError:
+			printError('FRLPC %s not found' % frlpc, self)
+
+		## try nfrls > allferols
+
+		self.frls = []
+		self.rus  = []
+
+		self.frl_index_to_ru_index = {}
+
+		self.makeFRLtoRUAssignments()
+		self.makeFEDConfiguration()
+
+		if verbose>0:
+			print 70*'-'
+			for frl in self.frls: print frl
+
+	def assignFRLToRU(self, index, frl):
+		try:
+			ru = self.rus[self.frl_index_to_ru_index[index]]
+		except KeyError:
+			printError("Missing RU assignment: could not find RU for FRL "
+				       "with index %d"%index, self)
+		ru.addFRL(frl)
+		frl.ruindex = ru.index
+
+	def makeFEDConfiguration(self):
+		## Add the RUs
+		for index in range(self.nrus):
+			ru = RUNode(index)
+			ru.hostname = self.allRUs[index]
+			self.rus.append(ru)
+
+		## Add the ferols, assigning each to a RU
+		for ferol in self.allFerols:
+			frl = FRLProdNode(index=ferol.slotNumber,
+			                  fedid1=ferol.fedIds[0],
+			                  fedid2=ferol.fedIds[1],
+				              rack=self.frlpc)
+			self.assignFRLToRU(index, frl)
+			self.frls.append(frl)
+
+
+
+
+
+
+
+
+		fedid0 = FEDID0
+		## FED to eFED slot distribution:
+		fed_to_efedslot = {}
+		for n,fed in enumerate(self.getAllFedIds()):
+			if fed >  fedid0+23: break
+			if fed <  fedid0+8:
+				fed_to_efedslot[fed] = 2*(n+1)
+			if fed >= fedid0+8  and fed < fedid0+16:
+				fed_to_efedslot[fed] = 2*(n+1)-16
+			if fed >= fedid0+16 and fed < fedid0+24:
+				fed_to_efedslot[fed] = 2*(n+1)-32
+
+		## FED to eFED/FMM slice distribution
+		allfedids = self.getAllFedIds()
+		FEDs = []
+		FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids
+		                              if fed <  fedid0+8 ]
+		FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids
+		                              if fed >= fedid0+8  and fed < fedid0+16]
+		FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids
+		                              if fed >= fedid0+16 and fed < fedid0+24]
+
+		if self.verbose>1: print 70*'-'
+		if self.verbose>1:
+			print ' FED | Slice | eFED slot'
+			for fed,slice,efed_slot in FEDs:
+				print ' %3d | %d     | %2d' %(fed,slice,efed_slot)
+		self.FEDConfiguration = FEDs
+		efeds = []
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		                                                      if slice == 0])
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		                                                      if slice == 1])
+		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		                                                      if slice == 2])
+		self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
+		self.nSlices = len(self.eFEDs)
 
