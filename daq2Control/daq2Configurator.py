@@ -765,7 +765,7 @@ class daq2Configurator(object):
 
 		return [[geoslot, inputmask, inputlabel, outputlabel, label]]
 
-	def makeRU(self, ru):
+	def makeRU(self, ru, isEVM=False):
 		fragmentname = 'RU/%s/RU_context.xml'%self.evbns
 		ru_context = elementFromFile(self.fragmentdir+fragmentname)
 
@@ -809,7 +809,7 @@ class daq2Configurator(object):
 		item_element = elementFromFile(self.fragmentdir+
 			                           '/RU/RU_frl_routing.xml')
 		classname_to_add = ("%s::EVM"%self.evbns if
-			                ru.index == 0 and self.evbns == 'evb' else
+			                isEVM and self.evbns == 'evb' else
 			                "%s::RU"%self.evbns)
 		item_element.find(QN(pt_frl_ns,'className').text).text = (
 			                                             classname_to_add)
@@ -827,7 +827,7 @@ class daq2Configurator(object):
 		ru_app = elementFromFile(filename=self.fragmentdir+
 			                     '/RU/%s/RU_application.xml'%self.evbns)
 		## make the first one an EVM in case of EvB
-		if self.evbns == 'evb' and ru.index == 0:
+		if self.evbns == 'evb' and isEVM:
 			ru_app = elementFromFile(filename=self.fragmentdir+
 				                     '/RU/evb/RU_application_EVM.xml')
 		ru_context.insert(7,ru_app)
@@ -836,7 +836,7 @@ class daq2Configurator(object):
 		## In case of EvB, add expected fedids
 		if self.evbns == 'evb':
 			ruevbappns = (self.xdaqappns%'evb::RU' if
-				          ru.index>0 else self.xdaqappns%'evb::EVM')
+				          not isEVM else self.xdaqappns%'evb::EVM')
 			fedSourceIds = ru_app.find(QN(ruevbappns, 'properties').text+'/'+
 				                       QN(ruevbappns, 'fedSourceIds').text)
 			fedSourceIds.attrib[QN(self.soapencns, 'arrayType').text] = (
@@ -867,7 +867,8 @@ class daq2Configurator(object):
 		return ru_context
 	def addRUs(self, nrus):
 		for ru in self.FEDConfig.rus:
-			self.config.append(self.makeRU(ru))
+			evm = (ru.index==0)
+			self.config.append(self.makeRU(ru,isEVM=evm))
 	def makeEVM(self):
 		index = 0
 		fragmentname = 'EVM/EVM_context.xml'
