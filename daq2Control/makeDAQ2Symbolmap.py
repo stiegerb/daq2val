@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 from pprint import pprint
-from daq2CablingInfo import daq2CablingInfo, addDictionaries
-from daq2CablingInfo import getMachines, getMachinesShuffled
+from daq2HardwareInfo import daq2HardwareInfo, addDictionaries
+from daq2HardwareInfo import getMachines, getMachinesShuffled
 
 HEADER = ("LAUNCHER_BASE_PORT 17777\n"
           "SOAP_BASE_PORT 2000\n"
@@ -57,9 +57,12 @@ if __name__ == "__main__":
 		               help=("Verbose mode"))
 	(opt, args) = parser.parse_args()
 
-	daq2Cabling = daq2CablingInfo(ibcabling=opt.inventoryFile,
-		                          ibswitchmask=opt.switch,
-		                          verbose=opt.verbose)
+	switchmask = []
+	if len(opt.switch):
+		switchmask = opt.switch.split(',')
+	hwInfo = daq2HardwareInfo(ibcabling=opt.inventoryFile,
+		                      ibswitchmask=switchmask,
+		                      verbose=opt.verbose)
 
 	# switch_cabling, ru_inventory, bu_inventory, _ = getDAQ2Inventory(
 	# 	                                              opt.inventoryFile,
@@ -81,12 +84,12 @@ if __name__ == "__main__":
 		# allMachines = getMachines(full_inventory,
 		# 	                      splitBy=opt.splitBy,
 		# 	                      verbose=opt.verbose)
-		RUs = getMachines(daq2Cabling.ru_inventory)
-		BUs = getMachines(daq2Cabling.bu_inventory)
+		RUs = getMachines(hwInfo.ru_inventory)
+		BUs = getMachines(hwInfo.bu_inventory)
 		if opt.shuffle:
 			# allMachines = getMachinesShuffled(full_inventory)
-			RUs = getMachinesShuffled(daq2Cabling.ru_inventory)
-			BUs = getMachinesShuffled(daq2Cabling.bu_inventory)
+			RUs = getMachinesShuffled(hwInfo.ru_inventory)
+			BUs = getMachinesShuffled(hwInfo.bu_inventory)
 
 		## Write the symbolmap
 		ru_counter, bu_counter = 0,0
