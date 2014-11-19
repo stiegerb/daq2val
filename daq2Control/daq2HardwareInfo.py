@@ -1,5 +1,6 @@
 from itertools import cycle
 from pprint import pprint
+from daq2Utils import printError
 
 def addDictionaries(original, to_be_added):
 	"""
@@ -61,7 +62,7 @@ class daq2HardwareInfo(object):
 '''
 	def __init__(self, gecabling="2014-10-13-ru-network.csv",
 		         ibcabling="2014-10-15-infiniband-ports.csv",
-		         geswitchmask="", ibswitchmask="",
+		         geswitchmask=[], ibswitchmask=[],
 		         verbose=0):
 		super(daq2HardwareInfo, self).__init__()
 		self.verbose = verbose
@@ -101,9 +102,8 @@ class daq2HardwareInfo(object):
 				switch,device = line.strip().split(';')
 
 				## Apply mask
-				if len(self.geswitchmask):
-					if not self.geswitchmask in switch:
-						continue
+				if self.geswitchmask and not switch in self.geswitchmask:
+					continue
 
 				if not switch in self.ge_switch_cabling:
 					self.ge_switch_cabling[switch] = []
@@ -178,8 +178,8 @@ class daq2HardwareInfo(object):
 				                 _.strip() for _ in line.split(',')]
 
 				## mask switches
-				if len(self.ibswitchmask):
-					if not self.ibswitchmask in switch: continue
+				if self.ibswitchmask and not switch in self.ibswitchmask:
+					continue
 
 				if port is not '': port = int(port)
 				if dport is not '': dport = int(dport)
@@ -235,6 +235,17 @@ class daq2HardwareInfo(object):
 		                            if ru.startswith('ru-')]
 		for ru in cycle(allrus):
 			yield ru
+	def getAllBUs(self, switch=None):
+		if not switch:
+			return [bu for bulist in self.bu_inventory.values()
+			           for bu in bulist]
+		else:
+			try:
+				return [bu for bu in self.bu_inventory[switch]]
+			except KeyError:
+				printError('IB switch %s not found'% switch, self)
+
+
 	def getBUs(self, ibswitch, bunchBy=4):
 		"""
 		Return a bunch of BUs on the same IB switch as the RU, as

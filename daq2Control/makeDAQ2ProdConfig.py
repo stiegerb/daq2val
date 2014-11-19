@@ -16,19 +16,10 @@ if __name__ == "__main__":
 	from optparse import OptionParser
 	usage = """[prog] """
 	parser = OptionParser(usage=usage)
-	# parser.add_option("-o", "--outDir", default="daq2FRLRUBUMaps/",
-	# 	               action="store", type="string", dest="outDir",
-	# 	               help=("Output directory [default: %default]"))
+	addConfiguratorOptions(parser)
 	parser.add_option("--nBUs", default=42, action="store", type="int",
 		               dest="nBUs",
 		               help=("Number of BUs [default: %default]"))
-	# # parser.add_option("--nRUs", default=1, action="store", type="int",
-	# # 	               dest="nRUs",
-	# # 	               help=("Number of RUs [default: %default]"))
-	# parser.add_option("--nFRLs", default=4, action="store", type="int",
-	# 	               dest="nFRLs",
-	# 	               help=("Number of FRLs [default: %default]"))
-	addConfiguratorOptions(parser)
 	parser.add_option("--ibInventoryFile",
 		               default="2014-10-15-infiniband-ports.csv",
 		               action="store", type="string", dest="ibInventoryFile",
@@ -50,32 +41,23 @@ if __name__ == "__main__":
 		               help=("Only use exact numbers of FRLs"))
 	(opt, args) = parser.parse_args()
 
+	geswitchmask=opt.whiteListGE.split(',') if len(opt.whiteListGE) else []
+	ibswitchmask=opt.whiteListIB.split(',') if len(opt.whiteListIB) else []
+
 	daq2HWInfo = daq2HardwareInfo(gecabling=opt.geInventoryFile,
 		                          ibcabling=opt.ibInventoryFile,
-                                  geswitchmask=opt.whiteListGE,
-                                  ibswitchmask=opt.whiteListIB,
+                                  geswitchmask=geswitchmask,
+                                  ibswitchmask=ibswitchmask,
 		                          verbose=0)
 
-	## Print out what we have
-	# print  50*'-'
-	# if opt.verbose:
-	# 	for switch in daq2HWInfo.ge_switch_cabling.keys():
-	# 		print switch
-	# 		for frlpc in daq2HWInfo.getListOfFRLPCs(switch,
-	# 			                                    canonical=opt.canonical):
-	# 			print "%s with %2d FEROLs" % (frlpc,
-	# 				                 len(daq2HWInfo.frlpc_cabling[frlpc]))
-	# 		for ru in [ru for ru in daq2HWInfo.ge_switch_cabling[switch]
-	# 		                              if ru.startswith('ru-')]:
-	# 			print ru
-	# 		print 50*'-'
-
+	######################################
+	## First make the configs
 	configurator = daq2ProdConfigurator(opt.fragmentDir,
 		                                daq2HWInfo, opt.verbose)
 
 	os.system('mkdir -p %s' % opt.output)
 	configurator.outPutDir = opt.output
-	configurator.enablePauseFrame = opt.enablePauseFrame
+	configurator.enablePauseFrame  = opt.enablePauseFrame
 	configurator.disablePauseFrame = opt.disablePauseFrame
 	configurator.setCorrelatedSeed = opt.setCorrelatedSeed
 	configurator.nbus = opt.nBUs
@@ -84,107 +66,38 @@ if __name__ == "__main__":
 	configurator.ptprot = ('udapl' if opt.useUDAPL  and not
 			                          opt.useIBV else 'ibv')
 
-	configurator.makeSplitConfigs(daq2HWInfo.ge_switch_cabling.keys())
-	# configurator.makeSplitConfigs(['sw-eth-c2e23-20-01', 'sw-eth-c2e24-38-01'])
-	# configurator.makeSplitConfigs(['sw-eth-c2e23-20-01'])
+	fedbuilders = daq2HWInfo.ge_switch_cabling.keys()
+	configurator.makeSplitConfigs(fedbuilders, dry=False)
+
+
+	######################################
+	## Now make the symbolmap
+	outputFileName = os.path.join(opt.output, 'daq2Symbolmap.txt')
+	with open(outputFileName, 'w') as outfile:
+		outfile.write(HEADER)
+		outfile.write('\n\n')
+
+		for n,frl in enumerate(configurator.allFEROLs):
+			writeEntry(outfile, 'FEROLCONTROLLER', frl.frlpc, n)
+		outfile.write('\n')
+
+		for ru in configurator.allRUs:
+			writeEntry(outfile, 'RU', ru.hostname, ru.index, addFRLHN=True)
+		outfile.write('\n')
+
+		allbus = daq2HWInfo.getAllBUs()
+		if opt.nBUs > len(allbus):
+			raise RuntimeError("Not enough BUs in inventory")
+		for n,bu in enumerate(allbus):
+			if n == opt.nBUs: break
+			writeEntry(outfile, 'BU', bu, n)
+		outfile.write('\n')
+		outfile.write('\n\n')
+
+	print "Wrote symbolmap to %s" % (outputFileName)
+	print  70*'-'
 
 	exit(0)
-
-
-
-	# symbolMaps = []
-
-	# ## Generate the FRL - RU - BU links
-	# bus = dict((ibsw,daq2HWInfo.getBUs(ibsw, bunchBy=opt.nBUs))
-	# 	                  for ibsw in daq2HWInfo.ib_switch_cabling.keys())
-	# rus = dict((ethsw,daq2HWInfo.getRUs(ethsw))
-	# 	                  for ethsw in daq2HWInfo.ge_switch_cabling.keys())
-	# frls = dict((frlpc,daq2HWInfo.getFRLBunches(frlpc, bunchBy=opt.nFRLs,
-	# 	         canonical=opt.canonical))
-	# 	                  for ethsw in daq2HWInfo.ge_switch_cabling.keys()
-	# 	                  for frlpc in daq2HWInfo.getListOfFRLPCs(ethsw,
-	# 	                  	                    canonical=opt.canonical))
-
-	# ## loop on eth switches:
-	# for switch in daq2HWInfo.ge_switch_cabling.keys():
-	# 	for frlpc in daq2HWInfo.getListOfFRLPCs(switch,
-	# 		                                    canonical=opt.canonical):
-	# 		totalfrls = len(daq2HWInfo.frlpc_cabling[frlpc])
-	# 		while(True):
-	# 			try:
-	# 				frlbunch = frls[frlpc].next()
-	# 				if opt.canonical and len(frlbunch) != opt.nFRLs:
-	# 					print "Mooooooep"
-	# 				try:
-	# 					ru = rus[switch].next()
-
-	# 					try:
-	# 						bubunch = bus[daq2HWInfo.ib_host_cabling[ru][0]].next()
-	# 					except StopIteration:
-	# 						if opt.verbose:
-	# 							print ("   Missing %2d FEROLs of %s "
-	# 								   "(out of BUs):" % (totalfrls, frlpc))
-	# 						break
-
-	# 				except StopIteration:
-	# 					if opt.verbose:
-	# 						print ("   Missing %2d FEROLs of %s: "
-	# 							   "(out of RUs)" % (totalfrls, frlpc))
-	# 					break
-
-	# 			except StopIteration:
-	# 				## We covered all the FEROLs
-	# 				break
-
-	# 			symbolMaps.append((frlbunch, ru, bubunch))
-	# 			totalfrls-=4
-
-	# if opt.verbose:
-	# 	print "Generated %d symbolmaps" % len(symbolMaps)
-	# 	print "Covered %d FEROLs total" % len([x for m in symbolMaps
-	# 		                                          for x in m[0]])
-	# 	print "Missing frlpc for %d FEROLs" % len(daq2HWInfo.missingFEROLs)
-	# 	print 50*'-'
-
-	# ## Now write the symbolmaps:
-	# # create output dir:
-	# os.system('mkdir -p %s' % opt.outDir)
-
-	# usedRUs, usedBUs = [], []
-	# nMaps = 0
-	# for frls, ru, bus in symbolMaps:
-	# 	if opt.uniqueOnly:
-	# 		if ru in usedRUs or len(set(usedBUs).intersection(bus)) > 0:
-	# 			continue
-	# 		usedRUs.append(ru)
-	# 		usedBUs += bus
-	# 	nMaps += 1
-
-	# 	outtag = "%s_%s" % (frls[0].crate.lower(), ru[3:-3])
-	# 	outputFile = '%s/daq2Symbolmap_%s.txt' % (opt.outDir, outtag)
-	# 	with open(outputFile, 'w') as outfile:
-	# 		outfile.write(HEADER)
-	# 		outfile.write('\n\n')
-
-	# 		for n,frl in enumerate(frls):
-	# 			writeEntry(outfile, 'FEROLCONTROLLER', frl.frlpc, n)
-	# 		outfile.write('\n')
-
-	# 		writeEntry(outfile, 'RU', ru, 0, addFRLHN=True)
-	# 		outfile.write('\n')
-
-	# 		for n,bu in enumerate(bus):
-	# 			writeEntry(outfile, 'BU', bu, n)
-	# 		outfile.write('\n')
-	# 		outfile.write('\n\n')
-
-	# if opt.uniqueOnly:
-	# 	print "Wrote %d unique symbolmaps to %s" % (nMaps, opt.outDir)
-	# else:
-	# 	print "Wrote %d symbolmaps to %s" % (nMaps, opt.outDir)
-	# print  50*'-'
-
-	# exit(0)
 
 
 
