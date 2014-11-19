@@ -465,7 +465,7 @@ def sleep(naptime=0.5,verbose=1,dry=False):
 		stdout.write('\r')
 		stdout.flush()
 def printProgress(step, total, customstr=''):
-	stdout.write("\r%s[%3d %%]" % (customstr, 100*float(step)/float(total)) )
+	stdout.write("\r%s[%3d %%]" % (customstr, 100*float(step+1)/float(total)) )
 	stdout.flush()
 
 
