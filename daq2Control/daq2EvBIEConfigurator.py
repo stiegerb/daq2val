@@ -295,53 +295,6 @@ class daq2EvBIEConfigurator(daq2Configurator):
 
 		return context
 
-	def addRUContextWithEndpoint(self, index):
-		fragmentname = 'RU/evb/RU_context_bare.xml'
-		context = elementFromFile(os.path.join(self.fragmentdir,
-			                                      fragmentname))
-		app = context.find(QN(self.xdaqns,'Application').text)
-		context.remove(app)
-		for mod in context.findall(QN(self.xdaqns,'Module').text):
-			context.remove(mod)
-
-		classname = 'evb::EVM' if index == 0 else 'evb::RU'
-		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
-			                        'class': classname,
-			                        'id':'43',
-			                        'instance':str(index),
-			                        'network':'infini'}))
-		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
-			                        'protocol': 'ibv',
-			                        'service':'i2o',
-			                        'hostname':'RU%d_I2O_HOST_NAME'%(index),
-			                        'port':'RU%d_I2O_PORT'%(index),
-			                        'network':'infini'}))
-		context.set('url', context.get('url')%(index, index))
-		self.config.append(context)
-
-
-	def addBUContextWithEndpoint(self, index):
-		fragmentname = 'BU/BU_context.xml'
-		context = elementFromFile(os.path.join(self.fragmentdir,
-			                                      fragmentname))
-		app = context.find(QN(self.xdaqns,'Application').text)
-		context.remove(app)
-		for mod in context.findall(QN(self.xdaqns,'Module').text):
-			context.remove(mod)
-		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
-			                        'class': 'evb::BU',
-			                        'id':'43',
-			                        'instance':str(index),
-			                        'network':'infini'}))
-		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
-			                        'protocol': 'ibv',
-			                        'service':'i2o',
-			                        'hostname':'BU%d_I2O_HOST_NAME'%(index),
-			                        'port':'BU%d_I2O_PORT'%(index),
-			                        'network':'infini'}))
-		context.set('url', context.get('url')%(index, index))
-		self.config.append(context)
-
 	def makeEVMConfig(self):
 		self.makeSkeleton()
 		## Everything
@@ -349,9 +302,9 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		self.config.append(self.makeRU(0))
 		outputname = 'EVM.xml'
 		for index in xrange(1,self.nrus):
-			self.addRUContextWithEndpoint(index)
+			self.addRUContextWithIBEndpoint(index)
 		for index in xrange(self.nbus):
-			self.addBUContextWithEndpoint(index)
+			self.addBUContextWithIBEndpoint(index)
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
 	def makeRUConfig(self, ruindex):
@@ -359,9 +312,9 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## only one RU, all the BUs
 		self.addI2OProtocol(rus_to_add=[ruindex])
 		self.config.append(self.makeRU(ruindex))
-		self.addRUContextWithEndpoint(0)
+		self.addRUContextWithIBEndpoint(0) ## EVM
 		for index in xrange(self.nbus):
-			self.addBUContextWithEndpoint(index)
+			self.addBUContextWithIBEndpoint(index)
 		outputname = 'RU%d.xml' % ruindex
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
@@ -371,7 +324,7 @@ class daq2EvBIEConfigurator(daq2Configurator):
 		## no RU, only one BU
 		self.addI2OProtocol(rus_to_add=[], bus_to_add=[buindex])
 		self.config.append(self.makeBU(buindex))
-		self.addRUContextWithEndpoint(0)
+		self.addRUContextWithIBEndpoint(0)
 		outputname = 'BU%d.xml' % buindex
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 

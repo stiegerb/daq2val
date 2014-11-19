@@ -3,6 +3,7 @@ import subprocess
 import re
 import time
 from copy import deepcopy
+from pprint import pprint
 
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
@@ -14,6 +15,7 @@ from daq2Utils import printError
 from daq2FEDConfiguration import daq2ProdFEDConfiguration, FRLNode, RUNode
 from daq2Configurator import elementFromFile, addFragmentFromFile
 from daq2Configurator import RU_STARTING_TID, BU_STARTING_TID
+from daq2Configurator import FEROL_OPERATION_MODES
 
 ######################################################################
 from daq2Configurator import daq2Configurator
@@ -24,147 +26,120 @@ class daq2ProdConfigurator(daq2Configurator):
 
 ---------------------------------------------------------------------
 '''
-	def __init__(self, fragmentdir, verbose=5):
+	def __init__(self, fragmentdir, hwInfo, verbose=5):
 		super(daq2ProdConfigurator, self).__init__(fragmentdir,
 			                                       verbose=verbose)
 
-		## These should be passed as options
-		self.enablePauseFrame  = True
-		self.disablePauseFrame = False
-		self.setCWND = -1
-		self.evbns          = 'gevb2g' ## 'gevb2g' or 'evb'
-		self.ptprot         = 'ibv' ## or 'ibv' or 'udapl'
-		self.operation_mode = 'ferol_emulator'
+		self.hwInfo = hwInfo
+		# self.symbMap = symbMap ## can get this info also from hwInfo?
 
-		## 0,1,2,3,13 corresponding to dvfrlpc-c2f32-[09,11,13]-01.cms
-		## (0 is all three, 13 is first 1 then 3)
-		self.ferolRack      = 1
+		self.canonical = False
 
-		self.useGTPe        = False
-		self.useFMMForDAQ2  = False
-		self.useEFEDs       = False
+	def makeFEROLConfig(self, ferol):
+		self.makeSkeleton()
+		## Not sure I need I2O protocol at all here
+		self.addI2OProtocol(rus_to_add=[ferol.ruindex], bus_to_add=[])
 
-		## These should be passed as arguments
-		self.nrus              = 1
-		self.nbus              = 2
-		self.nferols           = 8
-		self.streams_per_ferol = 2
+		self.config.append(self.makeFerolController(ferol))
+		self.addRUContextWithGEEndpoint(ferol.ruindex)
+		outputname = 'FEROLCONTROLLER%d.xml' % ferol.index
+		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
-		## Counters
-		self.eFED_crate_counter = 0
-		self.eFED_app_instance  = 0
+	def makeRUConfig(self, ru):
+		self.makeSkeleton()
+		self.addI2OProtocol(rus_to_add=[ru.index])
 
-	def makeFerolController(self, frl):
-		fragmentname = 'FerolController.xml'
-		ferol = elementFromFile(self.fragmentdir+fragmentname)
-		classname = 'ferol::FerolController'
+		self.config.append(self.makeRU(ru))
+		self.addRUContextWithIBEndpoint(0) ## EVM
+		for index in xrange(self.nbus):
+			self.addBUContextWithIBEndpoint(index)
+		outputname = 'RU%d.xml' % ru.index
+		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
-		fedids   = frl.fedIds
-		physSlot = frl.slotNumber
-		sourceIp = frl.sourceIp
+	def makeBUConfig(self, buindex):
+		self.makeSkeleton()
+		## no RU, only one BU
+		self.addI2OProtocol(rus_to_add=[], bus_to_add=[buindex])
+		self.config.append(self.makeBU(buindex))
+		self.addRUContextWithIBEndpoint(0) ## EVM
+		outputname = 'BU%d.xml' % buindex
+		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
-		self.setPropertyInAppInContext(ferol, classname,
-			                           'slotNumber', physSlot)
-		self.setPropertyInAppInContext(ferol, classname,
-			                           'expectedFedId_0', fedids[0])
+
+	def assignFEROLsToRUs(self, rus, ferols):
+		ferols_rest = [f for f in ferols if f.nstreams == 0]
+		rus_gen     = (r for r in rus)
+
 		try:
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'expectedFedId_1', fedids[1])
-		except IndexError:
-			pass
+			for n,f in enumerate(ferols):
+				# print n,f
+				if n%8==0: ru = rus_gen.next()
+				f.ruindex = ru.index
+				f.runame  = ru.hostname
+				ru.addFRL(f)
 
-		#### This is 'auto' now
-		# self.setPropertyInAppInContext(ferol, classname,
-		# 	                           'SourceIP', sourceIp)
+		except StopIteration:
+			print n,f
+			printError('Running out of RUs for %s'%
+				              self.hwInfo.ge_host_cabling[rus[0].hostname])
 
-		# if frl.nstreams == 1:
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED0', 135000)
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED1', 135000)
-		# if frl.nstreams == 2:
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED0', 62500)
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED1', 62500)
+		if self.verbose>5:
+			for f in ferols_rest:
+				print 'leftover FEROL:', f
+			for r in rus_gen:
+				print 'leftover RU:', r
+	def makeSplitConfigs(self, geswitches):
+		ruindex,ferolindex = 0,0
+		allRUs = []
+		allFEROLs = []
+		for switchname in geswitches:
+			# get a list of frlpcs, ferols, and rus
+			frlpcs = self.hwInfo.getListOfFRLPCs(switchname,
+				                                 canonical=self.canonical)
+			runames = self.hwInfo.getAllRUs(switchname)
 
-		if frl.nstreams == 1:
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'enableStream0', 'true')
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'enableStream1', 'false')
-		if frl.nstreams == 2:
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'enableStream0', 'true')
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'enableStream1', 'true')
+			## Number the RUs
+			RUs_onswitch = []
+			for runame in runames:
+				runode = RUNode(ruindex, hostname=runame)
+				allRUs.append(runode)
+				RUs_onswitch.append(runode)
+				ruindex += 1
 
-		if self.setCorrelatedSeed:
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'Seed_FED0', 12345)
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'Seed_FED1', 23456)
-		else:
-			seed = int(time.time()*10000)%100000
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'Seed_FED0', seed)
-			self.setPropertyInAppInContext(ferol, classname,
-				                           'Seed_FED1', seed+1)
-
-
-		if self.disablePauseFrame:
-			self.setPropertyInAppInContext(ferol, classname,
-			                              'ENA_PAUSE_FRAME', 'false')
-		if self.enablePauseFrame:
-			self.setPropertyInAppInContext(ferol, classname,
-			                               'ENA_PAUSE_FRAME', 'true')
-		if self.setCWND >= 0:
-			self.setPropertyInAppInContext(ferol, classname,
-			                               'TCP_CWND_FED0', self.setCWND)
-		if self.setCWND >= 0:
-			self.setPropertyInAppInContext(ferol, classname,
-			                               'TCP_CWND_FED1', self.setCWND)
-
-		self.setPropertyInAppInContext(ferol, classname, 'DestinationIP',
-			                  'RU%d_FRL_HOST_NAME'%frl.ruindex)
-		self.setPropertyInAppInContext(ferol, classname,
-			                  'TCP_DESTINATION_PORT_FED0',
-			                  'RU%d_FRL_PORT'%frl.ruindex)
-		self.setPropertyInAppInContext(ferol, classname,
-			                  'TCP_DESTINATION_PORT_FED1',
-			                  '60600')
-		## route every second one to port 60600 if there is only one
-		## stream per RU
-		if self.streams_per_ferol==1 and (frl.index+1)%2==0:
-			self.setPropertyInAppInContext(ferol, classname,
-				                  'TCP_DESTINATION_PORT_FED0', '60600')
-		try:
-			self.setPropertyInAppInContext(ferol, classname,
-				     'OperationMode',
-				     FEROL_OPERATION_MODES[self.operation_mode][0])
-			if FEROL_OPERATION_MODES[self.operation_mode][1] is not None:
-				self.setPropertyInAppInContext(ferol, classname,
-					 'FrlTriggerMode',
-					 FEROL_OPERATION_MODES[self.operation_mode][1])
-			else:
-				self.removePropertyInAppInContext(ferol, classname,
-					                              'FrlTriggerMode')
-			self.setPropertyInAppInContext(ferol, classname,
-				     'DataSource',
-				     FEROL_OPERATION_MODES[self.operation_mode][2])
-
-		except KeyError as e:
-			printError('Unknown ferol operation mode "%s"'%
-				        self.operation_mode, instance=self)
-			raise RuntimeError('Unknown ferol operation mode')
+			FEROLs_onswitch = []
+			for frlpc in frlpcs:
+				for ferol in self.hwInfo.getFEROLs(frlpc, haveFEDIDs=1):
+					ferol.index = ferolindex
+					allFEROLs.append(ferol)
+					FEROLs_onswitch.append(ferol)
+					ferolindex += 1
 
 
-		ferol.set('url', ferol.get('url')%(frl.index, frl.index))
+			## Assign FEROLs to RUs
+			self.assignFEROLsToRUs(RUs_onswitch, FEROLs_onswitch)
 
-		return ferol
-	def addFerolControllers(self, nferols, streams_per_ferol=1):
-		for frl in self.FEDConfig.frls:
-			self.config.append(self.makeFerolController(frl))
+			## Remove unused RUs
+			for r in allRUs:
+				if len(r.getFedIds()) == 0: allRUs.remove(r)
+
+		if self.verbose>5:
+			for f in allFEROLs:
+				print f
+
+		if self.verbose>1:
+			for r in allRUs:
+				print r, r.getFedIds()
+
+
+		for ferol in allFEROLs:
+			self.makeFEROLConfig(ferol)
+
+		for ru in allRUs:
+			self.makeRUConfig(ru)
+
+		for n in xrange(self.nbus):
+			self.makeBUConfig(n)
+		exit(0)
 
 	def makeConfig(self, nferols=8, streams_per_ferol=2, nrus=1, nbus=2,
 		           destination='configuration.template.xml'):

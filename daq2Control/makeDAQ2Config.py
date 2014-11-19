@@ -5,8 +5,8 @@ from daq2Utils import getConfig, printWarningWithWait, printError
 
 MAXNEFEDS = 16
 
-def addConfiguratorOption(parser):
-	parser.add_option("--useEvB", default=False, action="store_true",
+def addConfiguratorOptions(parser):
+	parser.add_option("--useEvB", default=True, action="store_true",
 		              dest="useEvB",
 		              help=("Use EvB for event building (default)"))
 	parser.add_option("--useGevb2g", default=False, action="store_true",
@@ -67,10 +67,12 @@ def addConfiguratorOption(parser):
 		              help=("Which ferol rack to use (1,2, or 3) [default: "
 		              	    "%default]. Choose 0 to use all three racks."))
 
-	parser.add_option("--fragmentDir", default='', action="store",
-		              type="string", dest="fragmentDir",
-		              help=("Use config fragments from a directory other than "
-		                    "the default"))
+	workingdir = os.path.dirname(os.path.realpath(__file__))
+	default_fragdir = os.path.join(workingdir,'config_fragments')
+	parser.add_option("--fragmentDir", default=default_fragdir,
+		              action="store", type="string", dest="fragmentDir",
+		              help=("Use config fragments from a directory other "
+		                    "than the default"))
 	parser.add_option("-v", "--verbose", default=1, action="store",
 		              type='int', dest="verbose",
 		              help=("Set the verbose level, [default: %default "
@@ -93,11 +95,6 @@ def getNxNConfig(string=""):
 def main(options, args):
 	nstreams, nrus, nbus, _, strperfrl = getConfig(args[0])
 	nferols = nstreams//strperfrl
-
-	if len(options.fragmentDir) == 0:
-		# By default take the config_fragments dir from the current release
-		workingdir = os.path.dirname(os.path.realpath(__file__))
-		options.fragmentDir = os.path.join(workingdir,'config_fragments')
 
 	configurator = daq2Configurator(options.fragmentDir,
 		                            verbose=options.verbose)
@@ -197,7 +194,7 @@ if __name__ == "__main__":
 	"""
 	parser = OptionParser()
 	parser.usage = usage
-	addConfiguratorOption(parser)
+	addConfiguratorOptions(parser)
 	(options, args) = parser.parse_args()
 
 	if len(args) > 0:

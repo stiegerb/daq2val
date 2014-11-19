@@ -28,17 +28,24 @@ class FEROL(object):
 		self.nstreams = 0
 
 		fed1, fed2 = fedIds
-		if fed1: self.nstreams = 2
-		if fed2: self.nstreams = 1
+		if fed1: self.nstreams = 1
+		if fed2: self.nstreams = 2
 		self.ruindex = -1
+		self.runame  = ''
+		self.index = -1
 
 	def __str__(self):
-		string = "PC %17s Slot: %2d RU: %d FEDs:"
+		fedstring = '          '
 		if self.nstreams == 2:
-			string += '%s, %s' % (self.fedIds[0], self.fedIds[1])
+			fedstring = '%4s, %4s' % (self.fedIds[0], self.fedIds[1])
 		if self.nstreams == 1:
-			string += '%s'     % (self.fedIds[0])
-		return string % (self.frlpc, self.slotNumber, self.ruindex)
+			fedstring = '%4s      ' % (self.fedIds[0])
+
+		string = ("%3d %15s, Crate %-6s, %-17s, slot: %-2d, "
+			      "FEDs: %s, assigned to RU%-2d %15s")
+		return string % (self.index, self.system, self.crate, self.frlpc,
+			             self.slotNumber, fedstring, self.ruindex,
+			             self.runame)
 
 
 ######################################################################
@@ -88,6 +95,9 @@ class daq2HardwareInfo(object):
 
 		with open(filename, 'r') as infile:
 			for line in infile:
+				if line.strip().startswith('#') or len(line.strip()) == 0:
+					continue
+
 				switch,device = line.strip().split(';')
 
 				## Apply mask
@@ -125,7 +135,6 @@ class daq2HardwareInfo(object):
 						fedid1 = fedid1.lstrip('FEDs ')
 					else:
 						fedid1 = fedid1.lstrip('FED ')
-
 				ferol = FEROL(frlpc, int(slot), (fedid1, fedid2), name, crate, switch)
 				self.FEROLs.append(ferol)
 				if fedid1:
@@ -249,6 +258,14 @@ class daq2HardwareInfo(object):
 					continue
 				result.append(device)
 		return result
+	def getFEROLs(self, frlpc, haveFEDIDs=0):
+		allFEROLs = self.frlpc_cabling[frlpc]
+		if haveFEDIDs==1:
+			return [f for f in allFEROLs if f.fedIds[0]]
+		elif haveFEDIDs==2:
+			return [f for f in allFEROLs if f.fedIds[1]]
+		else:
+			return allFEROLs
 
 def getMachines(inventory,splitBy=-1,verbose=False):
 	"""

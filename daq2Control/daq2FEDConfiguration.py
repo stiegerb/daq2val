@@ -10,9 +10,8 @@ def fedIdGenerator(maxstreams, startid=600):
 
 def split_list(alist, wanted_parts=1):
 	length = len(alist)
-	start = alist[i*length // wanted_parts
-	end = (i+1)*length // wanted_parts
-	return [start:end] for i in range(wanted_parts) ]
+	step = length // wanted_parts
+	return [ alist[i*step:(i+1)*step] for i in range(wanted_parts) ]
 
 ######################################################################
 class FRLNode(object):
@@ -123,7 +122,10 @@ class RUNode(object):
 		self.frls.append(frl)
 
 	def getFedIds(self):
-		return [fed for frl in self.frls for fed in frl.fedIds]
+		return [fed for frl in self.frls for fed in frl.fedIds if fed]
+
+	def __str__(self):
+		return "RU%d at %14s" % (self.index, self.hostname)
 
 ######################################################################
 class daq2FEDConfiguration(object):
@@ -275,48 +277,29 @@ class daq2ProdFEDConfiguration(daq2FEDConfiguration):
 			self.assignFRLToRU(index, frl)
 			self.frls.append(frl)
 
+		# ## FED to eFED/FMM slice distribution
+		# allfedids = self.getAllFedIds()
+		# FEDs = []
+		# FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids
+		#                               if fed <  fedid0+8 ]
+		# FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids
+		#                               if fed >= fedid0+8  and fed < fedid0+16]
+		# FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids
+		#                               if fed >= fedid0+16 and fed < fedid0+24]
 
-
-
-
-
-
-
-		fedid0 = FEDID0
-		## FED to eFED slot distribution:
-		fed_to_efedslot = {}
-		for n,fed in enumerate(self.getAllFedIds()):
-			if fed >  fedid0+23: break
-			if fed <  fedid0+8:
-				fed_to_efedslot[fed] = 2*(n+1)
-			if fed >= fedid0+8  and fed < fedid0+16:
-				fed_to_efedslot[fed] = 2*(n+1)-16
-			if fed >= fedid0+16 and fed < fedid0+24:
-				fed_to_efedslot[fed] = 2*(n+1)-32
-
-		## FED to eFED/FMM slice distribution
-		allfedids = self.getAllFedIds()
-		FEDs = []
-		FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids
-		                              if fed <  fedid0+8 ]
-		FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids
-		                              if fed >= fedid0+8  and fed < fedid0+16]
-		FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids
-		                              if fed >= fedid0+16 and fed < fedid0+24]
-
-		if self.verbose>1: print 70*'-'
-		if self.verbose>1:
-			print ' FED | Slice | eFED slot'
-			for fed,slice,efed_slot in FEDs:
-				print ' %3d | %d     | %2d' %(fed,slice,efed_slot)
-		self.FEDConfiguration = FEDs
-		efeds = []
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
-		                                                      if slice == 0])
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
-		                                                      if slice == 1])
-		efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
-		                                                      if slice == 2])
-		self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
-		self.nSlices = len(self.eFEDs)
+		# if self.verbose>1: print 70*'-'
+		# if self.verbose>1:
+		# 	print ' FED | Slice | eFED slot'
+		# 	for fed,slice,efed_slot in FEDs:
+		# 		print ' %3d | %d     | %2d' %(fed,slice,efed_slot)
+		# self.FEDConfiguration = FEDs
+		# efeds = []
+		# efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		#                                                       if slice == 0])
+		# efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		#                                                       if slice == 1])
+		# efeds.append([(fed, slot) for fed,slice,slot in self.FEDConfiguration
+		#                                                       if slice == 2])
+		# self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
+		# self.nSlices = len(self.eFEDs)
 

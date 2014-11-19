@@ -141,7 +141,7 @@ class daq2Configurator(object):
 		self.enablePauseFrame  = True
 		self.disablePauseFrame = False
 		self.setCWND = -1
-		self.evbns          = 'gevb2g' ## 'gevb2g' or 'evb'
+		self.evbns          = 'evb' ## 'gevb2g' or 'evb'
 		self.ptprot         = 'ibv' ## or 'ibv' or 'udapl'
 		self.operation_mode = 'ferol_emulator'
 
@@ -449,21 +449,6 @@ class daq2Configurator(object):
 		except IndexError:
 			pass
 
-		#### This is 'auto' now
-		# self.setPropertyInAppInContext(ferol, classname,
-		# 	                           'SourceIP', sourceIp)
-
-		# if frl.nstreams == 1:
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED0', 135000)
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED1', 135000)
-		# if frl.nstreams == 2:
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED0', 62500)
-		# 	self.setPropertyInAppInContext(ferol, classname,
-		# 	                               'TCP_CWND_FED1', 62500)
-
 		if frl.nstreams == 1:
 			self.setPropertyInAppInContext(ferol, classname,
 				                           'enableStream0', 'true')
@@ -541,6 +526,98 @@ class daq2Configurator(object):
 	def addFerolControllers(self, nferols, streams_per_ferol=1):
 		for frl in self.FEDConfig.frls:
 			self.config.append(self.makeFerolController(frl))
+
+	def addRUContextWithIBEndpoint(self, index):
+		fragmentname = 'RU/evb/RU_context_bare.xml'
+		context = elementFromFile(os.path.join(self.fragmentdir,
+			                                      fragmentname))
+		app = context.find(QN(self.xdaqns,'Application').text)
+		context.remove(app)
+		for mod in context.findall(QN(self.xdaqns,'Module').text):
+			context.remove(mod)
+
+		classname = 'evb::EVM' if index == 0 else 'evb::RU'
+		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
+			                        'class': classname,
+			                        'id':'43',
+			                        'instance':str(index),
+			                        'network':'infini'}))
+		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
+			                        'protocol': 'ibv',
+			                        'service':'i2o',
+			                        'hostname':'RU%d_I2O_HOST_NAME'%(index),
+			                        'port':'RU%d_I2O_PORT'%(index),
+			                        'network':'infini'}))
+		context.set('url', context.get('url')%(index, index))
+		self.config.append(context)
+	def addRUContextWithGEEndpoint(self, index):
+		fragmentname = 'RU/evb/RU_context_bare.xml'
+		context = elementFromFile(os.path.join(self.fragmentdir,
+			                                      fragmentname))
+		app = context.find(QN(self.xdaqns,'Application').text)
+		context.remove(app)
+		for mod in context.findall(QN(self.xdaqns,'Module').text):
+			context.remove(mod)
+
+		classname = 'evb::EVM' if index == 0 else 'evb::RU'
+		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
+			                        'class': classname,
+			                        'id':'43',
+			                        'instance':str(index),
+			                        'network':'infini'}))
+		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
+								    'protocol' : 'ftcp',
+								    'service'  : 'frl',
+								    'hostname' : 'RU%d_FRL_HOST_NAME'%index,
+								    'port'     : 'RU%d_FRL_PORT'%index,
+								    'network'  : 'ferola',
+								    'affinity' : 'RCV:P,SND:W,DSR:W,DSS:W',
+								    'datagramSize' : '131072',
+								    'nonblock'     : 'true',
+								    'pollingCycle' : '4',
+								    'rcvTimeout'   : '0',
+								    'rmode'        : 'select',
+								    'singleThread' : 'true',
+								    'sndTimeout'   : '2000',
+								    'targetId'     : '43'}))
+		context.insert(2,Element(QN(self.xdaqns, 'Endpoint').text, {
+								    'protocol' : 'ftcp',
+								    'service'  : 'frl',
+								    'hostname' : 'RU%d_FRL_HOST_NAME'%index,
+								    'port'     : '60600',
+								    'network'  : 'ferolb',
+								    'affinity' : 'RCV:P,SND:W,DSR:W,DSS:W',
+								    'datagramSize' : '131072',
+								    'nonblock'     : 'true',
+								    'pollingCycle' : '4',
+								    'rcvTimeout'   : '0',
+								    'rmode'        : 'select',
+								    'singleThread' : 'true',
+								    'sndTimeout'   : '2000',
+								    'targetId'     : '43'}))
+		context.set('url', context.get('url')%(index, index))
+		self.config.append(context)
+	def addBUContextWithIBEndpoint(self, index):
+		fragmentname = 'BU/BU_context.xml'
+		context = elementFromFile(os.path.join(self.fragmentdir,
+			                                      fragmentname))
+		app = context.find(QN(self.xdaqns,'Application').text)
+		context.remove(app)
+		for mod in context.findall(QN(self.xdaqns,'Module').text):
+			context.remove(mod)
+		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
+			                        'class': 'evb::BU',
+			                        'id':'43',
+			                        'instance':str(index),
+			                        'network':'infini'}))
+		context.insert(1,Element(QN(self.xdaqns, 'Endpoint').text, {
+			                        'protocol': 'ibv',
+			                        'service':'i2o',
+			                        'hostname':'BU%d_I2O_HOST_NAME'%(index),
+			                        'port':'BU%d_I2O_PORT'%(index),
+			                        'network':'infini'}))
+		context.set('url', context.get('url')%(index, index))
+		self.config.append(context)
 
 	def makeEFED(self, feds):
 		startid = 50
