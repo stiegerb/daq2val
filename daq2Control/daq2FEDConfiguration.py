@@ -190,11 +190,11 @@ class daq2FEDConfiguration(object):
 		allfedids = self.getAllFedIds()
 		FEDs = []
 		FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids
-		                              if fed <  fedid0+8 ]
+		                          if fed <  fedid0+8 ]
 		FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids
-		                              if fed >= fedid0+8  and fed < fedid0+16]
+		                          if fed >= fedid0+8  and fed < fedid0+16]
 		FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids
-		                              if fed >= fedid0+16 and fed < fedid0+24]
+		                          if fed >= fedid0+16 and fed < fedid0+24]
 
 		if self.verbose>1: print 70*'-'
 		if self.verbose>1:
@@ -281,11 +281,11 @@ class daq2ProdFEDConfiguration(daq2FEDConfiguration):
 		# allfedids = self.getAllFedIds()
 		# FEDs = []
 		# FEDs += [(fed, 0, fed_to_efedslot[fed]) for fed in allfedids
-		#                               if fed <  fedid0+8 ]
+		#                            if fed <  fedid0+8 ]
 		# FEDs += [(fed, 1, fed_to_efedslot[fed]) for fed in allfedids
-		#                               if fed >= fedid0+8  and fed < fedid0+16]
+		#                            if fed >= fedid0+8  and fed < fedid0+16]
 		# FEDs += [(fed, 2, fed_to_efedslot[fed]) for fed in allfedids
-		#                               if fed >= fedid0+16 and fed < fedid0+24]
+		#                            if fed >= fedid0+16 and fed < fedid0+24]
 
 		# if self.verbose>1: print 70*'-'
 		# if self.verbose>1:

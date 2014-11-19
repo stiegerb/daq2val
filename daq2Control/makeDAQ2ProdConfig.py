@@ -25,29 +25,61 @@ if __name__ == "__main__":
 		               action="store", type="string", dest="ibInventoryFile",
 		               help=("IB inventory file [default: %default]"))
 	parser.add_option("--geInventoryFile",
-		               default="2014-10-13-ru-network.csv",
+		               default="2014-11-03-ru-network.csv",
 		               action="store", type="string", dest="geInventoryFile",
 		               help=("40 GE inventory file [default: %default]"))
-	parser.add_option("--whiteListGESwitch", default="",
-		               action="store", type="string", dest="whiteListGE",
+	parser.add_option("--maskGESwitch", default="",
+		               action="store", type="string", dest="maskGE",
 		               help=("Use only machines from these 40GE switches "
 		               	     "[default: use all]"))
-	parser.add_option("--whiteListIBSwitch", default="",
-		               action="store", type="string", dest="whiteListIB",
+	parser.add_option("--maskIBSwitch", default="",
+		               action="store", type="string", dest="maskIB",
 		               help=("Use only machines from these IB switches "
+		               	     "(comma separated list) [default: use all]"))
+	parser.add_option("--maskFEDs", default="",
+		               action="store", type="string", dest="maskFEDs",
+		               help=("Use only these FEDs (comma separated list) "
+		               	     "[default: use all]"))
+	parser.add_option("--maskRUs", default="",
+		               action="store", type="string", dest="maskRUs",
+		               help=("Use only these RUs (comma separated list) "
+		               	     "[default: use all]"))
+	parser.add_option("--maskBUs", default="",
+		               action="store", type="string", dest="maskBUs",
+		               help=("Use only these BUs (comma separated list) "
 		               	     "[default: use all]"))
 	parser.add_option("-c", "--canonical", default=False,
 		               action="store_true", dest="canonical",
 		               help=("Only use exact numbers of FRLs"))
 	(opt, args) = parser.parse_args()
 
-	geswitchmask=opt.whiteListGE.split(',') if len(opt.whiteListGE) else []
-	ibswitchmask=opt.whiteListIB.split(',') if len(opt.whiteListIB) else []
+	geswitchmask=opt.maskGE.split(',') if len(opt.maskGE) else []
+	ibswitchmask=opt.maskIB.split(',') if len(opt.maskIB) else []
+
+	fedwhitelist=[]
+	if len(opt.maskFEDs):
+		for fragment in opt.maskFEDs.split(','):
+			if not '-' in fragment:
+				fedwhitelist.append(fragment)
+			else:
+				start,end = fragment.split('-')
+				fedwhitelist += [str(x) for x in range(int(start),int(end))]
+
+
+
+	ruwhitelist=opt.maskRUs.split(',') if len(opt.maskRUs) else []
+	buwhitelist=opt.maskBUs.split(',') if len(opt.maskBUs) else []
+	if buwhitelist:
+		opt.nBUs = len(buwhitelist)
+
 
 	daq2HWInfo = daq2HardwareInfo(gecabling=opt.geInventoryFile,
 		                          ibcabling=opt.ibInventoryFile,
                                   geswitchmask=geswitchmask,
                                   ibswitchmask=ibswitchmask,
+                                  fedwhitelist=fedwhitelist,
+                                  ruwhitelist=ruwhitelist,
+                                  buwhitelist=buwhitelist,
 		                          verbose=0)
 
 	######################################
@@ -67,8 +99,7 @@ if __name__ == "__main__":
 			                          opt.useIBV else 'ibv')
 
 	fedbuilders = daq2HWInfo.ge_switch_cabling.keys()
-	configurator.makeSplitConfigs(fedbuilders, dry=False)
-
+	configurator.makeConfigs(fedbuilders, dry=False)
 
 	######################################
 	## Now make the symbolmap

@@ -60,9 +60,10 @@ class daq2HardwareInfo(object):
  - Takes the information from two .csv files (provided by Andre Holzner)
 ---------------------------------------------------------------------
 '''
-	def __init__(self, gecabling="2014-10-13-ru-network.csv",
+	def __init__(self, gecabling="2014-11-03-ru-network.csv",
 		         ibcabling="2014-10-15-infiniband-ports.csv",
 		         geswitchmask=[], ibswitchmask=[],
+		         fedwhitelist=[], ruwhitelist=[], buwhitelist=[],
 		         verbose=0):
 		super(daq2HardwareInfo, self).__init__()
 		self.verbose = verbose
@@ -74,7 +75,7 @@ class daq2HardwareInfo(object):
 		self.missingFEROLs     = [] ## ferols with unknown frlpc
 		self.ge_host_cabling   = {} ## hostname to ge switch
 
-		self.ib_switch_cabling = {} ## ib switch to port to list of conn. devices
+		self.ib_switch_cabling = {} ## ib switch to port, list of conn. dev.
 		self.ru_inventory      = {} ## ib switch to list of RUs
 		self.bu_inventory      = {} ## ib switch to list of BUs
 		self.ib_host_cabling   = {} ## hostname to ib switch, port
@@ -82,12 +83,14 @@ class daq2HardwareInfo(object):
 		self.FEROLs = []
 		self.fedid_cabling = {} ## fedid to frlpc
 
-		self.readFEDRUCabling(gecabling)
-		self.readDAQ2Inventory(ibcabling)
+		self.fedwhitelist = fedwhitelist
+		self.ruwhitelist = ruwhitelist
+		self.buwhitelist = buwhitelist
 
-		# for frl in sorted(self.FEROLs): print frl
+		self.read40GECabling(gecabling)
+		self.readIBCabling(ibcabling)
 
-	def readFEDRUCabling(self, filename):
+	def read40GECabling(self, filename):
 		"""
 		Fill dictionaries for:
 		   ethswitch -> list of devices (rus, FEROLs)
@@ -116,6 +119,10 @@ class daq2HardwareInfo(object):
 
 				spdevice = device.split(',')
 				if len(spdevice) == 1 and device.startswith('ru-'):
+					## Apply ru mask:
+					if (self.ruwhitelist and not device in self.ruwhitelist):
+						continue
+
 					self.ge_switch_cabling[switch].append(device)
 					self.ge_host_cabling[device] = switch
 					continue
@@ -135,7 +142,15 @@ class daq2HardwareInfo(object):
 						fedid1 = fedid1.lstrip('FEDs ')
 					else:
 						fedid1 = fedid1.lstrip('FED ')
-				ferol = FEROL(frlpc, int(slot), (fedid1, fedid2), name, crate, switch)
+				ferol = FEROL(frlpc, int(slot), (fedid1, fedid2),
+					          name, crate, switch)
+
+				## Apply fed mask:
+				if (self.fedwhitelist and
+					not fedid1 in self.fedwhitelist and
+					not fedid2 in self.fedwhitelist):
+					continue
+
 				self.FEROLs.append(ferol)
 				if fedid1:
 					self.fedid_cabling[fedid1] = frlpc
@@ -146,11 +161,11 @@ class daq2HardwareInfo(object):
 					self.ge_switch_cabling[switch].append(frlpc)
 				if not frlpc in self.frlpc_cabling:
 					self.frlpc_cabling[frlpc] = []
-				self.ge_host_cabling[device] = switch
+				self.ge_host_cabling[frlpc] = switch
 				self.frlpc_cabling[frlpc].append(ferol)
 				self.ferol_cabling[ferol] = frlpc
 		return True
-	def readDAQ2Inventory(self, filename):
+	def readIBCabling(self, filename):
 		"""
 		Reads a file with lines formatted like:
 		switch,port,peerDevice,peerPort,blacklist,comment
@@ -180,6 +195,12 @@ class daq2HardwareInfo(object):
 				## mask switches
 				if self.ibswitchmask and not switch in self.ibswitchmask:
 					continue
+
+				## mask machines:
+				if self.buwhitelist and not device in self.buwhitelist:
+					if device.startswith('bu-'): continue
+				if self.ruwhitelist and not device in self.ruwhitelist:
+					if device.startswith('ru-'): continue
 
 				if port is not '': port = int(port)
 				if dport is not '': dport = int(dport)
@@ -244,8 +265,6 @@ class daq2HardwareInfo(object):
 				return [bu for bu in self.bu_inventory[switch]]
 			except KeyError:
 				printError('IB switch %s not found'% switch, self)
-
-
 	def getBUs(self, ibswitch, bunchBy=4):
 		"""
 		Return a bunch of BUs on the same IB switch as the RU, as

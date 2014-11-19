@@ -399,14 +399,14 @@ class daq2Configurator(object):
 			if "not found in context" in e.strerror: pass
 			else: raise e
 
-	def addI2OProtocol(self, rus_to_add=None, bus_to_add=None):
+	def addI2OProtocol(self, rus_to_add=None, bus_to_add=None, evminst=0):
 		i2ons = "http://xdaq.web.cern.ch/xdaq/xsd/2004/I2OConfiguration-30"
 		prot = Element(QN(i2ons, 'protocol').text)
 
 		## Add EVM:
 		prot.append(Element(QN(i2ons, 'target').text,
 			                      {'class':'%s::EVM'%self.evbns ,
-			                       'instance':"0", "tid":"1"}))
+			                       'instance':"%d"%evminst, "tid":"1"}))
 		## Add RUs:
 		if rus_to_add != None:
 			ru_instances_to_add = rus_to_add
@@ -527,7 +527,7 @@ class daq2Configurator(object):
 		for frl in self.FEDConfig.frls:
 			self.config.append(self.makeFerolController(frl))
 
-	def addRUContextWithIBEndpoint(self, index):
+	def addRUContextWithIBEndpoint(self, index, isEVM=False):
 		fragmentname = 'RU/evb/RU_context_bare.xml'
 		context = elementFromFile(os.path.join(self.fragmentdir,
 			                                      fragmentname))
@@ -536,7 +536,7 @@ class daq2Configurator(object):
 		for mod in context.findall(QN(self.xdaqns,'Module').text):
 			context.remove(mod)
 
-		classname = 'evb::EVM' if index == 0 else 'evb::RU'
+		classname = 'evb::EVM' if isEVM else 'evb::RU'
 		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
 			                        'class': classname,
 			                        'id':'43',
@@ -550,7 +550,7 @@ class daq2Configurator(object):
 			                        'network':'infini'}))
 		context.set('url', context.get('url')%(index, index))
 		self.config.append(context)
-	def addRUContextWithGEEndpoint(self, index):
+	def addRUContextWithGEEndpoint(self, index, isEVM=False):
 		fragmentname = 'RU/evb/RU_context_bare.xml'
 		context = elementFromFile(os.path.join(self.fragmentdir,
 			                                      fragmentname))
@@ -559,7 +559,7 @@ class daq2Configurator(object):
 		for mod in context.findall(QN(self.xdaqns,'Module').text):
 			context.remove(mod)
 
-		classname = 'evb::EVM' if index == 0 else 'evb::RU'
+		classname = 'evb::EVM' if isEVM else 'evb::RU'
 		context.insert(0,Element(QN(self.xdaqns, 'Application').text, {
 			                        'class': classname,
 			                        'id':'43',

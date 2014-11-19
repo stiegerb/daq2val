@@ -604,10 +604,7 @@ class daq2Control(object):
 
 		configfilelist = []
 		for host in self.config.hosts:
-			if host.type == 'RU' and host.index == 0:
-				filename = '%s/EVM.xml.configure.cmd.xml'%self._runDir
-			else:
-				filename = '%s/%s%d.xml.configure.cmd.xml'%(self._runDir,
+			filename = '%s/%s%d.xml.configure.cmd.xml'%(self._runDir,
 				                                            host.type,
 				                                            host.index)
 			configfilelist.append(filename)

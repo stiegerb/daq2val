@@ -45,35 +45,35 @@ class daq2ProdConfigurator(daq2Configurator):
 
 	def makeFEROLConfig(self, ferol):
 		self.makeSkeleton()
-		## Not sure I need I2O protocol at all here
-		self.addI2OProtocol(rus_to_add=[ferol.ruindex], bus_to_add=[])
-
 		self.config.append(self.makeFerolController(ferol))
-		self.addRUContextWithGEEndpoint(ferol.ruindex)
+		isevm = (ferol.ruindex==self.allRUs[0].index)
+		self.addRUContextWithGEEndpoint(ferol.ruindex, isEVM=isevm)
 		outputname = 'FEROLCONTROLLER%d.xml' % ferol.index
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
 	def makeEVMConfig(self, ru):
 		self.makeSkeleton()
 		ru_instances = [r.index for r in self.allRUs[1:]]
-		self.addI2OProtocol(rus_to_add=ru_instances)
+		self.addI2OProtocol(rus_to_add=ru_instances,
+			                evminst=self.allRUs[0].index)
 
 		## add the EVM
-		self.config.append(self.makeRU(ru))
+		self.config.append(self.makeRU(ru, isEVM=True))
 		for index in ru_instances:
 			self.addRUContextWithIBEndpoint(index)
 		for index in xrange(self.nbus):
 			self.addBUContextWithIBEndpoint(index)
 
-		outputname = 'EVM.xml'
+		outputname = 'RU%d.xml' % ru.index
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
 	def makeRUConfig(self, ru):
 		self.makeSkeleton()
-		self.addI2OProtocol(rus_to_add=[ru.index])
+		self.addI2OProtocol(rus_to_add=[ru.index],
+			                evminst=self.allRUs[0].index)
 
 		self.config.append(self.makeRU(ru))
-		self.addRUContextWithIBEndpoint(0) ## EVM
+		self.addRUContextWithIBEndpoint(self.allRUs[0].index) ## EVM
 		for index in xrange(self.nbus):
 			self.addBUContextWithIBEndpoint(index)
 		outputname = 'RU%d.xml' % ru.index
@@ -82,9 +82,10 @@ class daq2ProdConfigurator(daq2Configurator):
 	def makeBUConfig(self, buindex):
 		self.makeSkeleton()
 		## no RU, only one BU
-		self.addI2OProtocol(rus_to_add=[], bus_to_add=[buindex])
+		self.addI2OProtocol(rus_to_add=[], bus_to_add=[buindex],
+			                evminst=self.allRUs[0].index)
 		self.config.append(self.makeBU(buindex))
-		self.addRUContextWithIBEndpoint(0) ## EVM
+		self.addRUContextWithIBEndpoint(self.allRUs[0].index, isEVM=True)
 		outputname = 'BU%d.xml' % buindex
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
@@ -98,7 +99,9 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		## add the EVM
 		for ru in self.allRUs:
-			self.config.append(self.makeRU(ru))
+			isevm = False
+			if ru.index == 0: isevm = True
+			self.config.append(self.makeRU(ru, isEVM=isevm))
 
 		for index in xrange(self.nbus):
 			self.config.append(self.makeBU(index))
@@ -113,14 +116,13 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		try:
 			for n,f in enumerate(ferols):
-				# print n,f
 				if n%8==0: ru = rus_gen.next()
 				f.ruindex = ru.index
 				f.runame  = ru.hostname
 				ru.addFRL(f)
 
 		except StopIteration:
-			print n,f
+			print f
 			printError('Running out of RUs for %s'%
 				        self.hwInfo.ge_host_cabling[rus[0].hostname], self)
 
@@ -129,7 +131,7 @@ class daq2ProdConfigurator(daq2Configurator):
 				print 'leftover FEROL:', f
 			for r in rus_gen:
 				print 'leftover RU:', r
-	def makeSplitConfigs(self, geswitches, dry=False):
+	def makeConfigs(self, geswitches, dry=False):
 		for switchname in geswitches:
 			# get a list of frlpcs, ferols, and rus from the hwInfo
 			frlpcs = self.hwInfo.getListOfFRLPCs(switchname,
@@ -159,6 +161,14 @@ class daq2ProdConfigurator(daq2Configurator):
 			## Remove unused RUs
 			for r in self.allRUs:
 				if len(r.getFedIds()) == 0: self.allRUs.remove(r)
+
+		## Now make sure the EVM has index and instance 0!
+		oldevmindex = self.allRUs[0].index
+		## And make sure the FEROLs sending to the evm send to 0
+		self.allRUs[0].index = 0
+		for ferol in self.allFEROLs:
+			if ferol.ruindex == oldevmindex:
+				ferol.ruindex = 0
 
 		if self.verbose>5:
 			print 70*'-'
