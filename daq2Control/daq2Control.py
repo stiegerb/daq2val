@@ -692,7 +692,7 @@ class daq2Control(object):
 		## In case of mstreamio configurations:
 		if self.config.useMSIO:
 			if self.config.useIBV: ## Only do this for ibv!
-				pool = Pool(len(self.config.RUs))
+				pool = Pool(min(16,len(self.config.RUs)))
 
 				tasklist = [(ru.host, ru.port, 'pt::ibv::Application', 0,
 					         'connect',
@@ -1032,7 +1032,7 @@ class daq2Control(object):
 
 		## In case of eFEROLs (also configure and enable in this case):
 		elif len(self.config.eFEROLs) > 0:
-			pool = Pool(len(self.config.eFEROLs))
+			pool = Pool(min(16,len(self.config.eFEROLs)))
 
 			## Configure and enable pt::frl application on eFEROLs:
 			if self.options.verbose > 0: print separator
