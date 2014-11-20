@@ -51,6 +51,9 @@ if __name__ == "__main__":
 	parser.add_option("-c", "--canonical", default=False,
 		               action="store_true", dest="canonical",
 		               help=("Only use exact numbers of FRLs"))
+	parser.add_option("-d", "--dry", default=False,
+		               action="store_true", dest="dry",
+		               help=("Just print the assignments without writing out anything"))
 	(opt, args) = parser.parse_args()
 
 	geswitchmask=opt.maskGE.split(',') if len(opt.maskGE) else []
@@ -80,12 +83,14 @@ if __name__ == "__main__":
                                   fedwhitelist=fedwhitelist,
                                   ruwhitelist=ruwhitelist,
                                   buwhitelist=buwhitelist,
-		                          verbose=0)
+                                  canonical=opt.canonical,
+		                          verbose=opt.verbose)
 
 	######################################
 	## First make the configs
-	configurator = daq2ProdConfigurator(opt.fragmentDir,
-		                                daq2HWInfo, opt.verbose)
+	configurator = daq2ProdConfigurator(opt.fragmentDir, daq2HWInfo,
+		                                canonical=opt.canonical,
+		                                dry=opt.dry, verbose=opt.verbose)
 
 	os.system('mkdir -p %s' % opt.output)
 	configurator.outPutDir = opt.output
@@ -99,10 +104,11 @@ if __name__ == "__main__":
 			                          opt.useIBV else 'ibv')
 
 	fedbuilders = daq2HWInfo.ge_switch_cabling.keys()
-	configurator.makeConfigs(fedbuilders, dry=False)
+	configurator.makeConfigs(fedbuilders)
 
 	######################################
 	## Now make the symbolmap
+	if opt.dry: exit(0)
 	outputFileName = os.path.join(opt.output, 'daq2Symbolmap.txt')
 	with open(outputFileName, 'w') as outfile:
 		outfile.write(HEADER)

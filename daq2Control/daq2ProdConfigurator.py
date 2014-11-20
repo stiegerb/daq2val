@@ -27,14 +27,16 @@ class daq2ProdConfigurator(daq2Configurator):
 
 ---------------------------------------------------------------------
 '''
-	def __init__(self, fragmentdir, hwInfo, verbose=5):
+	def __init__(self, fragmentdir, hwInfo, canonical=False,
+		         dry=False, verbose=5):
 		super(daq2ProdConfigurator, self).__init__(fragmentdir,
 			                                       verbose=verbose)
 
 		self.hwInfo = hwInfo
 		# self.symbMap = symbMap ## can get this info also from hwInfo?
 
-		self.canonical = False
+		self.canonical = canonical
+		self.dry = dry
 
 		## Counters
 		self.ruindex = 0
@@ -73,7 +75,7 @@ class daq2ProdConfigurator(daq2Configurator):
 			                evminst=self.allRUs[0].index)
 
 		self.config.append(self.makeRU(ru))
-		self.addRUContextWithIBEndpoint(self.allRUs[0].index) ## EVM
+		self.addRUContextWithIBEndpoint(self.allRUs[0].index, isEVM=True)
 		for index in xrange(self.nbus):
 			self.addBUContextWithIBEndpoint(index)
 		outputname = 'RU%d.xml' % ru.index
@@ -131,11 +133,10 @@ class daq2ProdConfigurator(daq2Configurator):
 				print 'leftover FEROL:', f
 			for r in rus_gen:
 				print 'leftover RU:', r
-	def makeConfigs(self, geswitches, dry=False):
+	def makeConfigs(self, geswitches):
 		for switchname in geswitches:
 			# get a list of frlpcs, ferols, and rus from the hwInfo
-			frlpcs = self.hwInfo.getListOfFRLPCs(switchname,
-				                                 canonical=self.canonical)
+			frlpcs = self.hwInfo.getListOfFRLPCs(switchname)
 			runames = self.hwInfo.getAllRUs(switchname)
 
 			## Number the RUs
@@ -158,9 +159,19 @@ class daq2ProdConfigurator(daq2Configurator):
 			## Assign FEROLs to RUs
 			self.assignFEROLsToRUs(RUs_onswitch, FEROLs_onswitch)
 
-			## Remove unused RUs
-			for r in self.allRUs:
-				if len(r.getFedIds()) == 0: self.allRUs.remove(r)
+		## Remove unused RUs
+		usedRUs = []
+		for r in self.allRUs:
+			if len(r.getFedIds()) != 0:
+				usedRUs.append(r)
+		self.allRUs = usedRUs
+
+		## Remove unused FEROLs
+		usedFEROLs = []
+		for f in self.allFEROLs:
+			if f.ruindex >= 0:
+				usedFEROLs.append(f)
+		self.allFEROLs = usedFEROLs
 
 		## Now make sure the EVM has index and instance 0!
 		oldevmindex = self.allRUs[0].index
@@ -182,7 +193,7 @@ class daq2ProdConfigurator(daq2Configurator):
 			print 70*'-'
 
 
-		if dry: return
+		if self.dry: return
 
 		for n,ferol in enumerate(self.allFEROLs):
 			printProgress(n,len(self.allFEROLs),customstr='FEROLs: ')

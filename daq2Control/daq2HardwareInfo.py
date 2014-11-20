@@ -64,9 +64,11 @@ class daq2HardwareInfo(object):
 		         ibcabling="2014-10-15-infiniband-ports.csv",
 		         geswitchmask=[], ibswitchmask=[],
 		         fedwhitelist=[], ruwhitelist=[], buwhitelist=[],
-		         verbose=0):
+		         canonical=False, verbose=0):
 		super(daq2HardwareInfo, self).__init__()
 		self.verbose = verbose
+		self.canonical = canonical
+		self.canonlength = 8
 		self.ibswitchmask = ibswitchmask
 		self.geswitchmask = geswitchmask
 		self.ge_switch_cabling = {} ## ge switch to list of conn. devices
@@ -142,6 +144,8 @@ class daq2HardwareInfo(object):
 						fedid1 = fedid1.lstrip('FEDs ')
 					else:
 						fedid1 = fedid1.lstrip('FED ')
+				if self.canonical:
+					fedid2 = None
 				ferol = FEROL(frlpc, int(slot), (fedid1, fedid2),
 					          name, crate, switch)
 
@@ -280,22 +284,35 @@ class daq2HardwareInfo(object):
 				yield bunch
 				bunch = []
 				counter = 0
-	def getListOfFRLPCs(self, ethswitch, canonical=False):
+	def getListOfFRLPCs(self, ethswitch):
 		result = []
 		for device in self.ge_switch_cabling[ethswitch]:
 			if device.startswith('frlpc-'):
-				if canonical and len(self.frlpc_cabling[device]) < 8:
+				if (self.canonical and
+					len(self.frlpc_cabling[device]) < self.canonlength):
 					continue
 				result.append(device)
 		return result
 	def getFEROLs(self, frlpc, haveFEDIDs=0):
 		allFEROLs = self.frlpc_cabling[frlpc]
+		if self.canonical and len(allFEROLs) < self.canonlength:
+			return []
 		if haveFEDIDs==1:
-			return [f for f in allFEROLs if f.fedIds[0]]
+			result = [f for f in allFEROLs if f.fedIds[0]]
+			if self.canonical:
+				if len(result) < self.canonlength: return []
+				else: result = result[:self.canonlength]
+			return result
 		elif haveFEDIDs==2:
-			return [f for f in allFEROLs if f.fedIds[1]]
-		else:
+			result = [f for f in allFEROLs if f.fedIds[1]]
+			if self.canonical:
+				if len(result) < self.canonlength: return []
+				else: result = result[:self.canonlength]
+			return result
+		elif not canonical:
 			return allFEROLs
+		else:
+			return []
 
 def getMachines(inventory,splitBy=-1,verbose=False):
 	"""
