@@ -51,6 +51,9 @@ if __name__ == "__main__":
 	parser.add_option("-c", "--canonical", default=False,
 		               action="store_true", dest="canonical",
 		               help=("Only use exact numbers of FRLs"))
+	parser.add_option("--canonLength", default=8, action="store", type="int",
+		               dest="canonLength",
+		               help=("Canonical length [default: %default]"))
 	parser.add_option("-d", "--dry", default=False,
 		               action="store_true", dest="dry",
 		               help=("Just print the assignments without writing out anything"))
@@ -84,12 +87,14 @@ if __name__ == "__main__":
                                   ruwhitelist=ruwhitelist,
                                   buwhitelist=buwhitelist,
                                   canonical=opt.canonical,
+                                  canonlength=opt.canonLength,
 		                          verbose=opt.verbose)
 
 	######################################
 	## First make the configs
 	configurator = daq2ProdConfigurator(opt.fragmentDir, daq2HWInfo,
 		                                canonical=opt.canonical,
+		                                canonlength=opt.canonLength,
 		                                dry=opt.dry, verbose=opt.verbose)
 
 	os.system('mkdir -p %s' % opt.output)

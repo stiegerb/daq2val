@@ -150,17 +150,17 @@ sw-eth-c2e23-29-01;ECAL TRIG,crate S2D09d,FEROL 5,frlpc-s2d10-25-01
 sw-eth-c2e23-29-01;ECAL TRIG,crate S2D09d,FEROL 6,frlpc-s2d10-25-01
 sw-eth-c2e23-29-01;ECAL TRIG,crate S2D09d,FEROL 7,frlpc-s2d10-25-01
 sw-eth-c2e23-29-01;ECAL TRIG,crate S2D09d,FEROL 8,frlpc-s2d10-25-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 1,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 2,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 3,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 4,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 5,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 6,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 7,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 8,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 9,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DTTF,crate S1F09e,FEROL 1,frlpc-s1d06-36-01
-sw-eth-c2e23-29-01;DTTF,crate S1F09e,FEROL 2,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 1,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 2,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 3,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 4,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 5,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 6,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 7,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 8,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DT,crate S1F09e,FEROL 9,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DTTF,crate S1F09e,FEROL 1,frlpc-s1d06-36-01
+# sw-eth-c2e23-29-01;DTTF,crate S1F09e,FEROL 2,frlpc-s1d06-36-01
 sw-eth-c2e23-29-01;PIXEL,crate S1F09e,FEROL 1,frlpc-s1d06-36-01
 sw-eth-c2e23-29-01;PIXEL,crate S1F09e,FEROL 2,frlpc-s1d06-36-01
 sw-eth-c2e23-29-01;GT,crate S1F09e,FEROL 1,frlpc-s1d06-36-01
@@ -588,16 +588,16 @@ sw-eth-c2e24-35-01;TK TEC+,crate S1C07b,FEROL 16,FEDs 316,317,frlpc-s1d06-23-01
 # sw-eth-c2e24-35-01;Pix BA,crate S1G05c,FEROL 14,FED 18,frlpc-s1d06-32-01
 # sw-eth-c2e24-35-01;Pix BA,crate S1G05c,FEROL 15,FED 17,frlpc-s1d06-32-01
 # sw-eth-c2e24-35-01;Pix BA,crate S1G05c,FEROL 16,FED 16,frlpc-s1d06-32-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 1,FED 770,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 2,FED 771,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 3,FED 772,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 4,FED 773,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 5,FED 774,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 6,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 7,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 8,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 9,frlpc-s1d06-30-01
-sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 10,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 1,FED 770,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 2,FED 771,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 3,FED 772,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 4,FED 773,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 5,FED 774,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 6,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 7,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 8,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 9,frlpc-s1d06-30-01
+# sw-eth-c2e24-35-01;DT,crate S1G05a,FEROL 10,frlpc-s1d06-30-01
 sw-eth-c2e24-35-01;ru-c2e13-27-01
 sw-eth-c2e24-35-01;ru-c2e13-28-01
 sw-eth-c2e24-35-01;ru-c2e13-29-01

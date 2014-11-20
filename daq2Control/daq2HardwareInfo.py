@@ -64,11 +64,11 @@ class daq2HardwareInfo(object):
 		         ibcabling="2014-10-15-infiniband-ports.csv",
 		         geswitchmask=[], ibswitchmask=[],
 		         fedwhitelist=[], ruwhitelist=[], buwhitelist=[],
-		         canonical=False, verbose=0):
+		         canonical=False, canonlength=8, verbose=0):
 		super(daq2HardwareInfo, self).__init__()
 		self.verbose = verbose
 		self.canonical = canonical
-		self.canonlength = 8
+		self.canonlength = canonlength
 		self.ibswitchmask = ibswitchmask
 		self.geswitchmask = geswitchmask
 		self.ge_switch_cabling = {} ## ge switch to list of conn. devices
@@ -115,7 +115,7 @@ class daq2HardwareInfo(object):
 
 				if not 'frlpc' in device and not device.startswith('ru'):
 					self.missingFEROLs.append((switch, device))
-					if self.verbose>0:
+					if self.verbose>15:
 						print "Missing frlpc for:",switch, device
 					continue
 
@@ -144,7 +144,7 @@ class daq2HardwareInfo(object):
 						fedid1 = fedid1.lstrip('FEDs ')
 					else:
 						fedid1 = fedid1.lstrip('FED ')
-				if self.canonical:
+				if self.canonical and self.canonlength==8:
 					fedid2 = None
 				ferol = FEROL(frlpc, int(slot), (fedid1, fedid2),
 					          name, crate, switch)
@@ -288,9 +288,9 @@ class daq2HardwareInfo(object):
 		result = []
 		for device in self.ge_switch_cabling[ethswitch]:
 			if device.startswith('frlpc-'):
-				if (self.canonical and
-					len(self.frlpc_cabling[device]) < self.canonlength):
-					continue
+				# if (self.canonical and
+				# 	len(self.frlpc_cabling[device]) < self.canonlength):
+				# 	continue
 				result.append(device)
 		return result
 	def getFEROLs(self, frlpc, haveFEDIDs=0):

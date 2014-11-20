@@ -262,6 +262,29 @@ class daq2Control(object):
 			if self.config.useGTPe: delay = 20
 
 			for frl in self.config.FEROLs:
+
+				##### BUG HERE???? frl is ru sometimes?
+
+				print frl
+				if self.config.useEvB and frl.index == 0:
+					## this sends to the EVM
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_bytes_FED0',
+						           'unsignedInt', 1024,
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_Stdev_bytes_FED0',
+						           'unsignedInt', 0,
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Delay_ns_FED0',
+						           'unsignedInt', int(delay),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					continue
+
 				if frl.enableStream0:
 					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_bytes_FED0',

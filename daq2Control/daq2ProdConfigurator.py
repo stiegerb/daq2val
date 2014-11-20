@@ -27,7 +27,7 @@ class daq2ProdConfigurator(daq2Configurator):
 
 ---------------------------------------------------------------------
 '''
-	def __init__(self, fragmentdir, hwInfo, canonical=False,
+	def __init__(self, fragmentdir, hwInfo, canonical=False, canonlength=8,
 		         dry=False, verbose=5):
 		super(daq2ProdConfigurator, self).__init__(fragmentdir,
 			                                       verbose=verbose)
@@ -36,9 +36,11 @@ class daq2ProdConfigurator(daq2Configurator):
 		# self.symbMap = symbMap ## can get this info also from hwInfo?
 
 		self.canonical = canonical
+		self.canonlength = canonlength
 		self.dry = dry
 
 		## Counters
+		self.haveEVM = False
 		self.ruindex = 0
 		self.ferolindex = 0
 		self.allRUs = []
@@ -113,11 +115,23 @@ class daq2ProdConfigurator(daq2Configurator):
 
 
 	def assignFEROLsToRUs(self, rus, ferols):
+		ferols_gen = (f for f in ferols if f.nstreams > 0)
 		ferols_rest = [f for f in ferols if f.nstreams == 0]
-		rus_gen     = (r for r in rus)
+		rus_gen = (r for r in rus)
+
+		## First make an EVM
+		if not self.haveEVM:
+			evm = rus_gen.next()
+			evm_frl = ferols_gen.next()
+			evm_frl.ruindex = evm.index
+			evm_frl.runame = evm.hostname
+			evm_frl.nstreams = 1
+			evm_frl.fedIds = (evm_frl.fedIds[0], None)
+			evm.addFRL(evm_frl)
+			self.haveEVM = True
 
 		try:
-			for n,f in enumerate(ferols):
+			for n,f in enumerate(ferols_gen):
 				if n%8==0: ru = rus_gen.next()
 				f.ruindex = ru.index
 				f.runame  = ru.hostname
@@ -146,15 +160,16 @@ class daq2ProdConfigurator(daq2Configurator):
 				self.allRUs.append(runode)
 				RUs_onswitch.append(runode)
 				self.ruindex += 1
+			if len(RUs_onswitch) == 0: continue
 
 			FEROLs_onswitch = []
 			for frlpc in frlpcs:
-				for ferol in self.hwInfo.getFEROLs(frlpc, haveFEDIDs=1):
+				for ferol in self.hwInfo.getFEROLs(frlpc, haveFEDIDs=self.canonlength/8):
 					ferol.index = self.ferolindex
 					self.allFEROLs.append(ferol)
 					FEROLs_onswitch.append(ferol)
 					self.ferolindex += 1
-
+			if len(FEROLs_onswitch) == 0: continue
 
 			## Assign FEROLs to RUs
 			self.assignFEROLsToRUs(RUs_onswitch, FEROLs_onswitch)
@@ -173,9 +188,11 @@ class daq2ProdConfigurator(daq2Configurator):
 				usedFEROLs.append(f)
 		self.allFEROLs = usedFEROLs
 
+		print len(self.allFEROLs), len(self.allRUs)
+
 		## Now make sure the EVM has index and instance 0!
 		oldevmindex = self.allRUs[0].index
-		## And make sure the FEROLs sending to the evm send to 0
+		## And make sure the FEROL sending to the evm sends to 0
 		self.allRUs[0].index = 0
 		for ferol in self.allFEROLs:
 			if ferol.ruindex == oldevmindex:
