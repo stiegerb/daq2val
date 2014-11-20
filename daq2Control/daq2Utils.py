@@ -310,6 +310,7 @@ def checkStates(hosts, statename, verbose=0, dry=False):
 		'EFED'            : ['d2s::FEDEmulator'],
 		'GTPE'            : ['d2s::GTPeController'],
 		'FMM'             : ['tts::FMMController']}
+	checkedtrue = True
 	for host in hosts:
 		for app,inst in host.applications:
 			if not app in applications_to_check[host.type]: continue
@@ -320,10 +321,10 @@ def checkStates(hosts, statename, verbose=0, dry=False):
 					         app, inst, host.host, host.port, statename))
 			if not checkApplicationState(host, app, statename, instance=inst,
 				                         dry=dry):
+				checkedtrue = False
 				if verbose > 0: stdout.write(' FAILED\n')
-				return False
 			if verbose > 0: stdout.write(' OK\n')
-	return True
+	return checkedtrue
 
 def stopXDAQPacked(packedargs):
 	(host, verbose, dry) = packedargs

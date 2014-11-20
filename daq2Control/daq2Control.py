@@ -517,7 +517,9 @@ class daq2Control(object):
 					file.write(configureCmd)
 		else:
 			print 'Producing configuration command files in',self._runDir
-			for filename in os.listdir(self.configDir):
+			filenames = os.listdir(self.configDir)
+			for n,filename in enumerate(filenames):
+				utils.printProgress(n, len(filenames))
 				if not os.path.splitext(filename)[1] == '.xml':
 					continue
 				self.fillConfig(os.path.join(self.configDir,filename))
@@ -743,17 +745,20 @@ class daq2Control(object):
 		if not self.config.useEvB:
 			to_be_checked = [(self.config.FEROLs, 'Configured')]
 
+		configured = True
 		for hostlist, state in to_be_checked:
 			if utils.checkStates(hostlist, state,
 				                 verbose=self.options.verbose,
 				                 dry=self.options.dry): continue
 			printWarningWithWait('Configure failed for some machines.',
 				                  waittime=0, instance=self)
-			return False
-		if self.options.verbose > 0: print separator
-		if self.options.verbose > 0: print 'CONFIGURED'
-		if self.options.verbose > 0: print separator
-		return True
+			configured = False
+		if configured:
+			if self.options.verbose > 0: print separator
+			if self.options.verbose > 0: print 'CONFIGURED'
+			if self.options.verbose > 0: print separator
+			return True
+		return False
 	def enable(self):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Enabling"
