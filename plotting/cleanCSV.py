@@ -61,11 +61,24 @@ def truncatePoints(filename, firstN, lastN=None, inPlace=False):
 			if len(line.strip()) == 0 or line.strip()[0] == '#':
 				o.write(line)
 				continue
-			spline = line.strip('\n').split(',')
-			if len(spline) > 1 and spline[1] != '':
-				data = map(lambda x: int(float(x)), spline[1:])
-				o.write(spline[0])
-				o.write(',')
+			line = line.strip('\n')
+
+			try: ## EvB with size from BU (size, busize : rate, rate, rate, ...)
+				size,rates = line.split(':')
+				size += ':'
+				rates = rates.split(',')
+			except ValueError, e: ## Bare size as first entry (size, rate, rate, rate, ...)
+				if "need more than" in e.errstr:
+					spline = line.split(',')
+					size,rates = spline[0], spline[1:]
+					size += ','
+				else:
+					raise e
+
+			if len(rates) > 1 and rates[1] != '':
+				data = map(lambda x: int(float(x)), rates[1:])
+				o.write(size)
+				# o.write(',')
 
 				data.reverse() # can use same code as above
 				for n,x in enumerate(reversed(data)):
