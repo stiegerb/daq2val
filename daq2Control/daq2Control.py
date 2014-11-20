@@ -383,7 +383,8 @@ class daq2Control(object):
 							           dry=self.options.dry)
 						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Length_Stdev_bytes_FED0',
-							           'unsignedInt', int(relRMS*sizeProfile[0]),
+							           'unsignedInt',
+							           int(relRMS*sizeProfile[0]),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
 						utils.setParam(frl,  'ferol::FerolController',
@@ -399,7 +400,8 @@ class daq2Control(object):
 							           dry=self.options.dry)
 						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Length_Stdev_bytes_FED1',
-							           'unsignedInt', int(relRMS*sizeProfile[1]),
+							           'unsignedInt',
+							           int(relRMS*sizeProfile[1]),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
 						utils.setParam(frl,  'ferol::FerolController',
@@ -619,6 +621,7 @@ class daq2Control(object):
 		## Configure and enable:
 		self.configure()
 		self.enable()
+
 	def stop(self):
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Stopping"
@@ -813,7 +816,6 @@ class daq2Control(object):
 				if not self.checkEnabled():
 					self.retry('Failed to enable all FEROLs and RUs.')
 					return
-
 
 			## Enable GTPe:
 			if self.config.useGTPe:
@@ -1045,7 +1047,8 @@ class daq2Control(object):
 
 			if self.options.verbose > 0: print separator
 			for n,efrl in enumerate(self.config.eFEROLs):
-				utils.sendSimpleCmdToApp(efrl, 'pt::frl::Application', 'Enable',
+				utils.sendSimpleCmdToApp(efrl, 'pt::frl::Application',
+					                     'Enable',
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
 			sleep(2, self.options.verbose, self.options.dry)
@@ -1065,7 +1068,8 @@ class daq2Control(object):
 						           dry=self.options.dry)
 
 
-			## Set lognormal rms for eFEROLs (when running with --useLogNormal)
+			## Set lognormal rms for eFEROLs
+			## (when running with --useLogNormal)
 			if self.options.useLogNormal:
 				if self.options.verbose > 0: print separator
 				for n,efrl in enumerate(self.config.eFEROLs):

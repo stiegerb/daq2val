@@ -17,11 +17,11 @@ def getListOfSizes(maxSize, minSize=256, short=False, stepSize=256):
 		# allsteps = [256, 1024, 2048, 3072, 4096, 5120, 6144, 8192, 12288,
 		#            16000, 20480, 24576, 32500]
 		allsteps = [256, 512, 1024, 1536, 2048, 3072, 4096, 5120, 6144, 7168,
-		             8192, 10240, 12288, 14336, 16384, 17408, 18432, 19456, 20480,
-		             24576, 28672, 32500, 49152, 65000] ##, 131072]
-		# allsteps = [256, 512, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816,
-		#             3072, 3328, 3584, 3840, 4096, 5120, 6144, 7168, 8192,
-		#             12288, 14336, 16000, 20480, 24576, 28672, 32500]
+		             8192, 10240, 12288, 14336, 16384, 17408, 18432, 19456,
+		             20480, 24576, 28672, 32500, 49152, 65000] ##, 131072]
+	# allsteps = [256, 512, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816,
+	#             3072, 3328, 3584, 3840, 4096, 5120, 6144, 7168, 8192,
+	#             12288, 14336, 16000, 20480, 24576, 28672, 32500]
 
 	steps = []
 	for step in allsteps:
@@ -116,12 +116,15 @@ WARNING: Your maximum size for scanning doesn't seem to
 			              SIZE_LIMIT_TABLE[mergingby][1])
 		printWarningWithWait(message, waitfunc=sleep, waittime=2)
 
+	#####################################
+	## Start the system
 	d2c.start(steps[0], float(options.relRMS)*options.minSize,
 		      rate=options.useRate)
 
 	#####################################
 	## Test event building first
 	retries = 0
+
 	if not testBuilding(d2c, 10, options.testTime,
 		                verbose=options.verbose,
 		                dry=options.dry):
