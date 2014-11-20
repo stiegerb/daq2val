@@ -139,82 +139,64 @@ class daq2Control(object):
 	def sendCmdToEVMRUBU(self, cmd): ## ordering for configure
 		if self.options.verbose > 0: print separator
 		for n,evm in enumerate(self.config.EVM):
-			utils.sendSimpleCmdToApp(evm.host, evm.port,
-				                     self.config.namespace+'EVM', str(n),
+			utils.sendSimpleCmdToApp(evm, self.config.namespace+'EVM',
 				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		for n,ru in enumerate(self.config.RUs):
 			classname = 'RU'
 			if self.config.useEvB and n==0: classname = 'EVM'
-			utils.sendSimpleCmdToApp(ru.host, ru.port,
-				                     self.config.namespace+classname,
-				                     str(n), cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(ru, self.config.namespace+classname,
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		for n,bu in enumerate(self.config.BUs):
-			utils.sendSimpleCmdToApp(bu.host, bu.port,
-				                     self.config.namespace+'BU', str(n),
-				                     cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(bu, self.config.namespace+'BU',
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 	def sendCmdToRUEVMBU(self, cmd): ## ordering for enable
 		if self.options.verbose > 0: print separator
 		for n,ru in enumerate(self.config.RUs):
 			classname = 'RU'
 			if self.config.useEvB and n==0: classname = 'EVM'
-			utils.sendSimpleCmdToApp(ru.host, ru.port,
-				                     self.config.namespace+classname, str(n),
-				                     cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(ru, self.config.namespace+classname,
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		for n,evm in enumerate(self.config.EVM):
-			utils.sendSimpleCmdToApp(evm.host, evm.port,
-				                     self.config.namespace+'EVM', str(n),
-				                     cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(evm, self.config.namespace+'EVM',
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		for n,bu in enumerate(self.config.BUs):
-			utils.sendSimpleCmdToApp(bu.host, bu.port,
-				                     self.config.namespace+'BU', str(n),
-				                     cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(bu, self.config.namespace+'BU',
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 	def sendCmdToBUEVMRU(self, cmd): ## ordering for enable
 		if self.options.verbose > 0: print separator
 		for n,bu in enumerate(self.config.BUs):
-			utils.sendSimpleCmdToApp(bu.host, bu.port,
-				                     self.config.namespace+'BU', str(n),
-				                     cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(bu, self.config.namespace+'BU',
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		for n,evm in enumerate(self.config.EVM):
-			utils.sendSimpleCmdToApp(evm.host, evm.port,
-				                     self.config.namespace+'EVM', str(n),
-				                     cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(evm, self.config.namespace+'EVM',
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		sleep(2, self.options.verbose, self.options.dry)
 		for n,ru in enumerate(self.config.RUs):
 			classname = 'RU'
 			if self.config.useEvB and n==0: classname = 'EVM'
-			utils.sendSimpleCmdToApp(ru.host, ru.port,
-				                     self.config.namespace+classname, str(n),
-				                     cmd,
-				                     verbose=self.options.verbose,
+			utils.sendSimpleCmdToApp(ru, self.config.namespace+classname,
+				                     cmd, verbose=self.options.verbose,
 				                     dry=self.options.dry)
 	def sendCmdToFEROLs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for frl in self.config.FEROLs:
-			utils.sendSimpleCmdToApp(frl.host, frl.port,
-				                     'ferol::FerolController', 0, cmd,
+			utils.sendSimpleCmdToApp(frl, 'ferol::FerolController', cmd,
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
 	def sendCmdToEFEDs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for efed in self.config.eFEDs:
 			for instance,_,_ in efed.streams:
-				utils.sendSimpleCmdToApp(efed.host, efed.port,
-					                     'd2s::FEDEmulator', instance, cmd,
+				utils.sendSimpleCmdToApp(efed, 'd2s::FEDEmulator', cmd,
+					                     instance=instance, port=efed.port,
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
 	def sendCmdToGTPeFMM(self, cmd, invert=False):
@@ -222,25 +204,21 @@ class daq2Control(object):
 			gtpe = self.symbolMap('GTPE0')
 			fmm  = self.symbolMap('FMM0')
 			if not invert:
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
-					                     'd2s::GTPeController', '0',
+				utils.sendSimpleCmdToApp(gtpe, 'd2s::GTPeController',
 					                     str(cmd),
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
-				utils.sendSimpleCmdToApp(fmm.host, fmm.port,
-					                     'tts::FMMController', '0',
+				utils.sendSimpleCmdToApp(fmm, 'tts::FMMController',
 					                     str(cmd),
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
 				return
 			else:
-				utils.sendSimpleCmdToApp(fmm.host, fmm.port,
-					                     'tts::FMMController', '0',
+				utils.sendSimpleCmdToApp(fmm, 'tts::FMMController',
 					                     str(cmd),
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
-					                     'd2s::GTPeController', '0',
+				utils.sendSimpleCmdToApp(gtpe, 'd2s::GTPeController',
 					                     str(cmd),
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
@@ -255,8 +233,7 @@ class daq2Control(object):
 	def sendCmdToFMM(self, cmd):
 		try:
 			fmm = self.symbolMap('FMM0')
-			utils.sendSimpleCmdToApp(fmm.host, fmm.port,
-				                     'tts::FMMController', '0', cmd,
+			utils.sendSimpleCmdToApp(fmm, 'tts::FMMController', cmd,
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		except KeyError as e:
@@ -266,8 +243,7 @@ class daq2Control(object):
 	def sendCmdToGTPe(self, cmd):
 		try:
 			gtpe = self.symbolMap('GTPE0')
-			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
-				                     'd2s::GTPeController', '0', cmd,
+			utils.sendSimpleCmdToApp(gtpe, 'd2s::GTPeController', cmd,
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
 		except KeyError as e:
@@ -287,39 +263,33 @@ class daq2Control(object):
 
 			for frl in self.config.FEROLs:
 				if frl.enableStream0:
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_bytes_FED0',
 						           'unsignedInt', int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_Stdev_bytes_FED0',
 						           'unsignedInt', int(fragSizeRMS),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Delay_ns_FED0',
 						           'unsignedInt', int(delay),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 				if frl.enableStream1:
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_bytes_FED1',
 						           'unsignedInt', int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_Stdev_bytes_FED1',
 						           'unsignedInt', int(fragSizeRMS),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Delay_ns_FED1',
 						           'unsignedInt', int(delay),
 						           verbose=self.options.verbose,
@@ -341,38 +311,32 @@ class daq2Control(object):
 				for fragSize,delay,frl in itertools.izip(sizeProfile,
 					                                     delayProfile,
 					                                     self.config.FEROLs):
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_bytes_FED0',
 						           'unsignedInt', int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_Stdev_bytes_FED0',
 						           'unsignedInt', int(relRMS*fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Delay_ns_FED0',
 						           'unsignedInt', int(delay),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_bytes_FED1',
 						           'unsignedInt', int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_Stdev_bytes_FED1',
 						           'unsignedInt', int(relRMS*fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(frl.host, frl.port,
-						           'ferol::FerolController', 0,
+					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Delay_ns_FED1',
 						           'unsignedInt', int(delay),
 						           verbose=self.options.verbose,
@@ -389,39 +353,33 @@ class daq2Control(object):
 
 				for frl in self.config.FEROLs:
 					if frl.enableStream0:
-						utils.setParam(frl.host, frl.port,
-							           'ferol::FerolController', 0,
+						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Length_bytes_FED0',
 							           'unsignedInt', int(sizeProfile[0]),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
-						utils.setParam(frl.host, frl.port,
-							           'ferol::FerolController', 0,
+						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Length_Stdev_bytes_FED0',
 							           'unsignedInt', int(relRMS*sizeProfile[0]),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
-						utils.setParam(frl.host, frl.port,
-							           'ferol::FerolController', 0,
+						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Delay_ns_FED0',
 							           'unsignedInt', int(delayProfile[0]),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
 					if frl.enableStream1:
-						utils.setParam(frl.host, frl.port,
-							           'ferol::FerolController', 0,
+						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Length_bytes_FED1',
 							           'unsignedInt', int(sizeProfile[1]),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
-						utils.setParam(frl.host, frl.port,
-							           'ferol::FerolController', 0,
+						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Length_Stdev_bytes_FED1',
 							           'unsignedInt', int(relRMS*sizeProfile[1]),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
-						utils.setParam(frl.host, frl.port,
-							           'ferol::FerolController', 0,
+						utils.setParam(frl,  'ferol::FerolController',
 							           'Event_Delay_ns_FED1',
 							           'unsignedInt', int(delayProfile[0]),
 							           verbose=self.options.verbose,
@@ -435,13 +393,13 @@ class daq2Control(object):
 				## loop on eFED machines
 				for instance,fedid,_ in efed.streams:
 					## loop on applications for each eFED
-					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator',
-						           instance, 'eventSize',
+					utils.setParam(efed, 'd2s::FEDEmulator',
+						           'eventSize',
 						           'unsignedInt', int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator',
-						           instance, 'eventSizeStdDev',
+					utils.setParam(efed, 'd2s::FEDEmulator',
+						           'eventSizeStdDev',
 						           'unsignedInt', int(fragSizeRMS),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
@@ -453,12 +411,12 @@ class daq2Control(object):
 			relRMS = fragSizeRMS/fragSize
 
 			for fragSize,efed in zip(sizeProfile, self.config.eFEDs):
-				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0,
+				utils.setParam(efed, 'd2s::FEDEmulator',
 					           'eventSize', 'unsignedInt',
 					           int(fragSize),
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
-				utils.setParam(efed.host, efed.port, 'd2s::FEDEmulator', 0,
+				utils.setParam(efed, 'd2s::FEDEmulator',
 					           'eventSizeStdDev', 'unsignedInt',
 					           int(relRMS*fragSize),
 					           verbose=self.options.verbose,
@@ -479,24 +437,24 @@ class daq2Control(object):
 		if not self.config.useEvB: return
 
 		for n,h in enumerate(self.config.FMM):
-			utils.setParam(h.host, h.port, 'tts::FMMController',
-				           str(n), 'runNumber', 'unsignedInt', number,
+			utils.setParam(h, 'tts::FMMController',
+				           'runNumber', 'unsignedInt', number,
 				           verbose=self.options.verbose,
 				           dry=self.options.dry)
 		for n,h in enumerate(self.config.RUs):
 			classname = 'RU' if not self.config.useEvB or n>0 else 'EVM'
-			utils.setParam(h.host, h.port, self.config.namespace+classname,
-				           str(n), 'runNumber', 'unsignedInt', number,
+			utils.setParam(h, self.config.namespace+classname,
+				           'runNumber', 'unsignedInt', number,
 				           verbose=self.options.verbose,
 				           dry=self.options.dry)
 		for n,h in enumerate(self.config.EVM):
-			utils.setParam(h.host, h.port, self.config.namespace+'EVM',
-				           str(n), 'runNumber', 'unsignedInt', number,
+			utils.setParam(h, self.config.namespace+'EVM',
+				           'runNumber', 'unsignedInt', number,
 				           verbose=self.options.verbose,
 				           dry=self.options.dry)
 		for n,h in enumerate(self.config.BUs):
-			utils.setParam(h.host, h.port, self.config.namespace+'BU',
-				           str(n), 'runNumber', 'unsignedInt', number,
+			utils.setParam(h, self.config.namespace+'BU',
+				           'runNumber', 'unsignedInt', number,
 				           verbose=self.options.verbose,
 				           dry=self.options.dry)
 	def setCurrentSize(self, size, rms, rate):
@@ -688,8 +646,7 @@ class daq2Control(object):
 			# Configure gevb2g InputEmulator application
 			if not self.config.useEvB:
 				for n,ru in enumerate(self.config.RUs):
-					utils.sendSimpleCmdToApp(ru.host, ru.port,
-						                     'gevb2g::InputEmulator', str(n),
+					utils.sendSimpleCmdToApp(ru, 'gevb2g::InputEmulator',
 						                     'Configure',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
@@ -698,9 +655,8 @@ class daq2Control(object):
 
 			if self.config.useEvB:
 				utils.sendSimpleCmdToApp(
-					         self.config.RUs[0].host,
-					         self.config.RUs[0].port,
-		                     'pt::ibv::Application', 0,
+					         self.config.RUs[0],
+		                     'pt::ibv::Application',
 		                     'connect',
 		                     verbose=self.options.verbose,
 		                     dry=self.options.dry)
@@ -739,8 +695,7 @@ class daq2Control(object):
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
 					print "Sending init to", h.name
-					utils.sendSimpleCmdToApp(h.host, h.port,
-						                     "pt::ibv::Application", 0,
+					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
 						                     'connect',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
@@ -768,8 +723,7 @@ class daq2Control(object):
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
 					print "Sending init to", h.name
-					utils.sendSimpleCmdToApp(h.host, h.port,
-						                     "pt::ibv::Application", 0,
+					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
 						                     'connect',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
@@ -818,8 +772,7 @@ class daq2Control(object):
 			## Enable FMM:
 			if self.config.useGTPe:
 				fmm = self.symbolMap('FMM0')
-				utils.sendSimpleCmdToApp(fmm.host, fmm.port,
-					                     'tts::FMMController', '0',
+				utils.sendSimpleCmdToApp(fmm, 'tts::FMMController',
 					                     'Enable',
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
@@ -837,8 +790,7 @@ class daq2Control(object):
 			## Enable GTPe:
 			if self.config.useGTPe:
 				gtpe = self.symbolMap('GTPE0')
-				utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
-					                     'd2s::GTPeController', '0',
+				utils.sendSimpleCmdToApp(gtpe, 'd2s::GTPeController',
 					                     'Enable',
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
@@ -850,13 +802,11 @@ class daq2Control(object):
 		if self.config.useMSIO:
 			if self.options.verbose > 0: print separator
 			for n,bu in enumerate(self.config.BUs):
-				utils.sendSimpleCmdToApp(bu.host, bu.port, 'Server', str(n),
-					                     'start',
+				utils.sendSimpleCmdToApp(bu, 'Server', 'start',
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
 			for n,ru in enumerate(self.config.RUs):
-				utils.sendSimpleCmdToApp(ru.host, ru.port, 'Client', str(n),
-					                     'start',
+				utils.sendSimpleCmdToApp(ru, 'Client', 'start',
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
 			return
@@ -872,8 +822,7 @@ class daq2Control(object):
 			# Enable InputEmulator application in Gevb2g case
 			if not self.config.useEvB:
 				for n,ru in enumerate(self.config.RUs):
-					utils.sendSimpleCmdToApp(ru.host, ru.port,
-						                     'gevb2g::InputEmulator', str(n),
+					utils.sendSimpleCmdToApp(ru, 'gevb2g::InputEmulator',
 						                     'Enable',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
@@ -998,8 +947,8 @@ class daq2Control(object):
 			## Set trigger rate at GTPe
 			try:
 				gtpe = self.symbolMap('GTPE0')
-				utils.setParam(gtpe.host, gtpe.port, 'd2s::GTPeController',
-					           '0', 'triggerRate', 'double',
+				utils.setParam(gtpe, 'd2s::GTPeController',
+					           'triggerRate', 'double',
 					           str(float(rate)*1000),
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
@@ -1023,8 +972,7 @@ class daq2Control(object):
 			if self.config.useGTPe:
 				gtpe = self.symbolMap('GTPE0')
 				try:
-					utils.setParam(gtpe.host, gtpe.port,
-						           'd2s::GTPeController', '0',
+					utils.setParam(gtpe, 'd2s::GTPeController',
 						           'triggerRate', 'double',
 						           str(float(rate)*1000),
 						           verbose=self.options.verbose,
@@ -1039,17 +987,16 @@ class daq2Control(object):
 			if not self.config.useEvB:
 				if self.options.verbose > 0: print separator
 				for n,bu in enumerate(self.config.BUs):
-					utils.setParam(bu.host, bu.port, 'gevb2g::BU', str(n),
+					utils.setParam(bu, 'gevb2g::BU',
 						           'currentSize', 'unsignedLong',
 						           self.config.nStreams*int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 				if not self.options.dry:
-					for n,bu in enumerate(self.config.BUs):
+					for bu in self.config.BUs:
 						print ("%s dummyFedPayloadSize %d " %
-			                   (bu.name, int(utils.getParam(bu.host, bu.port,
+			                   (bu.name, int(utils.getParam(bu,
 			                   	                  'gevb2g::BU',
-			                   	                  str(n),
 			                   	                  'currentSize',
 			                   	                  'xsd:unsignedLong'))))
 
@@ -1070,8 +1017,7 @@ class daq2Control(object):
 
 			if self.options.verbose > 0: print separator
 			for n,efrl in enumerate(self.config.eFEROLs):
-				utils.sendSimpleCmdToApp(efrl.host, efrl.port,
-					                     'pt::frl::Application', n, 'Enable',
+				utils.sendSimpleCmdToApp(efrl, 'pt::frl::Application', 'Enable',
 					                     verbose=self.options.verbose,
 					                     dry=self.options.dry)
 			sleep(2, self.options.verbose, self.options.dry)
@@ -1080,14 +1026,12 @@ class daq2Control(object):
 			if self.options.verbose > 0: print separator
 			for n,efrl in enumerate(self.config.eFEROLs):
 				if self.config.useEvB or self.options.useLogNormal:
-					utils.setParam(efrl.host, efrl.port,
-						           'evb::test::DummyFEROL', n, 'fedSize',
+					utils.setParam(efrl, 'evb::test::DummyFEROL', 'fedSize',
 						           'unsignedInt', fragSize,
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 				else:
-					utils.setParam(efrl.host, efrl.port,
-						           'Client', n, 'currentSize',
+					utils.setParam(efrl, 'Client', 'currentSize',
 						           'unsignedLong', fragSize,
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
@@ -1097,14 +1041,12 @@ class daq2Control(object):
 			if self.options.useLogNormal:
 				if self.options.verbose > 0: print separator
 				for n,efrl in enumerate(self.config.eFEROLs):
-					utils.setParam(efrl.host, efrl.port,
-						           'evb::test::DummyFEROL', n,
+					utils.setParam(efrl, 'evb::test::DummyFEROL',
 						           'fedSizeStdDev', 'unsignedInt',
 						           int(fragSizeRMS),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
-					utils.setParam(efrl.host, efrl.port,
-						           'evb::test::DummyFEROL', n,
+					utils.setParam(efrl, 'evb::test::DummyFEROL',
 						           'useLogNormal', 'boolean', 'true',
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
@@ -1113,17 +1055,16 @@ class daq2Control(object):
 			if not self.config.useEvB:
 				if self.options.verbose > 0: print separator
 				for n,bu in enumerate(self.config.BUs):
-					utils.setParam(bu.host, bu.port, 'gevb2g::BU',
-						           str(n), 'currentSize', 'unsignedLong',
+					utils.setParam(bu, 'gevb2g::BU',
+						           'currentSize', 'unsignedLong',
 						           self.config.nStreams*int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 				if not self.options.dry:
-					for n,bu in enumerate(self.config.BUs):
+					for bu in self.config.BUs:
 						print ("%s dummyFedPayloadSize %d " %
-						       (bu.name, int(utils.getParam(bu.host, bu.port,
+						       (bu.name, int(utils.getParam(bu,
 						      	                  'gevb2g::BU',
-						      	                  str(n),
 						      	                  'currentSize',
 						      	                  'xsd:unsignedLong'))))
 
@@ -1131,8 +1072,7 @@ class daq2Control(object):
 
 			if self.config.useEvB or self.options.useLogNormal:
 				for n,efrl in enumerate(self.config.eFEROLs):
-					utils.sendSimpleCmdToApp(efrl.host, efrl.port,
-						                     'evb::test::DummyFEROL', n,
+					utils.sendSimpleCmdToApp(efrl, 'evb::test::DummyFEROL',
 						                     'Configure',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
@@ -1144,14 +1084,12 @@ class daq2Control(object):
 			## Enable eFEROL clients
 			for n,efrl in enumerate(self.config.eFEROLs):
 				if self.config.useEvB or self.options.useLogNormal:
-					utils.sendSimpleCmdToApp(efrl.host, efrl.port,
-						                     'evb::test::DummyFEROL', n,
+					utils.sendSimpleCmdToApp(efrl, 'evb::test::DummyFEROL',
 						                     'Enable',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
 				else:
-					utils.sendSimpleCmdToApp(efrl.host, efrl.port, 'Client',
-						                     n, 'start',
+					utils.sendSimpleCmdToApp(efrl, 'Client', 'start',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
 
@@ -1160,13 +1098,13 @@ class daq2Control(object):
 		## In case of mstreamio configurations:
 		elif self.config.useMSIO:
 			for n,ru in enumerate(self.config.RUs):
-				utils.setParam(ru.host, ru.port, 'Client', str(n),
+				utils.setParam(ru, 'Client',
 					           'currentSize', 'unsignedLong',
 					           fragSize,
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
 			for n,bu in enumerate(self.config.BUs):
-				utils.setParam(bu.host, bu.port, 'Server', str(n),
+				utils.setParam(bu, 'Server',
 					           'currentSize', 'unsignedLong',
 					           fragSize,
 					           verbose=self.options.verbose,
@@ -1175,18 +1113,18 @@ class daq2Control(object):
 		## In case of gevb2g InputEmulator configurations:
 		elif self.config.useInputEmulator and not self.config.useEvB:
 			for n,ru in enumerate(self.config.RUs):
-				utils.setParam(ru.host, ru.port, 'gevb2g::InputEmulator',
-					           str(n), 'Mean', 'unsignedLong',
+				utils.setParam(ru, 'gevb2g::InputEmulator',
+					           'Mean', 'unsignedLong',
 					           fragSize,
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
-				utils.setParam(ru.host, ru.port, 'gevb2g::InputEmulator',
-					           str(n), 'StdDev', 'unsignedLong',
+				utils.setParam(ru, 'gevb2g::InputEmulator',
+					           'StdDev', 'unsignedLong',
 					           int(fragSizeRMS),
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
 			for n,bu in enumerate(self.config.BUs):
-				utils.setParam(bu.host, bu.port, 'gevb2g::BU', str(n),
+				utils.setParam(bu, 'gevb2g::BU',
 					           'currentSize', 'unsignedLong',
 					           fragSize,
 					           verbose=self.options.verbose,
@@ -1198,33 +1136,33 @@ class daq2Control(object):
 				if n==0:
 					classname = 'EVM'
 					## Set a separate, smaller size for the EVM
-					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
-						           str(n), 'dummyFedSize', 'unsignedInt',
+					utils.setParam(ru, 'evb::%s'%classname,
+						           'dummyFedSize', 'unsignedInt',
 						           1024,
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 				else:
-					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
-						           str(n), 'dummyFedSize', 'unsignedInt',
+					utils.setParam(ru, 'evb::%s'%classname,
+						           'dummyFedSize', 'unsignedInt',
 						           int(fragSize),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 					if fragSizeRMS>0:
-						utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
-							           str(n), 'dummyFedSizeStdDev',
+						utils.setParam(ru, 'evb::%s'%classname,
+							           'dummyFedSizeStdDev',
 							           'unsignedInt',
 							           int(fragSizeRMS),
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
-						utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
-							           str(n), 'useLogNormal',
+						utils.setParam(ru, 'evb::%s'%classname,
+							           'useLogNormal',
 							           'boolean',
 							           'true',
 							           verbose=self.options.verbose,
 							           dry=self.options.dry)
 				if self.options.useRate != 'max':
-					utils.setParam(ru.host, ru.port, 'evb::%s'%classname,
-						           str(n), 'maxTriggerRate', 'unsignedInt',
+					utils.setParam(ru, 'evb::%s'%classname,
+						           'maxTriggerRate', 'unsignedInt',
 						           int(self.options.useRate),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
@@ -1251,8 +1189,7 @@ class daq2Control(object):
 		## Pause GTPe
 		if self.config.useGTPe:
 			gtpe = self.symbolMap('GTPE0')
-			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
-				                     'd2s::GTPeController', '0',
+			utils.sendSimpleCmdToApp(gtpe, 'd2s::GTPeController',
 				                     "Pause",
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
@@ -1276,8 +1213,8 @@ class daq2Control(object):
 			# 			       'running with GTPe.', self)
 			# 		raise RuntimeError('Failed to specify a rate '
 			# 			               'when running with GTPe.')
-			# 	utils.setParam(gtpe.host, gtpe.port,
-			# 		           'd2s::GTPeController', '0',
+			# 	utils.setParam(gtpe,
+			# 		           'd2s::GTPeController',
 			# 		           'triggerRate', 'double',
 			# 		           str(float(rate)*1000),
 			# 		           verbose=self.options.verbose,
@@ -1302,19 +1239,18 @@ class daq2Control(object):
 
 			## Change super-fragment size for BUs
 			if self.options.verbose > 0: print separator
-			for n,bu in enumerate(self.config.BUs):
-				utils.setParam(bu.host, bu.port, 'gevb2g::BU', str(n),
+			for bu in self.config.BUs:
+				utils.setParam(bu, 'gevb2g::BU',
 					           'currentSize', 'unsignedLong',
 					           self.config.nStreams*int(fragSize),
 					           verbose=self.options.verbose,
 					           dry=self.options.dry)
 			if self.options.verbose > 0: print separator
-			for n,bu in enumerate(self.config.BUs):
+			for bu in self.config.BUs:
 				if not self.options.dry:
 					print ("%s dummyFedPayloadSize %d " %
-					      (bu.name, int(utils.getParam(bu.host, bu.port,
+					      (bu.name, int(utils.getParam(bu,
 					      	                  'gevb2g::BU',
-					      	                  str(n),
 					      	                  'currentSize',
 					      	                  'xsd:unsignedLong'))))
 
@@ -1326,8 +1262,7 @@ class daq2Control(object):
 		## Resume GTPe
 		if self.config.useGTPe:
 			gtpe = self.symbolMap('GTPE0')
-			utils.sendSimpleCmdToApp(gtpe.host, gtpe.port,
-				                     'd2s::GTPeController', '0',
+			utils.sendSimpleCmdToApp(gtpe, 'd2s::GTPeController',
 				                     "Resume",
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
@@ -1341,13 +1276,9 @@ class daq2Control(object):
 		"""
 		sizes, rates = [],[]
 		for bu in self.config.BUs:
-			instance = next((inst for classn,inst in bu.applications
-				                                       if classn=='evb::BU'))
-			sizes.append(int(utils.getParam(bu.host, bu.port,
-				                            'evb::BU', str(instance),
+			sizes.append(int(utils.getParam(bu, 'evb::BU',
 				                            'eventSize', 'xsd:unsignedInt')))
-			rates.append(int(utils.getParam(bu.host, bu.port,
-				                            'evb::BU', str(instance),
+			rates.append(int(utils.getParam(bu, 'evb::BU',
 				                            'eventRate', 'xsd:unsignedInt')))
 		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
 		av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
@@ -1369,9 +1300,8 @@ class daq2Control(object):
 				stdout.write('Rate samples (ev/s @ RU (MB/s @ RU)):\n')
 			while(time.time() < starttime+duration):
 				time.sleep(interval)
-				ru_rate = int(utils.getParam(self.config.RUs[0].host,
-					                         self.config.RUs[0].port,
-				                            'evb::EVM', str(0),
+				ru_rate = int(utils.getParam(self.config.RUs[0],
+				                            'evb::EVM',
 				                            'eventRate',
 				                            'xsd:unsignedInt'))
 

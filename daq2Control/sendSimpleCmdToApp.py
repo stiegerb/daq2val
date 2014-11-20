@@ -25,7 +25,7 @@ if __name__ == "__main__":
 		host = d2SM(args[0])
 		classname, instance, command = args[1], int(args[2]), args[3]
 
-		sendSimpleCmdToApp(host.host, host.port, classname, instance, command, verbose=options.verbose, dry=options.dry)
+		sendSimpleCmdToApp(host, classname, command, verbose=options.verbose, dry=options.dry)
 		exit(0)
 	except KeyError:
 		printError('Host %s not defined in symbolmap!'%args[0])

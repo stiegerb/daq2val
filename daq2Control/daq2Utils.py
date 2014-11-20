@@ -114,18 +114,18 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 	if not d2c.config.useMSIO:
 		for n,bu in enumerate(d2c.config.BUs):
 			if d2c.config.useEvB:
-				nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU',
-					             str(n), 'nbEventsBuilt', 'xsd:unsignedLong',
+				nEvts = getParam(bu, d2c.config.namespace+'BU',
+					             'nbEventsBuilt', 'xsd:unsignedLong',
 					             verbose=verbose, dry=dry)
 			else:
-				nEvts = getParam(bu.host, bu.port, d2c.config.namespace+'BU',
-					             str(n), 'eventCounter',  'xsd:unsignedLong',
+				nEvts = getParam(bu, d2c.config.namespace+'BU',
+					             'eventCounter',  'xsd:unsignedLong',
 					             verbose=verbose, dry=dry)
 			events.append((bu.name, nEvts))
 	else: ## mstreamio
 		for n,bu in enumerate(d2c.config.BUs):
-			nEvts = getParam(bu.host, bu.port, 'Server',
-				             str(n), 'counter',  'xsd:unsignedLong',
+			nEvts = getParam(bu, 'Server',
+				             'counter',  'xsd:unsignedLong',
 				             verbose=verbose, dry=dry)
 			events.append((bu.name, nEvts))
 
@@ -267,7 +267,10 @@ def tryWebPing(host, port, verbose=0, dry=False):
 	if verbose>0: print 'Checking %25s:%-5d' % (host,int(port))
 	return subprocess.call(shlex.split(cmd))
 
-def checkApplicationState(host, classname, instance, statename, dry=False):
+def checkApplicationState(host, classname, statename, instance=None, dry=False):
+	if instance == None:
+		instance = getInstance(host, classname)
+
 	## Special case until stateName is added to the application infospace
 	## in the FerolController
 	if dry: return True
@@ -286,8 +289,7 @@ def checkApplicationState(host, classname, instance, statename, dry=False):
 		return True
 
 	## Normal case
-	state = getParam(host.host, host.port, classname, instance,
-		             'stateName', 'xsd:string')
+	state = getParam(host, classname, 'stateName', 'xsd:string')
 	state = state.strip('\n') ## remove trailing newlines
 	if not state == statename:
 		stdout.write('\n')
@@ -316,7 +318,7 @@ def checkStates(hosts, statename, verbose=0, dry=False):
 				stdout.write('Checking whether application %s(%d) on '
 					         '%s:%d is in state "%s" ... ' % (
 					         app, inst, host.host, host.port, statename))
-			if not checkApplicationState(host, app, inst, statename,
+			if not checkApplicationState(host, app, statename, instance=inst,
 				                         dry=dry):
 				if verbose > 0: stdout.write(' FAILED\n')
 				return False
@@ -357,50 +359,89 @@ def pauseGTPe(symbolMap, verbose=0, dry=False):
 		gtpe = symbolMap("GTPE0")
 		if tryWebPing(gtpe.host, gtpe.port) == 0:
 			if verbose>1: print 'Trying to pause GTPe.'
-			sendSimpleCmdToApp(gtpe.host, gtpe.port, 'd2s::GTPeController',
-				               '0', 'Pause', verbose=verbose, dry=dry)
+			sendSimpleCmdToApp(gtpe, 'd2s::GTPeController', 'Pause',
+				               verbose=verbose, dry=dry)
 			sleep(2, verbose=0, dry=dry)
 		else:
 			if verbose>1: print 'GTPe not running.'
 	except KeyError: ## no GTPe defined in symbolmap
 		pass
 
+def getInstance(host,classname):
+	instance = None
+	for app,inst in host.applications:
+		if app == classname:
+			if not instance: instance = inst
+			else: raise RuntimeError("sendSimpleCmdToApp several "
+				                     "applications on host %s:%s "
+				                     "with classname %s"
+				                     % (host.host,host.port,classname))
+	if instance is None:
+		printError("No application %s found on host %s:%s"%
+			                   (classname, host.host, host.port))
+	return instance
+
 ## Wrappers for existing perl scripts
 def sendSimpleCmdToAppPacked(packedargs):
 	(host, port, classname, instance, cmdName, verbose, dry) = packedargs
-	return sendSimpleCmdToApp(host, port, classname, instance, cmdName,
-		                      verbose, dry)
-def sendSimpleCmdToApp(host, port, classname, instance, cmdName,
+	return sendSimpleCmdToApp(host, classname, cmdName, port=port,
+		                      instance=instance,
+		                      verbose=verbose, dry=dry)
+def sendSimpleCmdToApp(host, classname, cmdName,
+	                   port=None,instance=None,
 	                   verbose=0, dry=False):
+	if port == None:
+		port = host.port
+		hostname = host.host
+
+	if instance == None:
+		instance = getInstance(host, classname)
+
 	if verbose > 1 and dry:
 		print '%-18s %25s:%-5d %25s %1s\t%-12s' % (
-			  'sendSimpleCmdToApp', host, port, classname, instance, cmdName)
+			  'sendSimpleCmdToApp', hostname, port,
+			                        classname, instance, cmdName)
 	if not dry:
-		return subprocess.check_call(['sendSimpleCmdToApp', host, str(port),
-			                             classname, str(instance), cmdName])
+		return subprocess.check_call(['sendSimpleCmdToApp', hostname,
+			                          str(port), classname, str(instance),
+			                          cmdName])
 def sendCmdToLauncher(host, port, cmd, verbose=0, dry=False):
 	if verbose > 1 and dry:
 		print '%-18s %25s:%-5d %-15s'%('sendCmdToLauncher', host, port, cmd)
 	if not dry:
 		return subprocess.call(['sendCmdToLauncher', host, str(port), cmd])
-def setParam(host, port, classname, instance, paramName, paramType,
-	         paramValue, verbose=0, dry=False):
+def setParam(host, classname, paramName, paramType, paramValue,
+	         port=None, instance=None, verbose=0, dry=False):
+	if port == None:
+		port = host.port
+		hostname = host.host
+
+	if instance == None:
+		instance = getInstance(host, classname)
+
 	if verbose > 1 and dry:
 		print '%-18s %25s:%-5d %25s %1s\t%-25s %12s %6s' % (
-			           'setParam', host, port, classname, instance,
+			           'setParam', hostname, port, classname, instance,
 			           paramName, paramType, paramValue)
 	if not dry:
-		return subprocess.check_call(['setParam', host, str(port), classname,
+		return subprocess.check_call(['setParam', hostname, str(port), classname,
 			                          str(instance), paramName, paramType,
 			                          str(paramValue)])
-def getParam(host, port, classname, instance, paramName, paramType,
-	         verbose=0, dry=False):
+def getParam(host, classname, paramName, paramType,
+	         port=None, instance=None, verbose=0, dry=False):
+	if port == None:
+		port = host.port
+		hostname = host.host
+
+	if instance == None:
+		instance = getInstance(host, classname)
+
 	if verbose > 1 and dry:
 		print '%-18s %25s:%-5d %25s %1s\t%-25s %12s' % (
-			            'getParam', host, port, classname, instance,
+			            'getParam', hostname, port, classname, instance,
 			            paramName, paramType)
 	if not dry:
-		call = subprocess.Popen(['getParam', host, str(port), classname,
+		call = subprocess.Popen(['getParam', hostname, str(port), classname,
 			                     str(instance), paramName, paramType],
 			                     stdout=subprocess.PIPE)
 		out,err = call.communicate()

@@ -37,7 +37,7 @@ if __name__ == "__main__":
 				except urllib2.URLError:
 					state = 'NO REPLY'
 			else:
-				state = getParam(host.host, host.port, app, inst, 'stateName', 'xsd:string')
+				state = getParam(host, app, 'stateName', 'xsd:string')
 				state = state.strip('\n') ## remove trailing newlines
 				if 'ERROR COMMAND' in state:
 					if 'REPLY=NONE'          in state: state = 'NO REPLY'
