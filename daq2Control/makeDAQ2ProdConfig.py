@@ -4,7 +4,7 @@ from makeDAQ2Config import addConfiguratorOptions
 from daq2ProdConfigurator import daq2ProdConfigurator
 
 from makeDAQ2Symbolmap import writeEntry
-import os
+import os, time, subprocess
 
 
 HEADER = ("LAUNCHER_BASE_PORT 17777\n"
@@ -115,6 +115,17 @@ if __name__ == "__main__":
 	## Now make the symbolmap
 	if opt.dry: exit(0)
 	outputFileName = os.path.join(opt.output, 'daq2Symbolmap.txt')
+
+	## Save previous symbolmap
+	if os.path.exists(outputFileName):
+		# get modification time of previous symbolmap:
+		modtime = time.localtime(os.path.getmtime(outputFileName))
+		modtime = time.strftime('%b%d-%H%M%S', modtime)
+		newfilename = 'daq2Symbolmap_%s.txt' % modtime
+		newfilename = os.path.join(opt.output, 'previous', newfilename)
+		os.system('mkdir -p %s' % os.path.join(opt.output, 'previous'))
+		subprocess.check_call(['mv', outputFileName, newfilename] )
+
 	with open(outputFileName, 'w') as outfile:
 		outfile.write(HEADER)
 		outfile.write('\n\n')
