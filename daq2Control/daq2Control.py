@@ -891,7 +891,7 @@ class daq2Control(object):
 
 		## Check Status of FEROLs and EVM/RUs:
 		if self.config.useEvB:
-			hosts_to_check =  self.config.FEROLs
+			hosts_to_check =  self.config.FEROLs[:]
 			hosts_to_check += self.config.RUs
 			hosts_to_check += self.config.BUs
 			if not utils.checkStates(hosts_to_check, 'Enabled',
