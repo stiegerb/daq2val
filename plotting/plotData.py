@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import sys, os
 import re
+import ROOT
 
 from os import path
 
@@ -260,7 +261,9 @@ class daq2Plotter(object):
 
 			## Correct for RMS:
 			if not self.args.sizeFromBU and rms is not None and rms != 0.0:
-				fragsize = averageFractionSize(eventsize/nstreams, rms*eventsize/nstreams, LOWERLIMIT, UPPERLIMIT)
+				fragsize = averageFractionSize(eventsize/nstreams,
+					                           rms*eventsize/nstreams,
+					                           LOWERLIMIT, UPPERLIMIT)
 				sufragsize = fragsize*nstreams/nrus
 
 			## Calculate rate
@@ -271,11 +274,11 @@ class daq2Plotter(object):
 			throughput  = sufragsize*avrate/1e6 ## in MB/s
 			throughputE = sufragsize*stdrate/1e6
 
-			data.append((fragsize, throughput, throughputE))
+			data.append((fragsize, throughput, throughputE, avrate, stdrate))
 
 		return data
 
-	##---------------------------------------------------------------------------------
+	##-----------------------------------------------------------------------
 	## Plotting and printing
 	def printTables(self):
 		for filename in self.filelist:
@@ -284,20 +287,23 @@ class daq2Plotter(object):
 		config, builder, protocol, rms = extractConfig(filename)
 		nstreams, nrus, nbus, strperfrl = getConfig(config)
 		data = self.getData(filename)
-		print "--------------------------------------------------------------------------------------"
-		print "Case: %s (%s/%s, RMS=%4.2f)" % (config, builder, protocol, rms)
-		print "--------------------------------------------------------------------------------------"
-		print "Superfrag. Size (B) : Fragment Size (B) : Av. Throughput (MB/s) :       Av. Rate     :"
-		print "--------------------------------------------------------------------------------------"
-		for	fragsize,tp,tpE in data:
+		print 86*"-"
+		print "Case: %s (%s/%s, RMS=%4.2f)" %(config, builder, protocol, rms)
+		print 86*"-"
+		print ("Superfrag. Size (B) : Fragment Size (B) : "
+			   "Av. Throughput (MB/s) :       Av. Rate     :")
+		print 86*"-"
+		for	fragsize,tp,tpE,rate,rateE in data:
 			if strperfrl == 0:
 				sufragsize = fragsize
 			else:
 				sufragsize = fragsize*nstreams/nrus
-			print ("             %6d :            %6d :      %6.1f +- %6.1f :  %8.1f +- %6.1f" %
-			       (sufragsize, fragsize, tp, tpE, tp*1e6/sufragsize, tpE*1e6/sufragsize))
+			print ("             %6d :            %6d :      "
+				   "%6.1f +- %6.1f :  %8.1f +- %6.1f" %
+			       (sufragsize, fragsize, tp, tpE,
+			       	rate, rateE))
 
-		print "--------------------------------------------------------------------------------------"
+		print 86*"-"
 	def makeMultiPlot(self):
 		from ROOT import gROOT, gStyle, TFile, TTree, gDirectory
 		from ROOT import TGraphErrors, TCanvas, TLegend, TH2D, TLatex, TPave
@@ -321,13 +327,20 @@ class daq2Plotter(object):
 			oname = 'plot_' + reduce(lambda x,y:x+'_'+y, caselist)
 
 		canv = TCanvas(oname, "Plot", 0, 0, 1024, 768)
-		canv.cd()
-		if not self.args.nologx: canv.SetLogx()
-		if self.args.logy: canv.SetLogy()
-		canv.SetGridx()
-		canv.SetGridy()
+		pad1 = ROOT.TPad("pad1", "", 0, 0, 1, 1)
+		pad2 = ROOT.TPad("pad2", "", 0, 0, 1, 1)
+		pad1.Draw()
+		pad1.cd()
+		if not self.args.nologx:
+			pad1.SetLogx()
+			pad2.SetLogx()
+		if self.args.logy:
+			pad1.SetLogy()
+			pad2.SetLogy()
+		# pad1.SetGridx()
+		# pad1.SetGridy()
+
 		## Cosmetics
-		# canv.DrawFrame(rangex[0], rangey[0], rangex[1], rangey[1])
 		axes = TH2D('axes', 'A', 100, rangex[0], rangex[1], 100, rangey[0], rangey[1])
 		title = args.title if len(args.title) else 'Throughput vs. Fragment Size'
 		titleX = args.titleX if len(args.titleX) else 'Fragment Size (bytes)'
@@ -366,12 +379,16 @@ class daq2Plotter(object):
 			tl.DrawLatex(0.145, 0.77, self.args.subtag)
 
 		graphs = []
+		rategraphs = []
 		configs = set()
 		for filename,case in zip(self.filelist,caselist):
 			try:
 				graphs.append(self.getGraph(filename))
-
 				config, builder, protocol, rms = extractConfig(filename)
+				if builder=='EvB':
+					rategraphs.append(self.getRateGraph(filename))
+				else:
+					rategraphs.append(None)
 				nstreams, nrus, nbus, strperfrl = getConfig(config)
 
 				if strperfrl == 0:
@@ -393,7 +410,8 @@ class daq2Plotter(object):
 		configs = sorted(configs)
 		nlegentries = len(self.filelist)
 		# nlegentries = len(caselist) if not self.args.daq1 else len(caselist) + 1
-		legendpos = (0.44, 0.13, 0.899, 0.20+nlegentries*0.05)
+		legendpos = (0.12, 0.75-nlegentries*0.04, 0.38, 0.75)
+		# legendpos = (0.44, 0.101, 0.899, 0.101+nlegentries*0.04) ## bottom right
 		if strperfrl == 0:
 			legendpos = (0.13, 0.73, 0.31, 0.73-nlegentries*0.045)
 		# if self.args.legendPos == 'TL':
@@ -444,6 +462,45 @@ class daq2Plotter(object):
 				else:
 					leg.AddEntry(func, '%.0f kHz'% (self.args.rate), 'l')
 
+		pad1.Update()
+		# canv.cd()
+
+		## Draw rate graphs on transparent pad
+		# dx,dy = rangex[1]-rangex[0], 200e3
+		# pad2.Range(rangex[0]-0.1*dx, 0-0.1*dy, rangex[1]+0.1*dx, 200e3+0.1*dy)
+		# pad2.Range(rangex[0], rangey[0], rangex[1], rangey[1])
+		# pad2.RangeAxis(rangex[0], 0, rangex[1], 200)
+		pad2.SetFillStyle(4000) ## transparent
+		pad2.SetFillColor(0)
+		pad2.SetFrameFillStyle(4000)
+		pad2.Draw()
+		pad2.cd()
+		raxes = TH2D('raxes', 'A', 100, rangex[0], rangex[1], 100, 0, args.ratemaxy)
+		raxes.Draw("A")
+		for n,rategraph in enumerate(rategraphs):
+			if rategraphs is None: continue
+			rategraph.SetLineColor(colors[n])
+			rategraph.SetMarkerColor(colors[n])
+			rategraph.SetMarkerStyle(markers[n])
+			rategraph.Draw("LY+")
+		pad2.Update()
+
+		line = ROOT.TLine(rangex[0], 100, rangex[1], 100)
+		line.SetLineColor(ROOT.kGray+2)
+		line.SetLineStyle(3)
+		line.Draw()
+
+		tgaxis = ROOT.TGaxis(rangex[1], 0, rangex[1], args.ratemaxy,
+			                 0, args.ratemaxy, 510, "+L")
+		tgaxis.SetTitle('Event Rate at EVM (kHz)')
+		tgaxis.SetTitleOffset(1.2)
+		tgaxis.SetTextFont(42)
+		tgaxis.SetLabelFont(42)
+		tgaxis.SetTickSize(0)
+		tgaxis.SetLabelSize(0.033)
+		tgaxis.SetTitleSize(0.035)
+		tgaxis.Draw()
+
 		leg.Draw()
 
 		## Draw CMS Prelim
@@ -456,10 +513,14 @@ class daq2Plotter(object):
 		tl.DrawLatex(0.625, 0.83, "CMS")
 		tl.SetTextFont(52)
 		tl.DrawLatex(0.71, 0.83, "Preliminary")
+		pad2.Update()
 
-
+		pad1.cd()
 		for graph in graphs:
 			graph.Draw("PL")
+
+		pad1.Update()
+
 
 		canv.Print(oname + '.pdf')
 		canv.Print(oname + '.png')
@@ -475,13 +536,31 @@ class daq2Plotter(object):
 		g = TGraphErrors(nsteps)
 
 		## Loop on the data
-		for	n,(fragsize,tp,tpE) in enumerate(data):
+		for	n,(fragsize,tp,tpE,_,_) in enumerate(data):
 			g.SetPoint(      n, fragsize, tp)
 			g.SetPointError( n,       0., tpE)
 
 		g.SetLineWidth(2)
 		g.SetMarkerSize(1.7)
 
+		return g
+
+	def getRateGraph(self, filename):
+		data = self.getData(filename)
+
+		from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
+		from array import array
+
+		nsteps = len(data)
+		g = TGraphErrors(nsteps)
+
+		## Loop on the data
+		for	n,(fragsize,_,_,rate,rateE) in enumerate(data):
+			g.SetPoint(      n, fragsize, rate/1.e3)
+			g.SetPointError( n,       0., rateE/1.e3)
+
+		g.SetLineWidth(1)
+		g.SetLineStyle(2)
 		return g
 
 ##---------------------------------------------------------------------------------
@@ -524,6 +603,8 @@ def addPlottingOptions(parser):
 		                dest="miny", help="Y axis range, minimum")
 	parser.add_argument("--maxy", default="5500", action="store", type=float,
 		                dest="maxy", help="Y axis range, maximum")
+	parser.add_argument("--ratemaxy", default="200", action="store", type=float,
+		                dest="ratemaxy", help="Y axis range for rate, maximum")
 	parser.add_argument("--minx", default="250", action="store", type=float,
 		                dest="minx", help="X axis range, minimum")
 	parser.add_argument("--maxx", default="17000", action="store", type=float,
