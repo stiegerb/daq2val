@@ -351,7 +351,7 @@ that respond to a tryWebPing call"""
 	if verbose > 0: print "Stopping XDAQs"
 	pauseGTPe(symbolMap, verbose=verbose, dry=dry)
 	from multiprocessing import Pool
-	pool = Pool(min(16,len(symbolMap.allHosts)))
+	pool = Pool(min(64,len(symbolMap.allHosts)))
 	pool.map(stopXDAQPacked,
 		     [(h, verbose, dry) for h in symbolMap.allHosts])
 def pauseGTPe(symbolMap, verbose=0, dry=False):
@@ -552,7 +552,7 @@ def sendToHostListInParallel2(hostlist, func, commonargs):
 	                                   for host in hostlist]
 
 	from multiprocessing import Pool
-	pool = Pool(min(len(hostlist),16))
+	pool = Pool(min(len(hostlist),64))
 	try:
 		pool.map(func, tasklist)
 		return True
@@ -568,7 +568,7 @@ def sendToHostListInParallel(hostlist, func, individualargs, commonargs):
 	                                   for host,iarg in hostarglist]
 
 	from multiprocessing import Pool
-	pool = Pool(min(len(hostlist),16))
+	pool = Pool(min(len(hostlist),64))
 	try:
 		pool.map(func, tasklist)
 		return True

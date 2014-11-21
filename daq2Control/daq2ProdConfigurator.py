@@ -164,7 +164,8 @@ class daq2ProdConfigurator(daq2Configurator):
 
 			FEROLs_onswitch = []
 			for frlpc in frlpcs:
-				for ferol in self.hwInfo.getFEROLs(frlpc, haveFEDIDs=self.canonlength/8):
+				for ferol in self.hwInfo.getFEROLs(frlpc,
+					         haveFEDIDs=self.canonlength/8):
 					ferol.index = self.ferolindex
 					self.allFEROLs.append(ferol)
 					FEROLs_onswitch.append(ferol)
