@@ -254,6 +254,9 @@ class daq2Plotter(object):
 			else:
 				fragsize    = eventsize/nstreams
 				sufragsize  = eventsize/nrus
+				if args.correctForEVM:
+					sufragsize = (eventsize-1024)/(nrus-1)
+
 
 			## Correct for RMS:
 			if not self.args.sizeFromBU and rms is not None and rms != 0.0:
@@ -512,6 +515,10 @@ def addPlottingOptions(parser):
 		                dest="quiet", help="Do not print the tables")
 	parser.add_argument("--sizeFromBU", default=False, action="store_true",
 		                dest="sizeFromBU", help="Take size from BU measurement")
+	parser.add_argument("--correctForEVM", default=False, action="store_true",
+		                dest="correctForEVM",
+		                help=("Assume one RU only has one fragment with 1kB size"
+		                      " and correct the throughput to show the other RUs"))
 
 	parser.add_argument("--miny", default="0", action="store", type=float,
 		                dest="miny", help="Y axis range, minimum")
