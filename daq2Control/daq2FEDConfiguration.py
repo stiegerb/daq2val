@@ -125,7 +125,7 @@ class RUNode(object):
 		return [fed for frl in self.frls for fed in frl.fedIds if fed]
 
 	def __str__(self):
-		return "RU%d at %14s" % (self.index, self.hostname)
+		return "RU%-2d at %14s" % (self.index, self.hostname)
 
 ######################################################################
 class daq2FEDConfiguration(object):

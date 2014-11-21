@@ -112,6 +112,7 @@ if __name__ == "__main__":
 
 	fedbuilders = daq2HWInfo.ge_switch_cabling.keys()
 	configurator.makeConfigs(fedbuilders)
+	configurator.printSetup(os.path.join(opt.output,'setup.txt'))
 
 	######################################
 	## Now make the symbolmap

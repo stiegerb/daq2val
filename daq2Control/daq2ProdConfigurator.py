@@ -54,7 +54,6 @@ class daq2ProdConfigurator(daq2Configurator):
 		self.addRUContextWithGEEndpoint(ferol.ruindex, isEVM=isevm)
 		outputname = 'FEROLCONTROLLER%d.xml' % ferol.index
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
-
 	def makeEVMConfig(self, ru):
 		self.makeSkeleton()
 		ru_instances = [r.index for r in self.allRUs[1:]]
@@ -70,7 +69,6 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		outputname = 'RU%d.xml' % ru.index
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
-
 	def makeRUConfig(self, ru):
 		self.makeSkeleton()
 		self.addI2OProtocol(rus_to_add=[ru.index],
@@ -82,7 +80,6 @@ class daq2ProdConfigurator(daq2Configurator):
 			self.addBUContextWithIBEndpoint(index)
 		outputname = 'RU%d.xml' % ru.index
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
-
 	def makeBUConfig(self, buindex):
 		self.makeSkeleton()
 		## no RU, only one BU
@@ -92,7 +89,6 @@ class daq2ProdConfigurator(daq2Configurator):
 		self.addRUContextWithIBEndpoint(self.allRUs[0].index, isEVM=True)
 		outputname = 'BU%d.xml' % buindex
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
-
 	def makeFullConfig(self):
 		self.makeSkeleton()
 		ru_instances = [r.index for r in self.allRUs[1:]]
@@ -112,7 +108,6 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		outputname = 'full.xml'
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
-
 
 	def assignFEROLsToRUs(self, rus, ferols):
 		ferols_gen = (f for f in ferols if f.nstreams > 0)
@@ -144,9 +139,9 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		if self.verbose>5:
 			for f in ferols_rest:
-				print 'leftover FEROL:', f
+				print 'unused FEROL:', f
 			for r in rus_gen:
-				print 'leftover RU:', r
+				print 'unused RU:', r
 	def makeConfigs(self, geswitches):
 		for switchname in geswitches:
 			# get a list of frlpcs, ferols, and rus from the hwInfo
@@ -189,8 +184,6 @@ class daq2ProdConfigurator(daq2Configurator):
 				usedFEROLs.append(f)
 		self.allFEROLs = usedFEROLs
 
-		print len(self.allFEROLs), len(self.allRUs)
-
 		## Now make sure the EVM has index and instance 0!
 		oldevmindex = self.allRUs[0].index
 		## And make sure the FEROL sending to the evm sends to 0
@@ -232,8 +225,35 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		self.makeFullConfig()
 
-		if self.verbose>0: print 70*'-'
-		if self.verbose>0: print ' Wrote configs to %s' % self.outPutDir
-		if self.verbose>0: print 70*'-'
+		if self.verbose>0:
+			print 70*'-'
+			print ' Wrote configs to %s' % self.outPutDir
+			print 70*'-'
+
+	def printSetup(self, filename):
+		with open(filename, 'w') as outfile:
+			outfile.write(115*'-'+'\n')
+			nfeds = len([i for r in self.allRUs for i in r.getFedIds()])
+			outfile.write("%d FEDs, %d FEROLs, %d RUs, %d BUs" % (
+				           nfeds, len(self.allFEROLs),
+				           len(self.allRUs), self.nbus))
+			outfile.write('\n')
+			outfile.write(115*'-'+'\n')
+			for r in self.allRUs:
+				outfile.write("%-22s"%str(r))
+				outfile.write("%2d FEROLs, "%len(r.frls))
+				outfile.write("%2d FEDs: "%len(r.getFedIds()))
+				fedstr = '%4d '*len(r.getFedIds())
+				fedstr = fedstr % tuple([int(i) for i in r.getFedIds()])
+				outfile.write(fedstr)
+				outfile.write('\n')
+			outfile.write(115*'-'+'\n')
+			for f in self.allFEROLs:
+				outfile.write(str(f))
+				outfile.write('\n')
+			outfile.write(115*'-'+'\n')
+
+			outfile.write('\n\n')
+			outfile.close()
 
 
