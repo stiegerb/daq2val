@@ -56,7 +56,8 @@ if __name__ == "__main__":
 		               help=("Canonical length [default: %default]"))
 	parser.add_option("-d", "--dry", default=False,
 		               action="store_true", dest="dry",
-		               help=("Just print the assignments without writing out anything"))
+		               help=("Just print the assignments without writing "
+		               	     "out anything"))
 	(opt, args) = parser.parse_args()
 
 	geswitchmask=opt.maskGE.split(',') if len(opt.maskGE) else []
@@ -97,11 +98,12 @@ if __name__ == "__main__":
 		                                canonlength=opt.canonLength,
 		                                dry=opt.dry, verbose=opt.verbose)
 
-	os.system('mkdir -p %s' % opt.output)
-	configurator.outPutDir = opt.output
+	os.system('mkdir -p %s' % os.path.join(opt.output, "config"))
+	configurator.outPutDir = os.path.join(opt.output, "config")
 	configurator.enablePauseFrame  = opt.enablePauseFrame
 	configurator.disablePauseFrame = opt.disablePauseFrame
 	configurator.setCorrelatedSeed = opt.setCorrelatedSeed
+	configurator.setCWND = opt.setCWND ## -1 doesn't do anything
 	configurator.nbus = opt.nBUs
 	configurator.evbns = ('gevb2g' if opt.useGevb2g and not
 			                          opt.useEvB else 'evb')
