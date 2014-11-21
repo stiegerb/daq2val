@@ -424,7 +424,7 @@ class daq2Plotter(object):
 		leg.SetTextSize(0.033)
 		leg.SetBorderSize(0)
 
-		colors  = [1,2,3,4,51,95,65,39,32]
+		colors  = [1,2,ROOT.kGreen+1,4,51,95,65,39,32]
 		markers = [20,21,22,23,34,33,29,24,25,26]
 
 		if (len(self.args.legends) > 0 and
