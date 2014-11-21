@@ -930,7 +930,10 @@ class daq2Control(object):
 		except OSError: ## dir exists, save previous measurements:
 			newdir =  self._outputDir
 			newdir += 'previous/'
-			newdir += time.strftime('%b%d-%H%M%S')
+			modtime = time.localtime(os.path.getmtime(self._outputDir))
+			modtime = time.strftime('%b%d-%H%M%S', modtime)
+			newdir += modtime
+
 			os.makedirs(newdir)
 			if len(glob.glob(self._outputDir+'*.csv')) > 0:
 				subprocess.check_call(['mv'] +
