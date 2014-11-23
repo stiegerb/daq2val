@@ -64,11 +64,9 @@ class daq2HardwareInfo(object):
 		         ibcabling="2014-10-15-infiniband-ports.csv",
 		         geswitchmask=[], ibswitchmask=[],
 		         fedwhitelist=[], ruwhitelist=[], buwhitelist=[],
-		         canonical=False, canonlength=8, verbose=0):
+		         verbose=0):
 		super(daq2HardwareInfo, self).__init__()
 		self.verbose = verbose
-		self.canonical = canonical
-		self.canonlength = canonlength
 		self.ibswitchmask = ibswitchmask
 		self.geswitchmask = geswitchmask
 		self.ge_switch_cabling = {} ## ge switch to list of conn. devices
@@ -82,6 +80,7 @@ class daq2HardwareInfo(object):
 		self.bu_inventory      = {} ## ib switch to list of BUs
 		self.ib_host_cabling   = {} ## hostname to ib switch, port
 
+		self.FRLPCs = []
 		self.FEROLs = []
 		self.fedid_cabling = {} ## fedid to frlpc
 
@@ -144,8 +143,6 @@ class daq2HardwareInfo(object):
 						fedid1 = fedid1.lstrip('FEDs ')
 					else:
 						fedid1 = fedid1.lstrip('FED ')
-				if self.canonical and self.canonlength==8:
-					fedid2 = None
 				ferol = FEROL(frlpc, int(slot), (fedid1, fedid2),
 					          name, crate, switch)
 
@@ -254,7 +251,8 @@ class daq2HardwareInfo(object):
 		                            if ru.startswith('ru-')]
 	def getRUs(self, switch):
 		"""
-		Return a RU on the same ETH switch as the frlpc, as long as there are any
+		Return a RU on the same ETH switch as the frlpc,
+		as long as there are any
 		"""
 		allrus = [ru for ru in self.ge_switch_cabling[switch]
 		                            if ru.startswith('ru-')]
@@ -284,35 +282,22 @@ class daq2HardwareInfo(object):
 				yield bunch
 				bunch = []
 				counter = 0
-	def getListOfFRLPCs(self, ethswitch):
+	def getListOfFRLPCs(self, ethswitch, minFRLs=0, minFEDIDs=0):
 		result = []
 		for device in self.ge_switch_cabling[ethswitch]:
 			if device.startswith('frlpc-'):
-				# if (self.canonical and
-				# 	len(self.frlpc_cabling[device]) < self.canonlength):
-				# 	continue
+				if len(self.getFEROLs(device,haveFEDIDs=minFEDIDs)) <minFRLs:
+					continue
 				result.append(device)
 		return result
 	def getFEROLs(self, frlpc, haveFEDIDs=0):
 		allFEROLs = self.frlpc_cabling[frlpc]
-		if self.canonical and len(allFEROLs) < self.canonlength:
-			return []
 		if haveFEDIDs==1:
-			result = [f for f in allFEROLs if f.fedIds[0]]
-			if self.canonical:
-				if len(result) < self.canonlength: return []
-				else: result = result[:self.canonlength]
-			return result
+			return [f for f in allFEROLs if f.fedIds[0]]
 		elif haveFEDIDs==2:
-			result = [f for f in allFEROLs if f.fedIds[1]]
-			if self.canonical:
-				if len(result) < self.canonlength: return []
-				else: result = result[:self.canonlength]
-			return result
-		elif not canonical:
-			return allFEROLs
+			return [f for f in allFEROLs if f.fedIds[1]]
 		else:
-			return []
+			return allFEROLs
 
 def getMachines(inventory,splitBy=-1,verbose=False):
 	"""

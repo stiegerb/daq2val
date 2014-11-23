@@ -18,6 +18,10 @@ from daq2Configurator import elementFromFile, addFragmentFromFile
 from daq2Configurator import RU_STARTING_TID, BU_STARTING_TID
 from daq2Configurator import FEROL_OPERATION_MODES
 
+def truncate(mylist, multiple=8):
+	delim = len(mylist)-len(mylist)%multiple
+	return mylist[:delim]
+
 ######################################################################
 from daq2Configurator import daq2Configurator
 class daq2ProdConfigurator(daq2Configurator):
@@ -27,7 +31,7 @@ class daq2ProdConfigurator(daq2Configurator):
 
 ---------------------------------------------------------------------
 '''
-	def __init__(self, fragmentdir, hwInfo, canonical=False, canonlength=8,
+	def __init__(self, fragmentdir, hwInfo, canonical=0,
 		         dry=False, verbose=5):
 		super(daq2ProdConfigurator, self).__init__(fragmentdir,
 			                                       verbose=verbose)
@@ -36,7 +40,6 @@ class daq2ProdConfigurator(daq2Configurator):
 		# self.symbMap = symbMap ## can get this info also from hwInfo?
 
 		self.canonical = canonical
-		self.canonlength = canonlength
 		self.dry = dry
 
 		## Counters
@@ -109,21 +112,9 @@ class daq2ProdConfigurator(daq2Configurator):
 		outputname = 'full.xml'
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
-	def assignFEROLsToRUs(self, rus, ferols):
+	def assignFEROLsToRUs(self, rus_gen, ferols):
 		ferols_gen = (f for f in ferols if f.nstreams > 0)
 		ferols_rest = [f for f in ferols if f.nstreams == 0]
-		rus_gen = (r for r in rus)
-
-		## First make an EVM
-		if not self.haveEVM:
-			evm = rus_gen.next()
-			evm_frl = ferols_gen.next()
-			evm_frl.ruindex = evm.index
-			evm_frl.runame = evm.hostname
-			evm_frl.nstreams = 1
-			evm_frl.fedIds = (evm_frl.fedIds[0], None)
-			evm.addFRL(evm_frl)
-			self.haveEVM = True
 
 		try:
 			for n,f in enumerate(ferols_gen):
@@ -142,13 +133,38 @@ class daq2ProdConfigurator(daq2Configurator):
 				print 'unused FEROL:', f
 			for r in rus_gen:
 				print 'unused RU:', r
+	def assignEVM(self, rus_gen, frlpcs):
+		if self.haveEVM: return True
+		for frlpc in frlpcs:
+			for ferol in self.hwInfo.getFEROLs(frlpc, haveFEDIDs=1):
+				print "Moep"
+				ferol.index = self.ferolindex
+				self.allFEROLs.append(ferol)
+				self.ferolindex += 1
+
+				evm = rus_gen.next()
+				ferol.ruindex = evm.index
+				ferol.runame = evm.hostname
+				ferol.nstreams = 1
+				ferol.fedIds = (ferol.fedIds[0], None)
+				evm.addFRL(ferol)
+				print "Found EVM. (You should only ever see this line once)"
+				return True
+		return False
+
+
 	def makeConfigs(self, geswitches):
+		minFRLs = self.canonical*8 if self.canonical else 2
+		minFEDIDs = self.canonical if self.canonical else 1
 		for switchname in geswitches:
 			# get a list of frlpcs, ferols, and rus from the hwInfo
-			frlpcs = self.hwInfo.getListOfFRLPCs(switchname)
-			runames = self.hwInfo.getAllRUs(switchname)
+			allfrlpcs = self.hwInfo.getListOfFRLPCs(switchname)
+			frlpcs = self.hwInfo.getListOfFRLPCs(switchname,
+				                             minFRLs=minFRLs,
+				                             minFEDIDs=minFEDIDs)
 
 			## Number the RUs
+			runames = self.hwInfo.getAllRUs(switchname)
 			RUs_onswitch = []
 			for runame in runames:
 				runode = RUNode(self.ruindex, hostname=runame)
@@ -156,19 +172,53 @@ class daq2ProdConfigurator(daq2Configurator):
 				RUs_onswitch.append(runode)
 				self.ruindex += 1
 			if len(RUs_onswitch) == 0: continue
+			RU_gen = (r for r in RUs_onswitch)
+
+			## Find an EVM:
+			if not self.haveEVM:
+				if self.canonical:
+					## Take one of the remaining
+					frlpcs_evm = list(set(allfrlpcs).difference(set(frlpcs)))
+					self.haveEVM = self.assignEVM(RU_gen, frlpcs_evm)
+				else:
+					## Just take the first one of
+					## the one with the fewest FEROLs
+					try:
+						frlpcs_evm = sorted(frlpcs,
+							                key=lambda f:
+							                len(self.hwInfo.getFEROLs(f)))
+						self.haveEVM = self.assignEVM(RU_gen, frlpcs_evm)
+						if self.haveEVM:
+							frlpcs.remove(frlpcs_evm[0])
+					except IndexError:
+						pass ## try next time
+
 
 			FEROLs_onswitch = []
 			for frlpc in frlpcs:
-				for ferol in self.hwInfo.getFEROLs(frlpc,
-					         haveFEDIDs=self.canonlength/8):
+				haveFEDIDs = self.canonical if self.canonical else 1
+				ferols = self.hwInfo.getFEROLs(frlpc, haveFEDIDs=haveFEDIDs)
+				## Apply canonicity
+				if self.canonical:
+					ferols = truncate(ferols,multiple=self.canonical*8)
+					if len(ferols) < self.canonical*8: continue
+
+				for ferol in ferols:
 					ferol.index = self.ferolindex
+					if self.canonical == 1:
+						ferol.fedIds = (ferol.fedIds[0], None)
+						ferol.nstreams = 1
 					self.allFEROLs.append(ferol)
 					FEROLs_onswitch.append(ferol)
 					self.ferolindex += 1
 			if len(FEROLs_onswitch) == 0: continue
 
 			## Assign FEROLs to RUs
-			self.assignFEROLsToRUs(RUs_onswitch, FEROLs_onswitch)
+			self.assignFEROLsToRUs(RU_gen, FEROLs_onswitch)
+
+		if not self.haveEVM:
+			printError("Failed to add EVM!", self)
+			raise RuntimeError("No EVM!")
 
 		## Remove unused RUs
 		usedRUs = []

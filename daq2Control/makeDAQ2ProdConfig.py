@@ -17,7 +17,7 @@ if __name__ == "__main__":
 	usage = """[prog] """
 	parser = OptionParser(usage=usage)
 	addConfiguratorOptions(parser)
-	parser.add_option("--nBUs", default=42, action="store", type="int",
+	parser.add_option("--nBUs", default=40, action="store", type="int",
 		               dest="nBUs",
 		               help=("Number of BUs [default: %default]"))
 	parser.add_option("--ibInventoryFile",
@@ -48,12 +48,12 @@ if __name__ == "__main__":
 		               action="store", type="string", dest="maskBUs",
 		               help=("Use only these BUs (comma separated list) "
 		               	     "[default: use all]"))
-	parser.add_option("-c", "--canonical", default=False,
-		               action="store_true", dest="canonical",
-		               help=("Only use exact numbers of FRLs"))
-	parser.add_option("--canonLength", default=8, action="store", type="int",
-		               dest="canonLength",
-		               help=("Canonical length [default: %default]"))
+	parser.add_option("-c", "--canonical", default=0,
+		               action="store", type="int", dest="canonical",
+		               help=("Only use exact numbers of FRLs "
+		               	     "0 is non canonical, 1 is 8 streams per RU, "
+		               	     "2 is 16 streams per RU."
+		               	     "[default: non canonical]"))
 	parser.add_option("-d", "--dry", default=False,
 		               action="store_true", dest="dry",
 		               help=("Just print the assignments without writing "
@@ -87,15 +87,12 @@ if __name__ == "__main__":
                                   fedwhitelist=fedwhitelist,
                                   ruwhitelist=ruwhitelist,
                                   buwhitelist=buwhitelist,
-                                  canonical=opt.canonical,
-                                  canonlength=opt.canonLength,
 		                          verbose=opt.verbose)
 
 	######################################
 	## First make the configs
 	configurator = daq2ProdConfigurator(opt.fragmentDir, daq2HWInfo,
 		                                canonical=opt.canonical,
-		                                canonlength=opt.canonLength,
 		                                dry=opt.dry, verbose=opt.verbose)
 
 	os.system('mkdir -p %s' % os.path.join(opt.output, "config"))
