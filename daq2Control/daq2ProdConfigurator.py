@@ -129,7 +129,7 @@ class daq2ProdConfigurator(daq2Configurator):
 		except StopIteration:
 			print f
 			printError('Running out of RUs for %s'%
-				        self.hwInfo.ge_host_cabling[rus[0].hostname], self)
+				        self.hwInfo.ge_host_cabling[f.frlpc], self)
 
 		if self.verbose>5:
 			for f in ferols_rest:
