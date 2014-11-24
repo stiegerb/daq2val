@@ -765,7 +765,7 @@ class daq2Configurator(object):
 
 		return [[geoslot, inputmask, inputlabel, outputlabel, label]]
 
-	def makeRU(self, ru, isEVM=False):
+	def makeRU(self, ru, isEVM=False, dropAtRU=False):
 		fragmentname = 'RU/%s/RU_context.xml'%self.evbns
 		ru_context = elementFromFile(self.fragmentdir+fragmentname)
 
@@ -826,10 +826,15 @@ class daq2Configurator(object):
 		## RU application
 		ru_app = elementFromFile(filename=self.fragmentdir+
 			                     '/RU/%s/RU_application.xml'%self.evbns)
+
 		## make the first one an EVM in case of EvB
 		if self.evbns == 'evb' and isEVM:
 			ru_app = elementFromFile(filename=self.fragmentdir+
 				                     '/RU/evb/RU_application_EVM.xml')
+
+		if self.evbns == 'evb' and dropAtRU:
+			self.setPropertyInApp(ru_app, 'dropInputData', 'true')
+
 		ru_context.insert(7,ru_app)
 		ru_app.set('instance',str(ru.index))
 

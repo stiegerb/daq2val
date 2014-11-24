@@ -42,6 +42,8 @@ class daq2ProdConfigurator(daq2Configurator):
 		self.canonical = canonical
 		self.dry = dry
 
+		self.dropAtRU = False
+
 		## Counters
 		self.haveEVM = False
 		self.ruindex = 0
@@ -64,7 +66,8 @@ class daq2ProdConfigurator(daq2Configurator):
 			                evminst=self.allRUs[0].index)
 
 		## add the EVM
-		self.config.append(self.makeRU(ru, isEVM=True))
+		self.config.append(self.makeRU(ru, dropAtRU=self.dropAtRU,
+			                               isEVM=True))
 		for index in ru_instances:
 			self.addRUContextWithIBEndpoint(index)
 		for index in xrange(self.nbus):
@@ -77,7 +80,7 @@ class daq2ProdConfigurator(daq2Configurator):
 		self.addI2OProtocol(rus_to_add=[ru.index],
 			                evminst=self.allRUs[0].index)
 
-		self.config.append(self.makeRU(ru))
+		self.config.append(self.makeRU(ru, dropAtRU=self.dropAtRU))
 		self.addRUContextWithIBEndpoint(self.allRUs[0].index, isEVM=True)
 		for index in xrange(self.nbus):
 			self.addBUContextWithIBEndpoint(index)
@@ -137,7 +140,6 @@ class daq2ProdConfigurator(daq2Configurator):
 		if self.haveEVM: return True
 		for frlpc in frlpcs:
 			for ferol in self.hwInfo.getFEROLs(frlpc, haveFEDIDs=1):
-				print "Moep"
 				ferol.index = self.ferolindex
 				self.allFEROLs.append(ferol)
 				self.ferolindex += 1
