@@ -29,7 +29,7 @@ def startXDAQLauncher(host, port, logfile, options):
 	if len(testType) > 0: testEnv = "-"+testType
 
 	# ssh to the host (no x11, run in background)
-	cmd = "ssh -x -n " + host
+	cmd = "ssh -o \"StrictHostKeyChecking no\" -x -n " + host
 	# cmd += " \"sudo -u %s sh -c \\"%user
 	cmd += ' "'
 	# Actual launcher command
