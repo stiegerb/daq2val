@@ -156,8 +156,12 @@ class daq2ProdConfigurator(daq2Configurator):
 
 
 	def makeConfigs(self, geswitches):
-		minFRLs = self.canonical*8 if self.canonical else 2
-		minFEDIDs = self.canonical if self.canonical else 1
+		if self.canonical:
+			minFRLs = 16
+			minFEDIDs = 8
+		else:
+			minFRLs = 2
+			minFEDIDs = 1
 		for switchname in geswitches:
 			# get a list of frlpcs, ferols, and rus from the hwInfo
 			allfrlpcs = self.hwInfo.getListOfFRLPCs(switchname)
@@ -198,13 +202,12 @@ class daq2ProdConfigurator(daq2Configurator):
 
 			FEROLs_onswitch = []
 			for frlpc in frlpcs:
-				haveFEDIDs = self.canonical if self.canonical else 1
+				haveFEDIDs = 2 if self.canonical else 1
 				ferols = self.hwInfo.getFEROLs(frlpc, haveFEDIDs=haveFEDIDs)
 				## Apply canonicity
 				if self.canonical:
+					if self.canonical and len(ferols) < 16: continue
 					ferols = truncate(ferols,multiple=self.canonical*8)
-					if len(ferols) < self.canonical*8: continue
-
 				for ferol in ferols:
 					ferol.index = self.ferolindex
 					if self.canonical == 1:
@@ -307,5 +310,3 @@ class daq2ProdConfigurator(daq2Configurator):
 
 			outfile.write('\n\n')
 			outfile.close()
-
-
