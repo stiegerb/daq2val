@@ -139,8 +139,10 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 		if verbose > 1:
 			print name, 'number of events built: ', int(nEvts)
 
-	if verbose > 1: print separator
-
+	if verbose > 1:
+		print separator
+		d2c.printRatesEvB()
+		print separator
 
 	totEvents = 0
 	for evtCount in eventCounter:
@@ -657,4 +659,3 @@ def loadMonitoringItemsFromURL(url):
 	items = parseMonitoringJsonFile(opener)
 	opener.close()
 	return items
-

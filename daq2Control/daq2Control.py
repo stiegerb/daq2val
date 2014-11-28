@@ -1300,10 +1300,36 @@ class daq2Control(object):
 
 		return
 
+	def getSizeRateFromEVM(self):
+		"""Get the  event rate and super-fragment size from the EVM
+		and multiply them to get throughput.
+		Unit is Bytes/s.
+		"""
+		size = int(utils.getParam(self.config.RUs[0], 'evb::EVM',
+				                  'superFragmentSize', 'xsd:unsignedInt'))
+		rate = int(utils.getParam(self.config.RUs[0], 'evb::EVM',
+				                  'eventRate', 'xsd:unsignedInt'))
+		return size, rate
+
+	def getSizeRateFromRU(self):
+		"""Get the average event rate and super-fragment size from the RUs
+		and multiply them to get throughput.
+		Unit is Bytes/s.
+		"""
+		sizes, rates = [],[]
+		for ru in self.config.RUs[1:]: # first host in RUs list is EVM
+			sizes.append(int(utils.getParam(ru, 'evb::RU',
+				                            'superFragmentSize', 'xsd:unsignedInt')))
+			rates.append(int(utils.getParam(ru, 'evb::RU',
+				                            'eventRate', 'xsd:unsignedInt')))
+		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
+		av_rate = reduce(lambda a,b:a+b, rates)/len(rates)
+		return av_size, av_rate
+
 	def getSizeRateFromBU(self):
 		"""Get the average event rate and size from the BUs
 		and multiply them to get throughput.
-		Unit is MB/s.
+		Unit is Bytes/s.
 		"""
 		sizes, rates = [],[]
 		for bu in self.config.BUs:
@@ -1312,8 +1338,9 @@ class daq2Control(object):
 			rates.append(int(utils.getParam(bu, 'evb::BU',
 				                            'eventRate', 'xsd:unsignedInt')))
 		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
-		av_rate = reduce(lambda a,b:a+b, rates) ## sum up the BUs
+		av_rate = reduce(lambda a,b:a+b, rates)/len(rates)
 		return av_size, av_rate
+
 	def getResultsEvB(self, duration, interval=5):
 		"""
 		Python implementation of testRubuilder.pl script
@@ -1336,27 +1363,27 @@ class daq2Control(object):
 				                            'eventRate',
 				                            'xsd:unsignedInt'))
 
+				ru_size, ru_rate = self.getSizeRateFromRU()
+				ru_tp = ru_size*ru_rate/1e6
 				bu_size, bu_rate = self.getSizeRateFromBU()
 				bu_sizes.append(bu_size)
-				bu_tp = bu_size*bu_rate/(len(self.config.RUs)*1e6)
 
 				ratesamples.append(ru_rate)
 				if self.options.verbose > 0:
 					if self.options.verbose>1:
-						stdout.write("%d (%7.2f) " % (ru_rate, bu_tp))
+						stdout.write("%d (%7.2f) " % (ru_rate, ru_tp))
 						stdout.flush()
 					pass
 			if self.options.verbose>1:
 				stdout.write("\n")
 
 			bu_av_size = sum(bu_sizes)/len(bu_sizes) # Event size
-			bu_sufrag_size = bu_av_size/len(self.config.RUs)
 
 			with open(self._outputDir+'/server.csv', 'a') as outfile:
 				if self.options.verbose > 0:
 					print 'Saving output to', self._outputDir+'server.csv'
 				outfile.write("%d, "%sufragsize)
-				outfile.write("%d: "%bu_sufrag_size)
+				outfile.write("%d: "%ru_size)
 				for n,rate in enumerate(ratesamples):
 					if n < (len(ratesamples)-1):
 						outfile.write('%d, '%rate)
@@ -1368,6 +1395,24 @@ class daq2Control(object):
 			printError("getResultsEvB() only works when running with "
 				       "the EvB, try getResults()", instance=self)
 			return
+
+	def printRatesEvB(self):
+		if self.options.dry: return
+		if self.config.useEvB:
+			evm_size, evm_rate = self.getSizeRateFromEVM()
+			ru_size, ru_rate = self.getSizeRateFromRU()
+			bu_size, bu_rate = self.getSizeRateFromBU()
+			stdout.write('EVM                         || RUs                         || BUs\n')
+			stdout.write('size/kB |    ev/s |    MB/s || size/kB |    ev/s |    MB/s || size/kB |    ev/s |    MB/s\n')
+			stdout.write("%7.2f | %7d | %7.1f || %7.2f | %7d | %7.1f || %7.2f | %7d | %7.1f\n"
+                         % (evm_size/1e3,evm_rate,evm_size*evm_rate/1e6,
+                            ru_size/1e3,ru_rate,ru_size*ru_rate/1e6,
+                            bu_size/1e3,bu_rate,bu_size*bu_rate/1e6))
+		else:
+			printError("printRatesEvB() only works when running with "
+				       "the EvB", instance=self)
+			return
+
 	def downloadMeasurements(self, url, target):
 		if self.options.dry:
 			print 'curl -o', target, url
@@ -1503,5 +1548,3 @@ class daq2Control(object):
 		# 	utils.sendSSHCommand(bu.host,'whoami',
 		# 		                 verbose=self.options.verbose,
 		# 		                 dry=self.options.dry)
-
-
