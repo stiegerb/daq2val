@@ -14,6 +14,7 @@ import subprocess
 import re, os, shlex
 import time
 import itertools
+from math import sqrt
 from sys import stdout
 from multiprocessing import Pool
 
@@ -1324,7 +1325,8 @@ class daq2Control(object):
 				                            'eventRate', 'xsd:unsignedInt')))
 		av_size = reduce(lambda a,b:a+b, sizes)/len(sizes) ## in bytes
 		av_rate = reduce(lambda a,b:a+b, rates)/len(rates)
-		return av_size, av_rate
+		sigma_rate = sqrt(reduce(lambda a,b:a+b, map(lambda x:x*x, rates))/len(rates) - av_rate*av_rate)
+		return av_size, av_rate, sigma_rate
 
 	def getSizeRateFromBU(self):
 		"""Get the average event rate and size from the BUs
@@ -1363,7 +1365,7 @@ class daq2Control(object):
 				                            'eventRate',
 				                            'xsd:unsignedInt'))
 
-				ru_size, ru_rate = self.getSizeRateFromRU()
+				ru_size, ru_rate, ru_rate_sigma = self.getSizeRateFromRU()
 				ru_tp = ru_size*ru_rate/1e6
 				bu_size, bu_rate = self.getSizeRateFromBU()
 				bu_sizes.append(bu_size)
@@ -1400,13 +1402,13 @@ class daq2Control(object):
 		if self.options.dry: return
 		if self.config.useEvB:
 			evm_size, evm_rate = self.getSizeRateFromEVM()
-			ru_size, ru_rate = self.getSizeRateFromRU()
+			ru_size, ru_rate, ru_rate_sigma = self.getSizeRateFromRU()
 			bu_size, bu_rate = self.getSizeRateFromBU()
-			stdout.write('EVM                         || RUs                         || BUs\n')
-			stdout.write('size/kB |    ev/s |    MB/s || size/kB |    ev/s |    MB/s || size/kB |    ev/s |    MB/s\n')
-			stdout.write("%7.2f | %7d | %7.1f || %7.2f | %7d | %7.1f || %7.2f | %7d | %7.1f\n"
+			stdout.write('EVM                         || RUs                                  || BUs\n')
+			stdout.write('size/kB |    ev/s |    MB/s || size/kB |             ev/s |    MB/s || size/kB |    ev/s |    MB/s\n')
+			stdout.write("%7.2f | %7d | %7.1f || %7.2f | %7d +/- %-4d | %7.1f || %7.2f | %7d | %7.1f\n"
                          % (evm_size/1e3,evm_rate,evm_size*evm_rate/1e6,
-                            ru_size/1e3,ru_rate,ru_size*ru_rate/1e6,
+                            ru_size/1e3,ru_rate,ru_rate_sigma,ru_size*ru_rate/1e6,
                             bu_size/1e3,bu_rate,bu_size*bu_rate/1e6))
 		else:
 			printError("printRatesEvB() only works when running with "
