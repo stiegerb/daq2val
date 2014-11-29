@@ -789,8 +789,8 @@ class daq2Configurator(object):
 		## Add builder network pt application
 		addFragmentFromFile(target=ru_context,
 		                    filename=self.fragmentdir+
-		                    '/RU/%s/RU_%s_application.xml'%
-		                    (self.evbns,self.ptprot),
+		                    '/RU/%s/RU_%s_application%s.xml'%
+		                    (self.evbns,self.ptprot,"_EVM" if isEVM else ""),
 		                    index=4) ## add after the two endpoints
 		## Add corresponding module
 		module = Element(QN(self.xdaqns, 'Module').text)
