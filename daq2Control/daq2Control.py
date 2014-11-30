@@ -723,6 +723,12 @@ class daq2Control(object):
 						                     'connect',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
+				for h in self.config.BUs:
+					print "Sending init to", h.name
+					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
+						                     'connect',
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
 				sleep(2, self.options.verbose, self.options.dry)
 			return
 
@@ -746,6 +752,12 @@ class daq2Control(object):
 
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
+					print "Sending init to", h.name
+					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
+						                     'connect',
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
+				for h in self.config.BUs:
 					print "Sending init to", h.name
 					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
 						                     'connect',
