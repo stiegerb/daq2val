@@ -496,7 +496,7 @@ class daq2Configurator(object):
 			                  '60600')
 		## route every second one to port 60600 if there is only one
 		## stream per RU
-		if self.streams_per_ferol==1 and (frl.index+1)%2==0:
+		if frl.nstreams==1 and (frl.index+1)%2==0:
 			self.setPropertyInAppInContext(ferol, classname,
 				                  'TCP_DESTINATION_PORT_FED0', '60600')
 		try:
@@ -1029,5 +1029,3 @@ class daq2Configurator(object):
 		self.writeConfig(destination)
 		if self.verbose>0: print ' Wrote config to %s' % destination
 		if self.verbose>0: print 70*'-'
-
-
