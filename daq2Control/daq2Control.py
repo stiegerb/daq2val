@@ -703,18 +703,6 @@ class daq2Control(object):
 
 		## In case of eFED:
 		if len(self.config.eFEDs) > 0:
-			self.sendCmdToGTPeFMM('Configure', invert=False)
-			self.sendCmdToEVMRUBU('Configure')
-			self.sendCmdToEFEDs('Configure')
-			self.sendCmdToFEROLs('Configure')
-			sleep(10, self.options.verbose, self.options.dry)
-			if not self.checkConfigured():
-				printWarningWithWait("Not everything configured. Waiting "
-					                 "another 10s and checking again.",
-					                 waittime=10, instance=self)
-				if not self.checkConfigured():
-					self.retry('Failed to configure.')
-					return
 
 			if self.config.useIBV: ## Only do this for ibv!
 				for h in self.config.RUs:
@@ -729,11 +717,40 @@ class daq2Control(object):
 						                     'connect',
 						                     verbose=self.options.verbose,
 						                     dry=self.options.dry)
-				sleep(2, self.options.verbose, self.options.dry)
+				sleep(5, self.options.verbose, self.options.dry)
+
+			self.sendCmdToGTPeFMM('Configure', invert=False)
+			self.sendCmdToEVMRUBU('Configure')
+			self.sendCmdToEFEDs('Configure')
+			self.sendCmdToFEROLs('Configure')
+			sleep(10, self.options.verbose, self.options.dry)
+			if not self.checkConfigured():
+				printWarningWithWait("Not everything configured. Waiting "
+					                 "another 10s and checking again.",
+					                 waittime=10, instance=self)
+				if not self.checkConfigured():
+					self.retry('Failed to configure.')
+					return
 			return
 
 		## In case of FEROLs:
 		if len(self.config.FEROLs) > 0:
+
+			if self.config.useIBV: ## Only do this for ibv!
+				for h in self.config.RUs:
+					print "Sending init to", h.name
+					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
+						                     'connect',
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
+				for h in self.config.BUs:
+					print "Sending init to", h.name
+					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
+						                     'connect',
+						                     verbose=self.options.verbose,
+						                     dry=self.options.dry)
+				sleep(5, self.options.verbose, self.options.dry)
+
 			self.sendCmdToFEROLs('Configure')
 			self.sendCmdToEVMRUBU('Configure')
 
@@ -749,21 +766,6 @@ class daq2Control(object):
 				if not self.checkConfigured():
 					self.retry('Failed to configure.')
 					return
-
-			if self.config.useIBV: ## Only do this for ibv!
-				for h in self.config.RUs:
-					print "Sending init to", h.name
-					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
-						                     'connect',
-						                     verbose=self.options.verbose,
-						                     dry=self.options.dry)
-				for h in self.config.BUs:
-					print "Sending init to", h.name
-					utils.sendSimpleCmdToApp(h, "pt::ibv::Application",
-						                     'connect',
-						                     verbose=self.options.verbose,
-						                     dry=self.options.dry)
-				sleep(2, self.options.verbose, self.options.dry)
 			return
 
 		printWarningWithWait("daq2Control::Configure ==> Doing nothing.",
