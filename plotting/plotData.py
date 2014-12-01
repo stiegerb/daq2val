@@ -131,10 +131,10 @@ class daq2Plotter(object):
 			if len(line.strip()) == 0 or line.strip()[0] == '#': continue
 
 			try:
-				# sizeru, sizebu: rate1, rate2, rate3, ...
+				# sufragsize, sizeru: rate1, rate2, rate3, ...
 				header, body = line.split(':')
-				size, size_bu = tuple([int(_) for _ in header.split(',')])
-				if self.args.sizeFromBU: size = size_bu
+				size, size_ru = tuple([int(_) for _ in header.split(',')])
+				if self.args.sizeFromRU: size = size_ru
 			except ValueError:
 				# size, rate1, rate2, rate3, ...
 				line = line.split(',',1)
@@ -260,7 +260,7 @@ class daq2Plotter(object):
 
 
 			## Correct for RMS:
-			if not self.args.sizeFromBU and rms is not None and rms != 0.0:
+			if not self.args.sizeFromRU and rms is not None and rms != 0.0:
 				fragsize = averageFractionSize(eventsize/nstreams,
 					                           rms*eventsize/nstreams,
 					                           LOWERLIMIT, UPPERLIMIT)
@@ -592,8 +592,8 @@ def addPlottingOptions(parser):
 		                dest="noRateLine", help="Do not draw the rate line")
 	parser.add_argument("-q", "--quiet", default=False, action="store_true",
 		                dest="quiet", help="Do not print the tables")
-	parser.add_argument("--sizeFromBU", default=False, action="store_true",
-		                dest="sizeFromBU", help="Take size from BU measurement")
+	parser.add_argument("--sizeFromRU", default=False, action="store_true",
+		                dest="sizeFromRU", help="Take size from RU measurement")
 	parser.add_argument("--correctForEVM", default=False, action="store_true",
 		                dest="correctForEVM",
 		                help=("Assume one RU only has one fragment with 1kB size"
