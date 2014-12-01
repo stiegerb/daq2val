@@ -1,0 +1,16 @@
+<xc:Application class="pt::ibv::Application" id="21" instance="0" network="infini" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<properties xmlns="urn:xdaq-application:pt::ibv::Application" xsi:type="soapenc:Struct">
+		<iaName xsi:type="xsd:string">mlx4_0</iaName>
+		<sendPoolName xsi:type="xsd:string">sudapl</sendPoolName>
+		<recvPoolName xsi:type="xsd:string">rudapl</recvPoolName>
+		<receiverPoolSize xsi:type="xsd:unsignedLong">0x100000000</receiverPoolSize>
+		<senderPoolSize xsi:type="xsd:unsignedLong">0x280000000</senderPoolSize>
+		<completionQueueSize xsi:type="xsd:unsignedInt">12800</completionQueueSize>
+		<sendQueuePairSize xsi:type="xsd:unsignedInt">1024</sendQueuePairSize>
+		<recvQueuePairSize xsi:type="xsd:unsignedInt">256</recvQueuePairSize>
+		<maxMessageSize xsi:type="xsd:unsignedInt">257000</maxMessageSize>
+		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
+		<sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout>
+		<useRelay xsi:type="xsd:boolean">true</useRelay>
+	</properties>
+</xc:Application>
