@@ -3,14 +3,14 @@
 		<iaName xsi:type="xsd:string">mlx4_0</iaName>
 		<sendPoolName xsi:type="xsd:string">sudapl</sendPoolName>
 		<recvPoolName xsi:type="xsd:string">rudapl</recvPoolName>
-		<receiverPoolSize xsi:type="xsd:unsignedLong">0x40000000</receiverPoolSize>
+		<receiverPoolSize xsi:type="xsd:unsignedLong">0x4000000</receiverPoolSize>
 		<senderPoolSize xsi:type="xsd:unsignedLong">0x80000000</senderPoolSize>
 		<completionQueueSize xsi:type="xsd:unsignedInt">8192</completionQueueSize>
-		<sendQueuePairSize xsi:type="xsd:unsignedInt">8192</sendQueuePairSize>
-		<recvQueuePairSize xsi:type="xsd:unsignedInt">64</recvQueuePairSize>
+		<sendQueuePairSize xsi:type="xsd:unsignedInt">128</sendQueuePairSize>
+		<recvQueuePairSize xsi:type="xsd:unsignedInt">128</recvQueuePairSize>
 		<maxMessageSize xsi:type="xsd:unsignedInt">131072</maxMessageSize>
 		<deviceMTU xsi:type="xsd:unsignedInt">4096</deviceMTU>
-		<sendWithTimeout xsi:type="xsd:boolean">false</sendWithTimeout>
+		<sendWithTimeout xsi:type="xsd:boolean">true</sendWithTimeout>
 		<useRelay xsi:type="xsd:boolean">true</useRelay>
 	</properties>
 </xc:Application>
