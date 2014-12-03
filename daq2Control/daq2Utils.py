@@ -112,6 +112,16 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 	eventCounter = []
 	events = []
 	if not d2c.config.useMSIO:
+		if d2c.config.useEvB:
+			for n,ru in enumerate(d2c.config.RUs):
+				if n == 0:
+					namespace = d2c.config.namespace+'EVM'
+				else:
+					namespace = d2c.config.namespace+'RU'
+				nEvts = getParam(ru, namespace,
+					             'eventCount', 'xsd:unsignedLong',
+					             verbose=verbose, dry=dry)
+				events.append((ru.name, nEvts))
 		for n,bu in enumerate(d2c.config.BUs):
 			if d2c.config.useEvB:
 				nEvts = getParam(bu, d2c.config.namespace+'BU',
