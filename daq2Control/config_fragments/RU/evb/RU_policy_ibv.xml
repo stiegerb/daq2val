@@ -1,10 +1,10 @@
     <ns1:policy xmlns:ns1="http://xdaq.web.cern.ch/xdaq/xsd/2013/XDAQPolicy-10">
-      <ns1:element cpunodes="1" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::acceptor/waiting" type="thread"/>
+      <ns1:element cpunodes="1" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::acceptor(.*)/waiting" type="thread"/>
       <ns1:element cpunodes="1" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::eventworkloop/polling" type="thread"/>
-      <ns1:element affinity="2" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr/polling" type="thread"/>
-      <ns1:element affinity="6" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops/polling" type="thread"/>
+      <ns1:element affinity="2" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr(.*)/polling" type="thread"/>
+      <ns1:element affinity="6" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops(.*)/polling" type="thread"/>
       <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc"/>
-      <ns1:element mempolicy="onnode" node="1" package="numa" pattern="urn:toolbox-mem-allocator-ibv-receiver-mlx4_0:ibvla" type="alloc"/>
+      <ns1:element mempolicy="onnode" node="1" package="numa" pattern="urn:toolbox-mem-allocator-ibv-receiver-(.+)-mlx4_0:ibvla" type="alloc"/>
       <ns1:element affinity="0" memnode="1" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:pt::ibv::relayworkloop" type="thread"/>
       <ns1:element mempolicy="onnode" node="1" package="numa" pattern="urn:pt-ibv-rlist-relayqueue:alloc" type="alloc"/>
       <ns1:element affinity="9" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:RU%d_FRL_PORT/polling" type="thread"/>
@@ -28,11 +28,8 @@
       <ns1:element affinity="20" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Responder_1/waiting" type="thread"/>
       <ns1:element affinity="10" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Responder_2/waiting" type="thread"/>
       <ns1:element affinity="26" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Responder_3/waiting" type="thread"/>
-      <ns1:element cpunodes="0" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/assignEvents/waiting" type="thread"/>
       <ns1:element cpunodes="0" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/monitoring/waiting" type="thread"/>
       <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:fragmentFIFO_FED(.+)" type="alloc"/>
       <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:fragmentRequestFIFO:alloc" type="alloc"/>
-      <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:superFragmentFIFO:alloc" type="alloc"/>
-      <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:allocateFIFO:alloc" type="alloc"/>
       <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:undefined:alloc" type="alloc"/>
     </ns1:policy>

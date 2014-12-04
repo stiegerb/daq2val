@@ -16,19 +16,19 @@
 			<useUdaplPool xsi:type="xsd:boolean">true</useUdaplPool>
 			<autoConnect xsi:type="xsd:boolean">false</autoConnect>
 			<!-- Copy worker configuration -->
-			<i2oFragmentBlockSize xsi:type="xsd:unsignedInt">131072</i2oFragmentBlockSize>
-			<i2oFragmentsNo xsi:type="xsd:unsignedInt">128</i2oFragmentsNo>
-			<i2oFragmentPoolSize xsi:type="xsd:unsignedInt">40000000</i2oFragmentPoolSize>
+			<i2oFragmentBlockSize xsi:type="xsd:unsignedInt">262144</i2oFragmentBlockSize>
+			<i2oFragmentsNo xsi:type="xsd:unsignedInt">512</i2oFragmentsNo>
+			<i2oFragmentPoolSize xsi:type="xsd:unsignedInt">320000000</i2oFragmentPoolSize>
 			<copyWorkerQueueSize xsi:type="xsd:unsignedInt">16</copyWorkerQueueSize>
 			<copyWorkersNo xsi:type="xsd:unsignedInt">4</copyWorkersNo>
 			<doSuperFragment xsi:type="xsd:boolean">false</doSuperFragment>
 			<!-- Input configuration e.g. PSP -->
-			<inputStreamPoolSize xsi:type="xsd:double">1400000</inputStreamPoolSize>
+			<inputStreamPoolSize xsi:type="xsd:double">2800000</inputStreamPoolSize>
 			<maxClients xsi:type="xsd:unsignedInt">64</maxClients>
 			<ioQueueSize xsi:type="xsd:unsignedInt">64</ioQueueSize>
 			<eventQueueSize xsi:type="xsd:unsignedInt">256</eventQueueSize>
 			<maxInputReceiveBuffers xsi:type="xsd:unsignedInt">8</maxInputReceiveBuffers>
-			<maxInputBlockSize xsi:type="xsd:unsignedInt">131072</maxInputBlockSize>
+			<maxInputBlockSize xsi:type="xsd:unsignedInt">262144</maxInputBlockSize>
 		</properties>
 	</xc:Application>
 	<xc:Module>$XDAQ_ROOT/lib/libtcpla.so</xc:Module>
