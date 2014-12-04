@@ -770,9 +770,14 @@ class daq2Configurator(object):
 		ru_context = elementFromFile(self.fragmentdir+fragmentname)
 
 		## Add policy
-		addFragmentFromFile(target=ru_context, filename=self.fragmentdir+
-			                '/RU/%s/RU_policy_%s.xml'%
-			                (self.evbns,self.ptprot), index=0)
+		if isEVM:
+			addFragmentFromFile(target=ru_context, filename=self.fragmentdir+
+			                    '/RU/%s/RU_policy_%s_EVM.xml'%
+			                    (self.evbns,self.ptprot), index=0)
+		else:
+			addFragmentFromFile(target=ru_context, filename=self.fragmentdir+
+			                    '/RU/%s/RU_policy_%s.xml'%
+			                    (self.evbns,self.ptprot), index=0)
 		polns = "http://xdaq.web.cern.ch/xdaq/xsd/2013/XDAQPolicy-10"
 		for element in ru_context.findall(QN(polns,"policy").text+'/'+
 			                              QN(polns,"element").text):
