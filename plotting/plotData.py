@@ -253,8 +253,8 @@ class daq2Plotter(object):
 					fragsize = float(size)
 					sufragsize = nrus*fragsize
 			else:
-				fragsize    = eventsize/nstreams
-				sufragsize  = eventsize/nrus
+				fragsize    = float(size)/(nstreams-1)*(nrus-1)
+				sufragsize  = float(size)
 				if args.correctForEVM:
 					sufragsize = (eventsize-1024)/(nrus-1)
 
@@ -273,6 +273,10 @@ class daq2Plotter(object):
 			stdrate     = std(data_dict[size])
 			throughput  = sufragsize*avrate/1e6 ## in MB/s
 			throughputE = sufragsize*stdrate/1e6
+			if self.args.plotBU:
+				throughput  = throughput  * nrus/nbus
+				throughputE = throughputE * nrus/nbus
+				fragsize    = sufragsize  * nrus / 1e3 ## in kB
 
 			data.append((fragsize, throughput, throughputE, avrate, stdrate))
 
@@ -297,7 +301,7 @@ class daq2Plotter(object):
 			if strperfrl == 0:
 				sufragsize = fragsize
 			else:
-				sufragsize = fragsize*nstreams/nrus
+				sufragsize = fragsize*nstreams
 			print ("             %6d :            %6d :      "
 				   "%6.1f +- %6.1f :  %8.1f +- %6.1f" %
 			       (sufragsize, fragsize, tp, tpE,
@@ -342,9 +346,10 @@ class daq2Plotter(object):
 
 		## Cosmetics
 		axes = TH2D('axes', 'A', 100, rangex[0], rangex[1], 100, rangey[0], rangey[1])
+		app = "RU" if not self.args.plotBU else "BU"
 		title = args.title if len(args.title) else 'Throughput vs. Fragment Size'
-		titleX = args.titleX if len(args.titleX) else 'Fragment Size (bytes)'
-		titleY = args.titleY if len(args.titleY) else 'Av. Throughput per RU (MB/s)'
+		titleX = args.titleX if len(args.titleX) else 'Fragment Size (bytes)' if not self.args.plotBU else 'Event Size (kB)'
+		titleY = args.titleY if len(args.titleY) else 'Av. Throughput per %s (MB/s)'%(app)
 		axes.GetYaxis().SetTitle(titleY)
 		axes.GetYaxis().SetTitleOffset(1.4)
 		axes.GetXaxis().SetTitleOffset(1.2)
@@ -598,6 +603,8 @@ def addPlottingOptions(parser):
 		                dest="correctForEVM",
 		                help=("Assume one RU only has one fragment with 1kB size"
 		                      " and correct the throughput to show the other RUs"))
+	parser.add_argument("--plotBU", default=False, action="store_true",
+		                dest="plotBU", help="Plot throughput at BU instead of RU")
 
 	parser.add_argument("--miny", default="0", action="store", type=float,
 		                dest="miny", help="Y axis range, minimum")
