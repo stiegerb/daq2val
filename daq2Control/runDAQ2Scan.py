@@ -177,8 +177,7 @@ WARNING: Your maximum size for scanning doesn't seem to
 				d2c.retry('GTPe does not seem to be running, will stop and '
 					      'restart.')
 		## Also do a test when running with EvB/inputemulator:
-		if (d2c.config.useInputEmulator and
-			d2c.config.useEvB and
+		if (d2c.config.useEvB and
 			options.stopRestart):
 			if not testBuilding(d2c, minevents=100, waittime=10,
 				                verbose=0, dry=options.dry):
@@ -244,4 +243,3 @@ if __name__ == "__main__":
 		exit(-1)
 
 	exit(0)
-

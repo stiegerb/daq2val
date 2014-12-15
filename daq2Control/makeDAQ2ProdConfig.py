@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
 		allbus = daq2HWInfo.getAllBUs()
 		if opt.nBUs > len(allbus):
-			raise RuntimeError("Not enough BUs in inventory")
+			raise RuntimeError("Not enough BUs in inventory: only found "+str(len(allbus)))
 		for n,bu in enumerate(allbus):
 			if n == opt.nBUs: break
 			writeEntry(outfile, 'BU', bu, n)
@@ -156,7 +156,3 @@ if __name__ == "__main__":
 	print  70*'-'
 
 	exit(0)
-
-
-
-
