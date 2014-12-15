@@ -2,11 +2,12 @@
 	<properties xmlns="urn:xdaq-application:evb::RU" xsi:type="soapenc:Struct">
 		<inputSource xsi:type="xsd:string">FEROL</inputSource>
 		<dropInputData xsi:type="xsd:boolean">false</dropInputData>
-		<blockSize xsi:type="xsd:unsignedInt">130000</blockSize>
+		<blockSize xsi:type="xsd:unsignedInt">131072</blockSize>
 		<checkCRC xsi:type="xsd:unsignedInt">0</checkCRC>
 		<computeCRC xsi:type="xsd:boolean">false</computeCRC>
-		<numberOfResponders xsi:type="xsd:unsignedInt">3</numberOfResponders>
-		<fragmentFIFOCapacity xsi:type="xsd:unsignedInt">128</fragmentFIFOCapacity>
+		<numberOfResponders xsi:type="xsd:unsignedInt">4</numberOfResponders>
+		<fragmentFIFOCapacity xsi:type="xsd:unsignedInt">512</fragmentFIFOCapacity>
+                <fragmentRequestFIFOCapacity xsi:type="xsd:unsignedInt">640</fragmentRequestFIFOCapacity>
 		<fedSourceIds soapenc:arrayType="xsd:ur-type[%d]" xsi:type="soapenc:Array">
 			<item soapenc:position="[0]" xsi:type="xsd:unsignedInt">0</item>
 		</fedSourceIds>

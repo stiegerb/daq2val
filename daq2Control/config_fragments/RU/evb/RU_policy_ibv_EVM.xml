@@ -28,8 +28,12 @@
       <ns1:element affinity="20" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Responder_1/waiting" type="thread"/>
       <ns1:element affinity="10" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Responder_2/waiting" type="thread"/>
       <ns1:element affinity="26" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Responder_3/waiting" type="thread"/>
+      <ns1:element affinity="26" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Allocator_0/waiting" type="thread"/>
+      <ns1:element affinity="28" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Allocator_1/waiting" type="thread"/>
+      <ns1:element affinity="30" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/Allocator_2/waiting" type="thread"/>
       <ns1:element cpunodes="0" memnode="0" mempolicy="onnode" package="numa" pattern="urn:toolbox-task-workloop:evb::(.+)/monitoring/waiting" type="thread"/>
       <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:fragmentFIFO_FED(.+)" type="alloc"/>
       <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:fragmentRequestFIFO:alloc" type="alloc"/>
+      <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:allocateFIFO(.+):alloc" type="alloc"/>
       <ns1:element mempolicy="onnode" node="0" package="numa" pattern="urn:undefined:alloc" type="alloc"/>
     </ns1:policy>
