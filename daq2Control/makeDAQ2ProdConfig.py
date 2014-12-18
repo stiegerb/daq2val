@@ -135,8 +135,8 @@ if __name__ == "__main__":
 		outfile.write(HEADER)
 		outfile.write('\n\n')
 
-		for n,frl in enumerate(configurator.allFEROLs):
-			writeEntry(outfile, 'FEROLCONTROLLER', frl.frlpc, n)
+		for frl in configurator.allFEROLs:
+			writeEntry(outfile, 'FEROLCONTROLLER', frl.frlpc, frl.index)
 		outfile.write('\n')
 
 		for ru in configurator.allRUs:
