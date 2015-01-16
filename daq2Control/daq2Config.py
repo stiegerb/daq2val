@@ -38,6 +38,9 @@ class FEROL(host):
 	def setStreams(self, enableStream0, enableStream1):
 		self.enableStream0 = self.cfgStringToBool(enableStream0)
 		self.enableStream1 = self.cfgStringToBool(enableStream1)
+	def setFEDIDs(self, fedid1, fedid2):
+		self.fedID1 = fedid1
+		self.fedID2 = fedid2
 
 ######################################################################
 class eFED(host):
@@ -324,6 +327,12 @@ class daq2Config(object):
 								self.nStreams += 1
 								maxsizes.append(int(prop.find(QN(self.ferolns, 'Event_Length_Max_bytes_FED1').text).text))
 								tcp_cwnd.append(int(prop.find(QN(self.ferolns, 'TCP_CWND_FED1').text).text))
+							try:
+								ho.setFEDIDs(int(prop.find(QN(self.ferolns, 'expectedFedId_0').text).text),
+									         int(prop.find(QN(self.ferolns, 'expectedFedId_1').text).text))
+							except Exception, e:
+								printError("Failed to read FEDIDs for %s%s"%(h,n), self)
+								raise e
 							break
 
 				## For eFEDs, count the number of enabled streams and their instances
