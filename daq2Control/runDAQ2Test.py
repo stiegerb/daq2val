@@ -83,11 +83,20 @@ def addOptions(parser):
 		              dest="retries",
 		              help="Number of retries when things go wrong.")
 
+	parser.add_option("--sizeFile", default='fedFragmentSizes.csv',
+		              action="store", type='string', dest="sizeFile",
+		              help=("File from which to take individual sizes. Only "
+		                    "relevant with --sizeFromFile option."))
 	parser.add_option("--sizeProfile", default='flat',action="store",
 					  type='string', dest="sizeProfile",
-		              help="Use different sizes for different streams, can\
-		                    be either 'flat', 'spike', 'sawtooth', or\
-		                    'doublespike'")
+		              help=("Use different sizes for different streams, can"
+		                    "be either 'flat', 'spike', 'sawtooth', "
+		                    "'doublespike', or 'file'. In case of 'file' the"
+		                    " sizes are taken from a file that is a comma-"
+		                    "separated list of fedID,size,sigma,... The "
+		                    "filename is taken from the --sizeFile option. "
+		                    "Note that the individual sizes are scaled to "
+		                    "be the given fragment size on average."))
 	parser.add_option("--profilePerFRL", default=False, action="store_true",
 		              dest="profilePerFRL",
 		              help="Apply the chosen size profile per FEROL instead\
@@ -166,6 +175,7 @@ if __name__ == "__main__":
 	from optparse import OptionParser
 	usage = """
 	%prog [options] --start config.xml fragsize
+	%prog [options] --start config.xml fragsize --sizeProfile file
 	%prog [options] --changeSize config.xml newfragsize
 	%prog [options] --changeSize config.xml newfragsize relRMS
 

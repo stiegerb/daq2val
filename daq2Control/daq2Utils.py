@@ -103,8 +103,27 @@ def getSizeProfile(meansize, nstreams, profile):
 		return size_list
 	else:
 		raise RuntimeError("Unknown size profile!")
+def readSizeFile(filename):
+	if not os.path.isfile(filename):
+		printError('No such file %s' %filename)
+		return None
+	fedIDToSizeSigma = {}
+	with open(filename, 'r') as inputfile:
+		for line in inputfile:
+			spline = line.split(',')
+			if len(spline) < 3: continue
+			try:
+				fedID = int(spline[0])
+				size = int(spline[1])
+				sigma = int(spline[2])
+				fedIDToSizeSigma[fedID] = (size, sigma)
+			except ValueError:
+				continue
+	from pprint import pprint
+	return fedIDToSizeSigma
 
 def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
+	"""Tests if a running system is building events."""
 	if verbose > 0: print separator
 	if verbose > 0: print 'Testing event building for', waittime, 'seconds...'
 	sleep(waittime, verbose, dry)

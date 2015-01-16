@@ -252,6 +252,25 @@ class daq2Control(object):
 				                 waittime=0, instance=self)
 			pass
 
+	def getSizeSigmaFromFEDID(self, fedid):
+		try:
+			size, rms = self.fedIDToSizeSigma[int(fedid)]
+			return size, rms
+		except KeyError:
+			return self.currentFragSize, self.currentFragSizeRMS
+		except AttributeError:
+			message = ("Error: size dictionary has not "
+				        "been set")
+			printError(message, instance=self)
+			raise RuntimeError(message)
+		except TypeError:
+			message = ("Error: size dictionary has not "
+				        "been set. Failed to read file?")
+			printError(message, instance=self)
+			raise RuntimeError(message)
+
+
+
 	def setSizeFEROLs(self, fragSize, fragSizeRMS, rate='max'):
 		if self.options.verbose > 0: print separator
 
@@ -312,6 +331,68 @@ class daq2Control(object):
 					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Delay_ns_FED1',
 						           'unsignedInt', int(delay),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+		elif self.options.sizeProfile == 'file':
+			self.fedIDToSizeSigma = utils.readSizeFile(self.options.sizeFile)
+			## Max rate when running with GTPe?
+			if self.config.useGTPe: delay = 20
+
+			for frl in self.config.FEROLs:
+				size1, rms1 = self.getSizeSigmaFromFEDID(frl.fedID1)
+				size2, rms2 = self.getSizeSigmaFromFEDID(frl.fedID2)
+				delay1 = utils.getFerolDelay(size1, rate)
+				delay2 = utils.getFerolDelay(size2, rate)
+				if self.config.useEvB and frl.index == 0:
+					## this sends to the EVM
+					delay = utils.getFerolDelay(1024, rate)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_bytes_FED0',
+						           'unsignedInt', 1024,
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_Stdev_bytes_FED0',
+						           'unsignedInt', 0,
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Delay_ns_FED0',
+						           'unsignedInt', int(delay),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					continue
+
+				if frl.enableStream0:
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_bytes_FED0',
+						           'unsignedInt', int(size1),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_Stdev_bytes_FED0',
+						           'unsignedInt', int(rms1),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Delay_ns_FED0',
+						           'unsignedInt', int(delay1),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+				if frl.enableStream1:
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_bytes_FED1',
+						           'unsignedInt', int(size2),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Length_Stdev_bytes_FED1',
+						           'unsignedInt', int(rms2),
+						           verbose=self.options.verbose,
+						           dry=self.options.dry)
+					utils.setParam(frl, 'ferol::FerolController',
+						           'Event_Delay_ns_FED1',
+						           'unsignedInt', int(delay2),
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 		else:
