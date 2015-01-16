@@ -257,7 +257,7 @@ class daq2Control(object):
 			size, rms = self.fedIDToSizeSigma[int(fedid)]
 			return size, rms
 		except KeyError:
-			return self.currentFragSize, self.currentFragSizeRMS
+			return None, None
 		except AttributeError:
 			message = ("Error: size dictionary has not "
 				        "been set")
@@ -335,14 +335,31 @@ class daq2Control(object):
 						           dry=self.options.dry)
 		elif self.options.sizeProfile == 'file':
 			self.fedIDToSizeSigma = utils.readSizeFile(self.options.sizeFile)
-			## Max rate when running with GTPe?
 			if self.config.useGTPe: delay = 20
-
 			for frl in self.config.FEROLs:
 				size1, rms1 = self.getSizeSigmaFromFEDID(frl.fedID1)
 				size2, rms2 = self.getSizeSigmaFromFEDID(frl.fedID2)
 				delay1 = utils.getFerolDelay(size1, rate)
 				delay2 = utils.getFerolDelay(size2, rate)
+
+				## Now scale the fixed sizes to what was set as fragSize
+				defSize = 2048 # default size for single stream FEDs
+				scaleFactor = float(fragSize)/(defSize)
+
+				if size1 is None: # Not found in dictionary, take given value
+					size1 = self.currentFragSize
+					rms1  = self.currentFragSizeRMS
+				else:
+					size1 = int(size1 * scaleFactor)
+					rms1  = int(rms1  * scaleFactor)
+
+				if size2 is None: # Not found in dictionary, take given value
+					size2 = self.currentFragSize
+					rms2  = self.currentFragSizeRMS
+				else:
+					size2 = int(size2 * scaleFactor)
+					rms2  = int(rms2  * scaleFactor)
+
 				if self.config.useEvB and frl.index == 0:
 					## this sends to the EVM
 					delay = utils.getFerolDelay(1024, rate)
