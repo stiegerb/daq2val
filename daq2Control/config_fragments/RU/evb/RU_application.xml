@@ -6,8 +6,8 @@
 		<checkCRC xsi:type="xsd:unsignedInt">0</checkCRC>
 		<computeCRC xsi:type="xsd:boolean">false</computeCRC>
 		<numberOfResponders xsi:type="xsd:unsignedInt">4</numberOfResponders>
-		<fragmentFIFOCapacity xsi:type="xsd:unsignedInt">512</fragmentFIFOCapacity>
-                <fragmentRequestFIFOCapacity xsi:type="xsd:unsignedInt">640</fragmentRequestFIFOCapacity>
+		<fragmentFIFOCapacity xsi:type="xsd:unsignedInt">256</fragmentFIFOCapacity>
+		<fragmentRequestFIFOCapacity xsi:type="xsd:unsignedInt">1500</fragmentRequestFIFOCapacity>
 		<fedSourceIds soapenc:arrayType="xsd:ur-type[%d]" xsi:type="soapenc:Array">
 			<item soapenc:position="[0]" xsi:type="xsd:unsignedInt">0</item>
 		</fedSourceIds>
