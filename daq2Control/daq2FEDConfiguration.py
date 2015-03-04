@@ -130,12 +130,16 @@ class RUNode(object):
 ######################################################################
 class daq2FEDConfiguration(object):
 	"""Helper class to distribute FEDs to RUs"""
-	def __init__(self, nstreams, nfrls, nrus, ferolRack, verbose=0):
+	def __init__(self, nstreams, nfrls, nrus, ferolRack, verbose=0, separateEVM=False):
 		self.nstreams = nstreams
 		self.nfrls = nfrls
-		self.strpfrl = self.nstreams//self.nfrls
+		if separateEVM:
+			self.strpfrl = self.nstreams//(self.nfrls-1)
+		else:
+			self.strpfrl = self.nstreams//self.nfrls
 		self.nrus = nrus
 		self.ferolRack = ferolRack
+		self.separateEVM = separateEVM
 
 		self.verbose=verbose
 
@@ -168,9 +172,14 @@ class daq2FEDConfiguration(object):
 
 		## Add the ferols, assigning each to a RU
 		for index in range(self.nfrls):
-			frl = FRLNode(index=index,
-				          rack=self.ferolRack,
-				          nstreams=self.strpfrl)
+			if self.separateEVM and index == 0:
+				frl = FRLNode(index=index,
+					          rack=self.ferolRack,
+					          nstreams=1)
+			else:
+				frl = FRLNode(index=index,
+					          rack=self.ferolRack,
+					          nstreams=self.strpfrl)
 			self.assignFRLToRU(index, frl)
 			self.frls.append(frl)
 
@@ -213,7 +222,10 @@ class daq2FEDConfiguration(object):
 		self.nSlices = len(self.eFEDs)
 
 	def makeFRLtoRUAssignments(self):
-		frl_bunching = split_list(range(self.nfrls), self.nrus)
+		if self.separateEVM:
+			frl_bunching = [[0]] + split_list(range(1,self.nfrls), self.nrus-1)
+		else:
+			frl_bunching = split_list(range(self.nfrls), self.nrus)
 		self.frl_index_to_ru_index = {}
 		for ru_index,bunch in enumerate(frl_bunching):
 			for frl_index in bunch:
@@ -302,4 +314,3 @@ class daq2ProdFEDConfiguration(daq2FEDConfiguration):
 		#                                                       if slice == 2])
 		# self.eFEDs = [fed_group for fed_group in efeds if len(fed_group)>0]
 		# self.nSlices = len(self.eFEDs)
-

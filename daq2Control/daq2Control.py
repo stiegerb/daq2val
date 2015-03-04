@@ -690,7 +690,7 @@ class daq2Control(object):
 			configfilelist.append(filename)
 
 		if not self.splitConfig:
-			if not utils.sendToHostListInParallel(
+			if not utils.sendToHostListInParallel2(
 				          self.config.hosts,
 	                      utils.sendCmdFileToExecutivePacked,
 				          (self._runDir+'/configure.cmd.xml',
