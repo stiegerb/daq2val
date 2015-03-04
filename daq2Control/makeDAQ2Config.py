@@ -66,6 +66,10 @@ def addConfiguratorOptions(parser):
 		              type='int', dest="ferolRack",
 		              help=("Which ferol rack to use (1,2, or 3) [default: "
 		              	    "%default]. Choose 0 to use all three racks."))
+	parser.add_option("--separateEVM", default=False, action="store_true",
+		              dest="separateEVM",
+		              help=("Use a dedicated EVM with only one input [default: "
+		              	    "%default]"))
 
 	workingdir = os.path.dirname(os.path.realpath(__file__))
 	default_fragdir = os.path.join(workingdir,'config_fragments')
@@ -177,7 +181,7 @@ def main(options, args):
 		elif ext == '':
 			output = os.path.join(name, output)
 
-	configurator.makeConfig(nferols,strperfrl,nrus,nbus,output)
+	configurator.makeConfig(nferols,strperfrl,nrus,nbus,output,options.separateEVM)
 
 	return True
 
@@ -205,4 +209,3 @@ if __name__ == "__main__":
 
 	parser.print_help()
 	exit(-1)
-

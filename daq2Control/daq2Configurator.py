@@ -998,16 +998,20 @@ class daq2Configurator(object):
 		subprocess.call(['mv', '-f', destination+'temp', destination])
 
 	def makeConfig(self, nferols=8, streams_per_ferol=2, nrus=1, nbus=2,
-		           destination='configuration.template.xml'):
+		           destination='configuration.template.xml', separateEVM=False):
 		self.nrus              = nrus
 		self.nbus              = nbus
 		self.nferols           = nferols
 		self.streams_per_ferol = streams_per_ferol
+		if separateEVM:
+			self.nferols += 1
+			self.nrus += 1
 
 		self.FEDConfig = daq2FEDConfiguration(
 			                 nstreams=nferols*streams_per_ferol,
-			                 nfrls=nferols, nrus=nrus,
-			                 ferolRack=self.ferolRack, verbose=self.verbose)
+			                 nfrls=self.nferols, nrus=self.nrus,
+			                 ferolRack=self.ferolRack, verbose=self.verbose,
+			                 separateEVM=separateEVM)
 
 		##
 		self.makeSkeleton()
