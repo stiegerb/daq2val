@@ -122,6 +122,7 @@ class daq2Config(object):
 
 		self.contexts = self.ETroot.getiterator(str(QN(self.xcns,'Context')))
 
+		self.dropAtRU = False
 		self.useMSIO = False
 		self.useInputEmulator = False
 		self.readXDAQConfigTemplate(configFile)
@@ -309,6 +310,10 @@ class daq2Config(object):
 							if propertyInApp(app, 'inputSource') == 'Local':
 								self.useInputEmulator = True
 								if self.verbose > 2 : print "Found evb InputEmulator"
+							if propertyInApp(app, 'dropInputData') == 'true':
+								self.dropAtRU = True
+							else:
+								self.dropAtRU = False
 							break
 					checked_evbie = True
 
@@ -434,4 +439,3 @@ WARNING: TCP_CWND_FEDX for FEROLs seems to be set
 
 	def writeConfig(self, destination):
 		self.config.write(destination)
-

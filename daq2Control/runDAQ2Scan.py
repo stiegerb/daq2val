@@ -7,21 +7,21 @@ from daq2Utils import testBuilding, SIZE_LIMIT_TABLE
 
 def getListOfSizes(maxSize, minSize=256, short=False, stepSize=256):
 	## multiples of stepsize up to 8192
-	allsteps = [ n*stepSize for n in xrange(1, 1000) if n*stepSize <= maxSize]
+	#allsteps = [ n*stepSize for n in xrange(1, 1000) if n*stepSize <= maxSize]
 	# allsteps = [ n*stepSize for n in xrange(1, 1000) if n*stepSize <= 8192]
 	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360, 16000]
 	# allsteps += [9216, 10240, 11264, 12288, 13312, 14336, 15360,
 	#              16384, 20480, 24576, 28672, 32500]
+	#allsteps = [256, 512, 768, 1024, 1536, 2048, 3072, 4096, 5120, 6144, 7168,
+    #            8192, 10240, 12288, 14336, 16384, 17408, 18432, 19456,
+    #            20480, 24576, 28672, 32500, 49152, 65000]
 
 	if short:
-		# allsteps = [256, 1024, 2048, 3072, 4096, 5120, 6144, 8192, 12288,
-		#            16000, 20480, 24576, 32500]
-		allsteps = [256, 512, 768, 1024, 1536, 2048, 3072, 4096, 5120, 6144, 7168,
-		             8192, 10240, 12288, 14336, 16384, 17408, 18432, 19456,
-		             20480, 24576, 28672, 32500, 49152, 65000] ##, 131072]
-	# allsteps = [256, 512, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816,
-	#             3072, 3328, 3584, 3840, 4096, 5120, 6144, 7168, 8192,
-	#             12288, 14336, 16000, 20480, 24576, 28672, 32500]
+		allsteps = [256, 1024, 2048, 3072, 4096, 5120, 6144, 8192, 12288, 16384]
+	else:
+		allsteps = [256, 512, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816,
+		           3072, 3328, 3584, 3840, 4096, 5120, 6144, 7168, 8192,
+		           12288, 14336, 16384]
 
 	steps = []
 	for step in allsteps:
@@ -30,7 +30,7 @@ def getListOfSizes(maxSize, minSize=256, short=False, stepSize=256):
 	return steps
 
 def addScanningOptions(parser):
-	parser.add_option("--maxSize", default=16000, action="store", type="int",
+	parser.add_option("--maxSize", default=17000, action="store", type="int",
 		               dest="maxSize",
 		               help=("Maximum fragment size of a scan in bytes, "
 		               	     "[default: %default]"))

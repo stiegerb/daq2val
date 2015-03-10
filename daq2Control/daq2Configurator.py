@@ -149,6 +149,7 @@ class daq2Configurator(object):
 		## (0 is all three, 13 is first 1 then 3)
 		self.ferolRack      = 1
 
+		self.dropAtRU       = False
 		self.useGTPe        = False
 		self.useFMMForDAQ2  = False
 		self.useEFEDs       = False
@@ -878,7 +879,7 @@ class daq2Configurator(object):
 	def addRUs(self, nrus):
 		for ru in self.FEDConfig.rus:
 			evm = (ru.index==0)
-			self.config.append(self.makeRU(ru,isEVM=evm))
+			self.config.append(self.makeRU(ru,isEVM=evm,dropAtRU=self.dropAtRU))
 	def makeEVM(self):
 		index = 0
 		fragmentname = 'EVM/EVM_context.xml'
