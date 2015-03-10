@@ -23,12 +23,12 @@
 			<copyWorkersNo xsi:type="xsd:unsignedInt">4</copyWorkersNo>
 			<doSuperFragment xsi:type="xsd:boolean">false</doSuperFragment>
 			<!-- Input configuration e.g. PSP -->
-			<inputStreamPoolSize xsi:type="xsd:double">1400000</inputStreamPoolSize>
+			<inputStreamPoolSize xsi:type="xsd:double">2800000</inputStreamPoolSize>
 			<maxClients xsi:type="xsd:unsignedInt">64</maxClients>
 			<ioQueueSize xsi:type="xsd:unsignedInt">64</ioQueueSize>
 			<eventQueueSize xsi:type="xsd:unsignedInt">256</eventQueueSize>
 			<maxInputReceiveBuffers xsi:type="xsd:unsignedInt">8</maxInputReceiveBuffers>
-			<maxInputBlockSize xsi:type="xsd:unsignedInt">131072</maxInputBlockSize>
+			<maxInputBlockSize xsi:type="xsd:unsignedInt">262144</maxInputBlockSize>
 		</properties>
 	</xc:Application>
 	<xc:Module>$XDAQ_ROOT/lib/libtcpla.so</xc:Module>

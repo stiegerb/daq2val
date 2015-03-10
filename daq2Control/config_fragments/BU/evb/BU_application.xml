@@ -13,5 +13,6 @@
 		<rawDataLowWaterMark xsi:type="xsd:double">0.75</rawDataLowWaterMark>
 		<calculateAdler32 xsi:type="xsd:boolean">true</calculateAdler32>
 		<resourcesPerCore xsi:type="xsd:double">0.2</resourcesPerCore>
+                <timeSamplePreScale xsi:type="xsd:unsignedInt">0</timeSamplePreScale>
 	</properties>
 </xc:Application>

@@ -23,7 +23,9 @@
 			<TCP_DESTINATION_PORT_FED1 xsi:type="xsd:unsignedInt">RU0_FRL_PORT</TCP_DESTINATION_PORT_FED1>
 
 			<!-- Default Settings (untouched by Configurator) -->
-			<N_Descriptors_FRL xsi:type="xsd:unsignedInt">8192</N_Descriptors_FRL>
+			<N_Descriptors_FRL xsi:type="xsd:unsignedInt">2048</N_Descriptors_FRL>
+                        <N_Descriptors_FED0 xsi:type="xsd:unsignedInt">1024</N_Descriptors_FED0>
+                        <N_Descriptors_FED1 xsi:type="xsd:unsignedInt">1024</N_Descriptors_FED1>
 			<Seed_FED0 xsi:type="xsd:unsignedInt">12345</Seed_FED0>
 			<Seed_FED1 xsi:type="xsd:unsignedInt">23456</Seed_FED1>
 			<Event_Length_bytes_FED0 xsi:type="xsd:unsignedInt">2048</Event_Length_bytes_FED0>
@@ -53,8 +55,8 @@
 			<TCP_TIMER_RTT_FED1 xsi:type="xsd:unsignedInt">625000</TCP_TIMER_RTT_FED1>
 			<TCP_TIMER_RTT_SYN_FED0 xsi:type="xsd:unsignedInt">312500000</TCP_TIMER_RTT_SYN_FED0>
 			<TCP_TIMER_RTT_SYN_FED1 xsi:type="xsd:unsignedInt">312500000</TCP_TIMER_RTT_SYN_FED1>
-			<TCP_TIMER_PERSIST_FED0 xsi:type="xsd:unsignedInt">40000</TCP_TIMER_PERSIST_FED0>
-			<TCP_TIMER_PERSIST_FED1 xsi:type="xsd:unsignedInt">40000</TCP_TIMER_PERSIST_FED1>
+			<TCP_TIMER_PERSIST_FED0 xsi:type="xsd:unsignedInt">625000</TCP_TIMER_PERSIST_FED0>
+			<TCP_TIMER_PERSIST_FED1 xsi:type="xsd:unsignedInt">625000</TCP_TIMER_PERSIST_FED1>
 			<TCP_REXMTTHRESH_FED0 xsi:type="xsd:unsignedInt">3</TCP_REXMTTHRESH_FED0>
 			<TCP_REXMTTHRESH_FED1 xsi:type="xsd:unsignedInt">3</TCP_REXMTTHRESH_FED1>
 			<TCP_REXMTCWND_SHIFT_FED0 xsi:type="xsd:unsignedInt">6</TCP_REXMTCWND_SHIFT_FED0>
