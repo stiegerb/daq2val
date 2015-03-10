@@ -66,6 +66,9 @@ def addConfiguratorOptions(parser):
 		              type='int', dest="ferolRack",
 		              help=("Which ferol rack to use (1,2, or 3) [default: "
 		              	    "%default]. Choose 0 to use all three racks."))
+	parser.add_option("--dropAtRU", default=False,
+		               action="store_true", dest="dropAtRU",
+		               help=("Drop events at RU"))
 	parser.add_option("--separateEVM", default=False, action="store_true",
 		              dest="separateEVM",
 		              help=("Use a dedicated EVM with only one input [default: "
@@ -123,6 +126,7 @@ def main(options, args):
 	configurator.useGTPe           = options.useGTPe
 	configurator.useFMMForDAQ2     = options.useFMMForDAQ2
 	configurator.useEFEDs          = options.useEFEDs
+	configurator.dropAtRU          = options.dropAtRU
 
 	## Some checks:
 	if configurator.evbns == 'evb' and nbus < 4:

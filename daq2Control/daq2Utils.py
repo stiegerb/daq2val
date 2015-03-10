@@ -150,7 +150,8 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 				nEvts = getParam(bu, d2c.config.namespace+'BU',
 					             'eventCounter',  'xsd:unsignedLong',
 					             verbose=verbose, dry=dry)
-			events.append((bu.name, nEvts))
+			if not d2c.config.dropAtRU:
+				events.append((bu.name, nEvts))
 	else: ## mstreamio
 		for n,bu in enumerate(d2c.config.BUs):
 			nEvts = getParam(bu, 'Server',
