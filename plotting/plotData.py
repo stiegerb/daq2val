@@ -390,11 +390,11 @@ class daq2Plotter(object):
 			try:
 				graphs.append(self.getGraph(filename))
 				config, builder, protocol, rms = extractConfig(filename)
+				nstreams, nrus, nbus, strperfrl = getConfig(config)
 				if builder=='EvB':
-					rategraphs.append(self.getRateGraph(filename))
+					rategraphs.append(self.getRateGraph(filename,nbus))
 				else:
 					rategraphs.append(None)
-				nstreams, nrus, nbus, strperfrl = getConfig(config)
 
 				if strperfrl == 0:
 					nrus = 1 ## ignore number of RUs if MSIO
@@ -490,14 +490,21 @@ class daq2Plotter(object):
 			rategraph.Draw("LY+")
 		pad2.Update()
 
-		line = ROOT.TLine(rangex[0], 100, rangex[1], 100)
+		if self.args.plotBU:
+			line = ROOT.TLine(rangex[0], 2, rangex[1], 2)
+			tgaxis = ROOT.TGaxis(rangex[1], 0, rangex[1], args.ratemaxy,
+                                 0, args.ratemaxy, 510, "+L")
+			tgaxis.SetTitle('Event Rate at BU (kHz)')
+		else:
+			line = ROOT.TLine(rangex[0], 100, rangex[1], 100)
+			tgaxis = ROOT.TGaxis(rangex[1], 0, rangex[1], args.ratemaxy,
+                                 0, args.ratemaxy, 510, "+L")
+			tgaxis.SetTitle('Event Rate at EVM (kHz)')
+
 		line.SetLineColor(ROOT.kGray+2)
 		line.SetLineStyle(3)
 		line.Draw()
 
-		tgaxis = ROOT.TGaxis(rangex[1], 0, rangex[1], args.ratemaxy,
-			                 0, args.ratemaxy, 510, "+L")
-		tgaxis.SetTitle('Event Rate at EVM (kHz)')
 		tgaxis.SetTitleOffset(1.2)
 		tgaxis.SetTextFont(42)
 		tgaxis.SetLabelFont(42)
@@ -550,7 +557,7 @@ class daq2Plotter(object):
 
 		return g
 
-	def getRateGraph(self, filename):
+	def getRateGraph(self, filename, nbus):
 		data = self.getData(filename)
 
 		from ROOT import TFile, TTree, gDirectory, TGraphErrors, TCanvas
@@ -561,8 +568,11 @@ class daq2Plotter(object):
 
 		## Loop on the data
 		for	n,(fragsize,_,_,rate,rateE) in enumerate(data):
-			g.SetPoint(      n, fragsize, rate/1.e3)
-			g.SetPointError( n,       0., rateE/1.e3)
+			if self.args.plotBU:
+				rate = rate / nbus
+				rateE = rateE / nbus
+			g.SetPoint(      n, fragsize, rate/1e3)
+			g.SetPointError( n,       0., rateE/1e3)
 
 		g.SetLineWidth(1)
 		g.SetLineStyle(2)

@@ -48,9 +48,6 @@ if __name__ == "__main__":
 		               action="store", type="string", dest="maskBUs",
 		               help=("Use only these BUs (comma separated list) "
 		               	     "[default: use all]"))
-	parser.add_option("--dropAtRU", default=False,
-		               action="store_true", dest="dropAtRU",
-		               help=("Drop events at RU"))
 	parser.add_option("-c", "--canonical", default=0,
 		               action="store", type="int", dest="canonical",
 		               help=("Only use exact numbers of FRLs "
