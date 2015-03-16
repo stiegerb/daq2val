@@ -52,7 +52,7 @@ if __name__ == "__main__":
 		               action="store", type="int", dest="canonical",
 		               help=("Only use exact numbers of FRLs "
 		               	     "0 is non canonical, 1 is 8 streams per RU, "
-		               	     "2 is 16 streams per RU."
+		               	     "2 is 16 streams per RU, 3 is 8 streams with the same RUs as in 2."
 		               	     "[default: non canonical]"))
 	parser.add_option("-d", "--dry", default=False,
 		               action="store_true", dest="dry",
