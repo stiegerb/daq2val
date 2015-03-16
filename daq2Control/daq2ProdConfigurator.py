@@ -1,3 +1,4 @@
+
 import os
 import sys
 import subprocess
@@ -46,7 +47,7 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		## Counters
 		self.haveEVM = False
-		self.ruindex = 0
+		self.ruindex = 1
 		self.ferolindex = 0
 		self.allRUs = []
 		self.allFEROLs = []
@@ -145,6 +146,7 @@ class daq2ProdConfigurator(daq2Configurator):
 				self.ferolindex += 1
 
 				evm = rus_gen.next()
+				evm.index = 0
 				ferol.ruindex = evm.index
 				ferol.runame = evm.hostname
 				ferol.nstreams = 1
@@ -156,7 +158,10 @@ class daq2ProdConfigurator(daq2Configurator):
 
 
 	def makeConfigs(self, geswitches):
-		if self.canonical:
+		if self.canonical == 1:
+			minFRLs = 8
+			minFEDIDs = 8
+		elif self.canonical > 1:
 			minFRLs = 16
 			minFEDIDs = 8
 		else:
@@ -202,15 +207,18 @@ class daq2ProdConfigurator(daq2Configurator):
 
 			FEROLs_onswitch = []
 			for frlpc in frlpcs:
-				haveFEDIDs = 2 if self.canonical else 1
+				if self.canonical > 1:
+					haveFEDIDs = 2
+				else:
+					haveFEDIDs = 1
 				ferols = self.hwInfo.getFEROLs(frlpc, haveFEDIDs=haveFEDIDs)
 				## Apply canonicity
 				if self.canonical:
-					if self.canonical and len(ferols) < 16: continue
-					ferols = truncate(ferols,multiple=self.canonical*8)
+					if self.canonical and len(ferols) < haveFEDIDs*8: continue
+					ferols = truncate(ferols,multiple=haveFEDIDs*8)
 				for ferol in ferols:
 					ferol.index = self.ferolindex
-					if self.canonical == 1:
+					if self.canonical in [1,3]:
 						ferol.fedIds = (ferol.fedIds[0], None)
 						ferol.nstreams = 1
 					self.allFEROLs.append(ferol)
@@ -229,7 +237,10 @@ class daq2ProdConfigurator(daq2Configurator):
 		usedRUs = []
 		for r in self.allRUs:
 			if len(r.getFedIds()) != 0:
-				usedRUs.append(r)
+				if r.index == 0:
+					usedRUs.insert(0,r)
+				else:
+					usedRUs.append(r)
 		self.allRUs = usedRUs
 
 		## Remove unused FEROLs
@@ -238,14 +249,6 @@ class daq2ProdConfigurator(daq2Configurator):
 			if f.ruindex >= 0:
 				usedFEROLs.append(f)
 		self.allFEROLs = usedFEROLs
-
-		## Now make sure the EVM has index and instance 0!
-		oldevmindex = self.allRUs[0].index
-		## And make sure the FEROL sending to the evm sends to 0
-		self.allRUs[0].index = 0
-		for ferol in self.allFEROLs:
-			if ferol.ruindex == oldevmindex:
-				ferol.ruindex = 0
 
 		if self.verbose>5:
 			print 70*'-'
