@@ -217,6 +217,9 @@ def sendSOAPMessage(host, port, message, command):
 		return 0
 	elif 'Fault' in out:
 		print 'FAULT'
+		print separator
+		print out
+		print separator
 		return 1
 	elif len(out) == 0:
 		print 'NONE'
@@ -282,10 +285,10 @@ and instance on host:port"""
 	message = 'Content-Location: urn:xdaq-application:class=%s,instance=%d'%(
 		                                            classname, int(instance))
 	return sendSOAPMessage(host, port, message, command)
-def writeItem(host, port, classname, instance, item, data, offset=0,
+def writeItem(host, port, classname, instance, item, data, offset=0, device='ferol',
 	          verbose=0, dry=False):
 	body = ('<xdaq:WriteItem xmlns:xdaq="urn:xdaq-soap:3.0" offset="%s"  '
-		    'item="%s" data="%s"/>' % (str(offset), item, str(data)))
+		    'device="%s" item="%s" data="%s"/>' % (str(offset), device, item, str(data)))
 	cmd = SOAPEnvelope % body
 	cmd = cmd.replace('\"','\\\"') ## escape the quotes when passing as arg
 	return sendCmdToApp(host, port, classname, str(instance), cmd,
