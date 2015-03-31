@@ -192,6 +192,7 @@ class daq2Control(object):
 			utils.sendSimpleCmdToApp(frl, 'ferol::FerolController', cmd,
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
+			time.sleep(0.1)
 	def sendCmdToEFEDs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for efed in self.config.eFEDs:
@@ -545,8 +546,7 @@ class daq2Control(object):
 	def setRunNumber(self, number=0):
 		## Set Runnumber here:
 		if number==0:
-			number = time.strftime('%d%H%M')
-			if number[0] == '0': number = number[1:]
+			number = str(int(time.strftime('%d%H%M')) + 2000000000)
 
 		if self.options.verbose > 0: print separator
 		if self.options.verbose > 0: print "Setting run number", number

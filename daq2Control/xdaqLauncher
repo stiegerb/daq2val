@@ -188,12 +188,23 @@ sub processClientRequest {
                         $numactl="taskset -c $cores";
                     }
                 } elsif ($ENV{TEST_TYPE} eq "daq2"){
-                    if ($host =~ "ru-c2e") {
+                    if ($host =~ "ru-c2") {
                         $cores="10,12,14,26,28,30";
                         $cpu="1";
                         $numactl="numactl --physcpubind=$cores --membind=$cpu";
                     }
                     elsif ($host =~ "bu-c2") {
+                        $cores="10,12,14,26,28,30";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    }
+                } elsif ($ENV{TEST_TYPE} eq "daq2val"){
+                    if ($host =~ "dvru-c2") {
+                        $cores="10,12,14,26,28,30";
+                        $cpu="1";
+                        $numactl="numactl --physcpubind=$cores --membind=$cpu";
+                    }
+                    elsif ($host =~ "dvbu-c2") {
                         $cores="10,12,14,26,28,30";
                         $cpu="1";
                         $numactl="numactl --physcpubind=$cores --membind=$cpu";
