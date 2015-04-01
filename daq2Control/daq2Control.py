@@ -192,7 +192,7 @@ class daq2Control(object):
 			utils.sendSimpleCmdToApp(frl, 'ferol::FerolController', cmd,
 				                     verbose=self.options.verbose,
 				                     dry=self.options.dry)
-			time.sleep(0.1)
+			sleep(0.1, self.options.verbose, self.options.dry)
 	def sendCmdToEFEDs(self, cmd):
 		if self.options.verbose > 0: print separator
 		for efed in self.config.eFEDs:
