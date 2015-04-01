@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-import os, subprocess, shlex, re
+import os, subprocess, shlex, re, time
 from sys import stdout
 
 separator = 70*'-'
@@ -518,24 +518,26 @@ for a total duration of [duration]"""
 
 ## Common utilities
 def sleep(naptime=0.5,verbose=1,dry=False):
-	import time
-	from sys import stdout
 	if dry:
 		if verbose > 0: print 'sleep', naptime
 		return
 
+	if naptime < 0.5:
+		time.sleep(naptime)
+		return
+
 	barlength = len(separator)-1
 	starttime = time.time()
-	if verbose > 0 and naptime > 0.5:
+	if verbose > 0:
 		stdout.write(''+barlength*' '+'-')
 		stdout.write('\r')
 		stdout.flush()
 	while(time.time() < starttime+naptime):
 		time.sleep(naptime/float(barlength))
-		if verbose > 0 and naptime > 0.5:
+		if verbose > 0:
 			stdout.write('-')
 			stdout.flush()
-	if verbose > 0 and naptime > 0.5:
+	if verbose > 0:
 		stdout.write('-')
 		stdout.flush()
 		stdout.write('\r' + (barlength+5)*' ')
