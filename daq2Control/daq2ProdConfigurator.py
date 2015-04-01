@@ -122,7 +122,7 @@ class daq2ProdConfigurator(daq2Configurator):
 
 		ferolsPerRU = 8
 		if nRUs * ferolsPerRU < len(ferols_to_use):
-			ferolsPerRU = len(ferols_to_use)/nRUs
+			ferolsPerRU = len(ferols_to_use)/nRUs + 1
 		try:
 			for n,f in enumerate(ferols_to_use):
 				if n%ferolsPerRU==0: ru = rus_gen.next()
