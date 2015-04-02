@@ -2,7 +2,9 @@ import subprocess
 import re, os, shlex
 import time
 from sys import stdout
+from copy import deepcopy
 import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import Element
 from xml.etree.ElementTree import QName as QN
 
 from daq2Utils import printError, printWarningWithWait, sleep, SIZE_LIMIT_TABLE, checkMaxSize
@@ -196,16 +198,48 @@ class daq2Config(object):
 		self.setProperty(['RU','EVM'], 'pt::ibv::Application', param_name, param_value)
 
 	def fillRUInstances(self, maskRUs=""):
-		count = 0
-		items = ""
 		maskRU_lst = [r.strip('.cms') for r in maskRUs.split(',')]
-		for ru in self.RUs:
-			if ru.index == 0: continue #skip the EVM
-			if ru.host.strip('.cms') not in maskRU_lst:
-				items += '<item soapenc:position="[%d]" xsi:type="xsd:unsignedInt">%d</item>\n' % (count,ru.index)
-				count += 1
-		ruInstances = '<ruInstances soapenc:arrayType="xsd:ur-type[%d]" xsi:type="soapenc:Array">\n%s</ruInstances>' % (count,items)
-		self.setProperty(['RU'], 'evb::EVM', 'ruInstances', ruInstances, 0)
+
+		rus_to_add = [r.index for r in self.RUs if not r.index==0 and
+		                         not r.host.strip('.cms') in maskRU_lst]
+		rus_to_add = [(n,r) for n,r in enumerate(rus_to_add)]
+
+		soapencns = "http://schemas.xmlsoap.org/soap/encoding/"
+		appns = 'urn:xdaq-application:evb::EVM'
+
+		# Make the ruInstances element
+		ruInstances = Element(QN(appns, 'ruInstances').text)
+		ruInstances.attrib[QN(soapencns, 'arrayType').text] = (
+			                    "xsd:ur-type[%d]"%(len(rus_to_add)))
+		ruInstances.attrib[QN('xsi', 'type').text] = QN(soapencns, "Array").text
+
+		# Make an empty item element
+		item_element = Element('item')
+		item_element.attrib[QN('xsi','type').text] = "xsd:unsignedInt"
+
+		# Fill the item elements and add them to ruInstances
+		for pos,index in rus_to_add:
+			item_to_add = deepcopy(item_element)
+			item_to_add.attrib[QN(soapencns, 'position').text] = "[%d]"%pos
+			item_to_add.text = str(index)
+			ruInstances.append(item_to_add)
+
+		# Remove the old ruInstances element and add the new one
+		for context in self.contexts:
+			(host,number) = self.urlToHostAndNumber(context.attrib['url'])
+			if not host == 'RU': continue
+			for app in context.findall(QN(self.xcns, 'Application').text):
+				if not app.attrib['class'] == 'evb::EVM': continue ## find correct application
+				try:
+					prop = app[0] ## Assume here that there is only one element, which is the properties
+					if 'properties' in prop.tag:
+						oldInstances = app.find(QN(appns,'properties').text+'/'+
+							                    QN(appns,'ruInstances').text)
+						prop.remove(oldInstances)
+						prop.append(ruInstances)
+				except IndexError: ## i.e. app[0] didn't work
+					pass
+		return
 
 	def getProperty(self, application, prop_name):
 		pass
