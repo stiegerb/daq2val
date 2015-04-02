@@ -108,6 +108,7 @@ class daq2Control(object):
 				                          self.options.setCWND)
 			self.config.setFerolParameter('TCP_CWND_FED1',
 				                          self.options.setCWND)
+		self.config.fillRUInstances(self.options.maskRUs)
 		if self.options.verbose>1: self.config.printHosts()
 	def fillConfig(self, filename):
 		basename = os.path.split(filename)[1]

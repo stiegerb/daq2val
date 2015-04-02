@@ -152,6 +152,10 @@ def addOptions(parser):
 		              help=("Set the ENA_PAUSE_FRAME parameter in the FEROL "
 		              	"config to 'true', overriding the "
 		              	"configuration file"))
+	parser.add_option("--maskRUs", default="",
+		               action="store", type="string", dest="maskRUs",
+		               help=("Don't use these RUs (comma separated list) "
+		               	     "[default: use all]"))
 
 def setCurrentSizeFromArgs(d2c, args, options):
 	if len(args) > 1: ## if given, set also fragsize and relRMS
@@ -369,4 +373,3 @@ if __name__ == "__main__":
 
 	parser.print_help()
 	exit(-1)
-

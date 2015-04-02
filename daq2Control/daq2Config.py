@@ -195,12 +195,26 @@ class daq2Config(object):
 	def setRUIBVParameter(self, param_name, param_value):
 		self.setProperty(['RU','EVM'], 'pt::ibv::Application', param_name, param_value)
 
+	def fillRUInstances(self, maskRUs=""):
+		count = 0
+		items = ""
+		maskRU_lst = [r.strip('.cms') for r in maskRUs.split(',')]
+		for ru in self.RUs:
+			if ru.index == 0: continue #skip the EVM
+			if ru.host.strip('.cms') not in maskRU_lst:
+				items += '<item soapenc:position="[%d]" xsi:type="xsd:unsignedInt">%d</item>\n' % (count,ru.index)
+				count += 1
+		ruInstances = '<ruInstances soapenc:arrayType="xsd:ur-type[%d]" xsi:type="soapenc:Array">\n%s</ruInstances>' % (count,items)
+		self.setProperty(['RU'], 'evb::EVM', 'ruInstances', ruInstances, 0)
+
 	def getProperty(self, application, prop_name):
 		pass
 
-	def setProperty(self, context_list, classname, prop_name, prop_value):
+	def setProperty(self, context_list, classname, prop_name, prop_value, instance=None):
 		for context in self.contexts:
-			if not self.urlToHostAndNumber(context.attrib['url'])[0] in context_list: continue
+			(host,number) = self.urlToHostAndNumber(context.attrib['url'])
+			if not host in context_list: continue
+			if instance is not None and instance != int(number): continue
 			for app in context.findall(QN(self.xcns, 'Application').text):
 				if not app.attrib['class'] == classname: continue ## find correct application
 				try:

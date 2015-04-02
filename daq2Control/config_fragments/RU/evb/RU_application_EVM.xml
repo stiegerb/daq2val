@@ -11,6 +11,7 @@
 		<maxTriggerRate xsi:type="xsd:unsignedInt">0</maxTriggerRate>
 		<fragmentFIFOCapacity xsi:type="xsd:unsignedInt">256</fragmentFIFOCapacity>
 		<fragmentRequestFIFOCapacity xsi:type="xsd:unsignedInt">1500</fragmentRequestFIFOCapacity>
+		<ruInstances soapenc:arrayType="xsd:ur-type[0]" xsi:type="soapenc:Array"/>
 		<fedSourceIds soapenc:arrayType="xsd:ur-type[%d]" xsi:type="soapenc:Array">
 			<item soapenc:position="[0]" xsi:type="xsd:unsignedInt">0</item>
 		</fedSourceIds>
