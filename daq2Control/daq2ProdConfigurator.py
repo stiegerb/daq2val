@@ -116,13 +116,16 @@ class daq2ProdConfigurator(daq2Configurator):
 		outputname = 'full.xml'
 		self.writeConfig(os.path.join(self.outPutDir,outputname))
 
-	def assignFEROLsToRUs(self, rus_gen, ferols):
-		ferols_gen = (f for f in ferols if f.nstreams > 0)
+	def assignFEROLsToRUs(self, rus_gen, ferols, nRUs):
+		ferols_to_use = [f for f in ferols if f.nstreams > 0]
 		ferols_rest = [f for f in ferols if f.nstreams == 0]
 
+		ferolsPerRU = 8
+		if not self.canonical and nRUs * ferolsPerRU < len(ferols_to_use):
+			ferolsPerRU = len(ferols_to_use)/nRUs + 1
 		try:
-			for n,f in enumerate(ferols_gen):
-				if n%8==0: ru = rus_gen.next()
+			for n,f in enumerate(ferols_to_use):
+				if n%ferolsPerRU==0: ru = rus_gen.next()
 				f.ruindex = ru.index
 				f.runame  = ru.hostname
 				ru.addFRL(f)
@@ -227,7 +230,8 @@ class daq2ProdConfigurator(daq2Configurator):
 			if len(FEROLs_onswitch) == 0: continue
 
 			## Assign FEROLs to RUs
-			self.assignFEROLsToRUs(RU_gen, FEROLs_onswitch)
+			self.assignFEROLsToRUs(RU_gen, FEROLs_onswitch,
+				                   nRUs=len(RUs_onswitch))
 
 		if not self.haveEVM:
 			printError("Failed to add EVM!", self)
