@@ -71,6 +71,20 @@ def split_list(alist, wanted_parts=1):
 	return [ alist[i*length // wanted_parts: (i+1)*length // wanted_parts]
 	         for i in range(wanted_parts) ]
 
+def formatXMLFile(xmlfile):
+	## Pass through xmllint for formatting
+	subprocess.call(['xmllint', '--format', '--nsclean', xmlfile,
+	                 '-o', xmlfile])
+
+	## Remove the <?xml version="1.0"?> added by xmllint
+	with open(xmlfile, 'r') as oldfile:
+		lines = oldfile.readlines()
+		lines.remove('<?xml version="1.0"?>\n')
+		with open(xmlfile+'temp', 'w') as newfile:
+			for line in lines:
+				newfile.write(line)
+	subprocess.call(['mv', '-f', xmlfile+'temp', xmlfile])
+
 
 ######################################################################
 def propertyInApp(application, prop_name, prop_value=None):
@@ -985,16 +999,8 @@ class daq2Configurator(object):
 		with open(destination, 'w') as file:
 			file.write(ElementTree.tostring(self.config))
 			file.close()
-		## pass through xmllint for formatting
-		subprocess.call(['xmllint', '--format', '--nsclean', destination,
-		                 '-o', destination])
-		with open(destination, 'r') as oldfile:
-			lines = oldfile.readlines()
-			lines.remove('<?xml version="1.0"?>\n')
-			with open(destination+'temp', 'w') as newfile:
-				for line in lines:
-					newfile.write(line)
-		subprocess.call(['mv', '-f', destination+'temp', destination])
+
+		formatXMLFile(destination)
 
 	def makeConfig(self, nferols=8, streams_per_ferol=2, nrus=1, nbus=2,
 		           destination='configuration.template.xml', separateEVM=False):
