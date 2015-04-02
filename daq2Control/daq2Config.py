@@ -258,8 +258,16 @@ class daq2Config(object):
 				self.namespace = 'gevb2g::'
 			else:
 				raise RuntimeError("Couldn't determine EvB/gevb2g case!")
-		except TypeError:
-			raise RuntimeError("Did not find i2o protocol in config file!")
+		except TypeError,e:
+			if i2o_protocol == None:
+				if self.verbose > 2: print ("Warning: Did not find i2o protocol"
+					                        " to determine namespace, setting "
+					                        "to 'evb' and useEvB to True")
+				self.namespace = 'evb::'
+				self.useEvB = True
+				self.useMSIO = False
+			else:
+				raise e
 
 		maxsizes = []
 		tcp_cwnd = []
@@ -307,13 +315,17 @@ class daq2Config(object):
 				if h == 'RU' and self.useEvB and not checked_evbie:
 					for app in apps:
 						if app.attrib['class'] == 'evb::EVM':
-							if propertyInApp(app, 'inputSource') == 'Local':
-								self.useInputEmulator = True
-								if self.verbose > 2 : print "Found evb InputEmulator"
-							if propertyInApp(app, 'dropInputData') == 'true':
-								self.dropAtRU = True
-							else:
-								self.dropAtRU = False
+							try:
+								if propertyInApp(app, 'inputSource') == 'Local':
+									self.useInputEmulator = True
+									if self.verbose > 2 : print "Found evb InputEmulator"
+								if propertyInApp(app, 'dropInputData') == 'true':
+									self.dropAtRU = True
+								else:
+									self.dropAtRU = False
+							except RuntimeError: ## Didn't find properties
+								pass
+
 							break
 					checked_evbie = True
 
