@@ -80,17 +80,15 @@ def propertyInApp(application, prop_name, prop_value=None):
 		properties = application[0]
 		if not 'properties' in properties.tag:
 			raise RuntimeError(
-				  'Could not identify properties of %s application'
-				  'in %s context.'%(application.attrib['class'],
-				                 context.attrib['url']))
+				  'Could not identify properties of %s application'%
+				                         application.attrib['class'])
 		## Extract namespace
 		appns = re.match(r'\{(.*?)\}properties',
 		                 properties.tag).group(1)
 	except IndexError: ## i.e. app[0] didn't work
 		raise RuntimeError(
-			  'Application %s in context %s does not have'
-			  'properties.'%(application.attrib['class'],
-			  	             context.attrib['url']))
+			  'Application %s does not have properties.'%
+			                             application.attrib['class'])
 
 	prop = application.find(QN(appns,'properties').text+'/'+
 		            QN(appns,prop_name).text)
