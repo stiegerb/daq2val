@@ -21,6 +21,7 @@ from multiprocessing import Pool
 separator = 70*'-'
 
 from daq2Config import daq2Config, host, FEROL
+from daq2Configurator import formatXMLFile
 from daq2SymbolMap import daq2SymbolMap
 from daq2Utils import printError, printWarningWithWait, sleep
 from logNormalTest import averageFractionSize
@@ -112,13 +113,31 @@ class daq2Control(object):
 		if self.options.verbose>1: self.config.printHosts()
 	def fillConfig(self, filename):
 		basename = os.path.split(filename)[1]
+		configfragm = daq2Config(filename)
+		configfragm.fillFromSymbolMap(self.symbolMap)
+
+		if self.options.enablePauseFrame:
+			configfragm.setFerolParameter('ENA_PAUSE_FRAME', 'true')
+		if self.options.disablePauseFrame:
+			configfragm.setFerolParameter('ENA_PAUSE_FRAME', 'false')
+		if self.options.setCWND > 0:
+			configfragm.setFerolParameter('TCP_CWND_FED0',
+				                          self.options.setCWND)
+			configfragm.setFerolParameter('TCP_CWND_FED1',
+				                          self.options.setCWND)
+
+		## TODO: Add a check here if this is necessary
+		configfragm.fillRUInstances(self.options.maskRUs)
+
 		runconfig = os.path.join(self._runDir,basename)
 		if self.options.verbose > 5:
 			print 'Filling configuration template in ' + runconfig
 		if not self.options.dry:
-			## write out the parsed xml to a file (still templated)
-			parsedconfig = ET.parse(filename)
-			parsedconfig.write(runconfig)
+			# write out the parsed xml to a file (still templated)
+			configfragm.config.write(runconfig)
+			# format the xml to resolve the namespaces
+			formatXMLFile(runconfig)
+
 			## fill the template with actual hosts and port numbers
 			filledconfig = self.symbolMap.fillTemplate(runconfig)
 			with open(runconfig, 'w') as configfile:
@@ -604,9 +623,9 @@ class daq2Control(object):
 				                 "somewhere.")
 
 		## Cleanup run dir
-		if not self.options.dry:
-			subprocess.check_call(['rm', '-rf', self._runDir])
-			subprocess.check_call(['mkdir', '-p', self._runDir])
+		# if not self.options.dry:
+		subprocess.check_call(['rm', '-rf', self._runDir])
+		subprocess.check_call(['mkdir', '-p', self._runDir])
 
 		## Clean up and create output dir
 		self.prepareOutputDir()
@@ -643,6 +662,8 @@ class daq2Control(object):
 				utils.printProgress(n, len(filenames))
 				if not os.path.splitext(filename)[1] == '.xml':
 					continue
+
+				## TODO: Only do this for RUs that are not masked!
 				self.fillConfig(os.path.join(self.configDir,filename))
 		if self.config.useInputEmulator and self.config.useEvB:
 			self.dropBUCaches()
