@@ -121,7 +121,7 @@ class daq2ProdConfigurator(daq2Configurator):
 		ferols_rest = [f for f in ferols if f.nstreams == 0]
 
 		ferolsPerRU = 8
-		if nRUs * ferolsPerRU < len(ferols_to_use):
+		if not self.canonical and nRUs * ferolsPerRU < len(ferols_to_use):
 			ferolsPerRU = len(ferols_to_use)/nRUs + 1
 		try:
 			for n,f in enumerate(ferols_to_use):
