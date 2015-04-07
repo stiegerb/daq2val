@@ -60,8 +60,8 @@ class daq2HardwareInfo(object):
  - Takes the information from two .csv files (provided by Andre Holzner)
 ---------------------------------------------------------------------
 '''
-	def __init__(self, gecabling="2014-11-03-ru-network.csv",
-		         ibcabling="2014-10-15-infiniband-ports.csv",
+	def __init__(self, gecabling="2015-04-01-ru-network.csv",
+		         ibcabling="2015-03-30-infiniband-ports.csv",
 		         geswitchmask=[], ibswitchmask=[],
 		         fedwhitelist=[], ruwhitelist=[], buwhitelist=[],
 		         verbose=0):
@@ -189,9 +189,12 @@ class daq2HardwareInfo(object):
 			for line in infile:
 				if line.strip().startswith('#') or len(line.strip()) == 0:
 					continue
-
-				switch,port,device,dport,blisted,comment = [
+				try:
+					switch,port,device,dport,blisted,comment = [
 				                 _.strip() for _ in line.split(',')]
+				except ValueError:
+					print("Failure to parse: "+line);
+					return
 
 				## mask switches
 				if self.ibswitchmask and not switch in self.ibswitchmask:
@@ -328,13 +331,3 @@ def getMachinesShuffled(inventory):
 				yield inventory[switch][index]
 			except IndexError:
 				continue
-
-
-
-
-
-
-
-
-
-
