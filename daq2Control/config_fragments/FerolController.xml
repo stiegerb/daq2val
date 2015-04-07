@@ -13,8 +13,8 @@
 			<OperationMode xsi:type="xsd:string">FRL_MODE</OperationMode>
 			<FrlTriggerMode xsi:type="xsd:string">FRL_AUTO_TRIGGER_MODE</FrlTriggerMode>
 			<DataSource xsi:type="xsd:string">GENERATOR_SOURCE</DataSource>
-			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">80000</TCP_CWND_FED0>
-			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">80000</TCP_CWND_FED1>
+			<TCP_CWND_FED0 xsi:type="xsd:unsignedInt">140000</TCP_CWND_FED0>
+			<TCP_CWND_FED1 xsi:type="xsd:unsignedInt">140000</TCP_CWND_FED1>
 			<ENA_PAUSE_FRAME xsi:type="xsd:boolean">true</ENA_PAUSE_FRAME>
 
 			<!-- Settings for groups of FEROLs -->
