@@ -90,7 +90,7 @@ def addOptions(parser):
 	parser.add_option("--sizeProfile", default='flat',action="store",
 					  type='string', dest="sizeProfile",
 		              help=("Use different sizes for different streams, can"
-		                    "be either 'flat', 'spike', 'sawtooth', "
+		                    "be either 'flat', 'streams', 'spike', 'sawtooth', "
 		                    "'doublespike', or 'file'. In case of 'file' the"
 		                    " sizes are taken from a file that is a comma-"
 		                    "separated list of fedID,size,sigma,... The "
@@ -369,4 +369,3 @@ if __name__ == "__main__":
 
 	parser.print_help()
 	exit(-1)
-
