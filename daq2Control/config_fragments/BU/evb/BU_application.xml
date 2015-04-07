@@ -1,6 +1,7 @@
 <xc:Application class="evb::BU" id="43" instance="0" network="infini" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<properties xmlns="urn:xdaq-application:evb::BU" xsi:type="soapenc:Struct">
 		<dropEventData xsi:type="xsd:boolean">true</dropEventData>
+		<deleteRawDataFiles xsi:type="xsd:boolean">false</deleteRawDataFiles>
 		<maxEvtsUnderConstruction xsi:type="xsd:unsignedInt">640</maxEvtsUnderConstruction>
 		<eventsPerRequest xsi:type="xsd:unsignedInt">32</eventsPerRequest>
 		<lumiSectionTimeout xsi:type="xsd:unsignedInt">30</lumiSectionTimeout>
@@ -11,8 +12,15 @@
 		<maxEventsPerFile xsi:type="xsd:unsignedInt">400</maxEventsPerFile>
 		<rawDataHighWaterMark xsi:type="xsd:double">0.95</rawDataHighWaterMark>
 		<rawDataLowWaterMark xsi:type="xsd:double">0.75</rawDataLowWaterMark>
-		<calculateAdler32 xsi:type="xsd:boolean">true</calculateAdler32>
+		<calculateAdler32 xsi:type="xsd:boolean">false</calculateAdler32>
 		<resourcesPerCore xsi:type="xsd:double">0.2</resourcesPerCore>
                 <timeSamplePreScale xsi:type="xsd:unsignedInt">0</timeSamplePreScale>
+                <hltFiles xsi:arrayType="xsd:ur-type[4]" xsi:type="soapenc:Array">
+                	<item xsi:position="[0]" xsi:type="xsd:string">HltConfig.py</item>
+                	<item xsi:position="[1]" xsi:type="xsd:string">SCRAM_ARCH</item>
+                	<item xsi:position="[2]" xsi:type="xsd:string">CMSSW_VERSION</item>
+                	<item xsi:position="[3]" xsi:type="xsd:string">fffParameters.jsn</item>
+                </hltFiles>
+                <hltParameterSetURL xsi:type="xsd:string"/>
 	</properties>
 </xc:Application>
