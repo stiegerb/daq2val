@@ -255,9 +255,6 @@ class daq2Plotter(object):
 			else:
 				fragsize    = float(size)/(nstreams-1)*(nrus-1)
 				sufragsize  = float(size)
-				if args.correctForEVM:
-					sufragsize = (eventsize-1024)/(nrus-1)
-
 
 			## Correct for RMS:
 			if not self.args.sizeFromRU and rms is not None and rms != 0.0:
@@ -274,9 +271,15 @@ class daq2Plotter(object):
 			throughput  = sufragsize*avrate/1e6 ## in MB/s
 			throughputE = sufragsize*stdrate/1e6
 			if self.args.plotBU:
-				throughput  = throughput  * nrus/nbus
-				throughputE = throughputE * nrus/nbus
-				fragsize    = sufragsize  * nrus / 1e3 ## in kB
+				if args.correctForEVM:
+					throughput  = throughput  * (nrus-1)/nbus + 1024 * avrate/1e6
+					throughputE = throughputE * (nrus-1)/nbus + 1024 * stdrate/1e6
+					fragsize    = sufragsize  * (nrus-1)/1e3 + 1 ## in kB
+				else:
+					throughput  = throughput  * nrus/nbus
+					throughputE = throughputE * nrus/nbus
+					fragsize    = sufragsize  * nrus / 1e3 ## in kB
+				#print(str(fragsize)+":"+str(sufragsize))
 
 			data.append((fragsize, throughput, throughputE, avrate, stdrate))
 
@@ -349,7 +352,7 @@ class daq2Plotter(object):
 		app = "RU" if not self.args.plotBU else "BU"
 		title = args.title if len(args.title) else 'Throughput vs. Fragment Size'
 		titleX = args.titleX if len(args.titleX) else 'Fragment Size (bytes)' if not self.args.plotBU else 'Event Size (kB)'
-		titleY = args.titleY if len(args.titleY) else 'Av. Throughput per %s (MB/s)'%(app)
+		titleY = args.titleY if len(args.titleY) else 'Throughput on %s (MB/s)'%(app)
 		axes.GetYaxis().SetTitle(titleY)
 		axes.GetYaxis().SetTitleOffset(1.4)
 		axes.GetXaxis().SetTitleOffset(1.2)
@@ -359,29 +362,30 @@ class daq2Plotter(object):
 		axes.GetXaxis().SetNoExponent()
 		axes.Draw()
 
+		legendPosY = 0.83
 		tl = TLatex()
 		tl.SetTextFont(42)
 		tl.SetNDC(1)
 		if len(self.args.tag) > 0:
 			width = 0.12+0.020*len(self.args.tag)
 			if width > 0.9: width=0.899
-			pave = TPave(0.12, 0.80, width, 0.899, 0, 'NDC')
+			pave = TPave(0.12, legendPosY-0.03, width, legendPosY+0.069, 0, 'NDC')
 			pave.SetFillStyle(1001)
 			pave.SetFillColor(0)
 			pave.Draw()
+			tl.SetTextSize(0.05)
+			tl.DrawLatex(0.14, legendPosY, self.args.tag)
+			legendPosY -= 0.06
 		if len(self.args.subtag) > 0:
 			width2 = 0.12+0.015*len(self.args.subtag)
 			if width2 > 0.9: width2=0.899
-			pave2 = TPave(0.12, 0.75, width2, 0.899, 0, 'NDC')
+			pave2 = TPave(0.12, legendPosY-0.02, width2, legendPosY+0.129, 0, 'NDC')
 			pave2.SetFillStyle(1001)
 			pave2.SetFillColor(0)
 			pave2.Draw()
-		if len(self.args.tag) > 0:
-			tl.SetTextSize(0.05)
-			tl.DrawLatex(0.14, 0.83, self.args.tag)
-		if len(self.args.subtag) > 0:
 			tl.SetTextSize(0.035)
-			tl.DrawLatex(0.145, 0.77, self.args.subtag)
+			tl.DrawLatex(0.145, legendPosY, self.args.subtag)
+			legendPosY -= 0.02
 
 		graphs = []
 		rategraphs = []
@@ -415,7 +419,8 @@ class daq2Plotter(object):
 		configs = sorted(configs)
 		nlegentries = len(self.filelist)
 		# nlegentries = len(caselist) if not self.args.daq1 else len(caselist) + 1
-		legendpos = (0.12, 0.75-nlegentries*0.04, 0.38, 0.75)
+
+		legendpos = (0.12, legendPosY-nlegentries*0.04, 0.38, legendPosY)
 		# legendpos = (0.44, 0.101, 0.899, 0.101+nlegentries*0.04) ## bottom right
 		if strperfrl == 0:
 			legendpos = (0.13, 0.73, 0.31, 0.73-nlegentries*0.045)
@@ -467,6 +472,15 @@ class daq2Plotter(object):
 				else:
 					leg.AddEntry(func, '%.0f kHz'% (self.args.rate), 'l')
 
+		## Draw line-speed lines
+		if self.args.plotBU:
+			lineSpeed = ROOT.TLine(rangex[0], 7000, rangex[1], 7000)
+		else:
+			lineSpeed = ROOT.TLine(rangex[0], 5000, rangex[1], 5000)
+		lineSpeed.SetLineColor(ROOT.kGray+2)
+		lineSpeed.SetLineStyle(7)
+		lineSpeed.Draw()
+
 		pad1.Update()
 		# canv.cd()
 
@@ -491,7 +505,7 @@ class daq2Plotter(object):
 		pad2.Update()
 
 		if self.args.plotBU:
-			line = ROOT.TLine(rangex[0], 2, rangex[1], 2)
+			line = ROOT.TLine(rangex[0], 100./62, rangex[1], 100./62)
 			tgaxis = ROOT.TGaxis(rangex[1], 0, rangex[1], args.ratemaxy,
                                  0, args.ratemaxy, 510, "+L")
 			tgaxis.SetTitle('Event Rate at BU (kHz)')
@@ -516,7 +530,7 @@ class daq2Plotter(object):
 		leg.Draw()
 
 		## Draw CMS Prelim
-		pave = TPave(0.62, 0.80, 0.899, 0.899, 0, 'NDC')
+		pave = TPave(0.62, 0.80, 0.899, 0.898, 0, 'NDC')
 		pave.SetFillStyle(1001)
 		pave.SetFillColor(0)
 		pave.Draw()
