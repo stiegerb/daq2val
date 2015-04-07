@@ -1,21 +1,22 @@
 <pol:policy xmlns:pol="http://xdaq.web.cern.ch/xdaq/xsd/2013/XDAQPolicy-10">
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_0/waiting" type="thread" package="numa" mempolicy="local" affinity="9" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_1/waiting" type="thread" package="numa" mempolicy="local" affinity="14" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_2/waiting" type="thread" package="numa" mempolicy="local" affinity="15" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_3/waiting" type="thread" package="numa" mempolicy="local" affinity="1" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_4/waiting" type="thread" package="numa" mempolicy="local" affinity="3" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_5/waiting" type="thread" package="numa" mempolicy="local" affinity="5" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/requestFragments/waiting" type="thread" package="numa" mempolicy="local" affinity="13" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/fileMover/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" cpunodes="1" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/lumiAccounting/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" cpunodes="1" />
-      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/monitoring/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" cpunodes="1" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_0/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="1" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_1/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="3" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_2/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="5" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_3/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="9" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_4/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="11" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_5/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="13" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_6/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="15" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/Builder_7/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="7" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/requestFragments/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="31" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/fileMover/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="29" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/lumiAccounting/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="27" />
+      <pol:element pattern="urn:toolbox-task-workloop:evb::(.+)/monitoring/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="25" />
       <pol:element pattern="urn:superFragmentFIFO(.+)" type="alloc" package="numa" mempolicy="onnode" node="1" />
       <pol:element pattern="urn:fileStatisticsFIFO_stream(.+):alloc" type="alloc" package="numa" mempolicy="onnode" node="1" />
       <pol:element pattern="urn:freeResourceFIFO:alloc" type="alloc" package="numa" mempolicy="onnode" node="1" />
       <pol:element pattern="urn:blockedResourceFIFO:alloc" type="alloc" package="numa" mempolicy="onnode" node="1" />
       <pol:element pattern="urn:toolbox-task-workloop:pt::ibv::acceptor-(.+)/waiting" type="thread" package="numa" mempolicy="onnode" memnode="1" cpunodes="1" />
       <pol:element pattern="urn:toolbox-task-workloop:pt::ibv::eventworkloop/polling" package="numa" type="thread" mempolicy="onnode" memnode="1" cpunodes="1" />
-      <pol:element pattern="urn:toolbox-task-workloop:http-(.+)/waiting" package="numa" type="thread" mempolicy="onnode" memnode="1" cpunodes="1" />
       <pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloops(.*)/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="10" />
       <pol:element pattern="urn:toolbox-task-workloop:pt::ibv::completionworkloopr(.*)/polling" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="12" />
       <pol:element pattern="urn:toolbox-mem-allocator:CommittedHeapAllocator" type="alloc" package="numa" mempolicy="onnode" node="1" />
