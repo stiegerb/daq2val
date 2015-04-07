@@ -15,11 +15,11 @@ if __name__ == "__main__":
 	usage = """[prog] """
 	parser = OptionParser(usage=usage)
 	parser.add_option("--ibInventoryFile",
-		               default="2014-10-15-infiniband-ports.csv",
+		               default="2015-03-30-infiniband-ports.csv",
 		               action="store", type="string", dest="ibInventoryFile",
 		               help=("IB inventory file [default: %default]"))
 	parser.add_option("--geInventoryFile",
-		               default="2014-10-13-ru-network.csv",
+		               default="2015-04-01-ru-network.csv",
 		               action="store", type="string", dest="geInventoryFile",
 		               help=("40 GE inventory file [default: %default]"))
 	parser.add_option("-o", "--outDir", default="daq2FRLRUBUMaps/",
@@ -163,7 +163,3 @@ if __name__ == "__main__":
 	print  50*'-'
 
 	exit(0)
-
-
-
-
