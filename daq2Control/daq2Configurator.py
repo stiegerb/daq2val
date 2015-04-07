@@ -507,11 +507,19 @@ class daq2Configurator(object):
 		self.setPropertyInAppInContext(ferol, classname,
 			                  'TCP_DESTINATION_PORT_FED1',
 			                  '60600')
+		self.setPropertyInAppInContext(ferol, classname,
+			                  'TCP_SOURCE_PORT_FED0',
+			                  'RU%d_FRL_PORT'%frl.ruindex)
+		self.setPropertyInAppInContext(ferol, classname,
+			                  'TCP_SOURCE_PORT_FED1',
+			                  '60600')
 		## route every second one to port 60600 if there is only one
 		## stream per RU
 		if frl.nstreams==1 and (frl.index+1)%2==0:
 			self.setPropertyInAppInContext(ferol, classname,
 				                  'TCP_DESTINATION_PORT_FED0', '60600')
+			self.setPropertyInAppInContext(ferol, classname,
+				                  'TCP_SOURCE_PORT_FED0', '60600')
 		try:
 			self.setPropertyInAppInContext(ferol, classname,
 				     'OperationMode',
