@@ -276,7 +276,7 @@ class daq2Control(object):
 		if self.options.verbose > 0: print separator
 
 		## Flat profile (i.e. each stream has the same size)
-		if self.options.sizeProfile == 'flat':
+		if self.options.sizeProfile in ['flat','streams']:
 			delay = utils.getFerolDelay(fragSize, rate)
 
 			## Max rate when running with GTPe?
@@ -302,15 +302,20 @@ class daq2Control(object):
 						           dry=self.options.dry)
 					continue
 
+				if self.options.sizeProfile == 'streams' and frl.enableStream0 and frl.enableStream1:
+					divider = 2
+				else:
+					divider = 1
+
 				if frl.enableStream0:
 					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_bytes_FED0',
-						           'unsignedInt', int(fragSize),
+						           'unsignedInt', int(fragSize)/divider,
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_Stdev_bytes_FED0',
-						           'unsignedInt', int(fragSizeRMS),
+						           'unsignedInt', int(fragSizeRMS)/divider,
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 					utils.setParam(frl, 'ferol::FerolController',
@@ -321,12 +326,12 @@ class daq2Control(object):
 				if frl.enableStream1:
 					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_bytes_FED1',
-						           'unsignedInt', int(fragSize),
+						           'unsignedInt', int(fragSize)/divider,
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 					utils.setParam(frl, 'ferol::FerolController',
 						           'Event_Length_Stdev_bytes_FED1',
-						           'unsignedInt', int(fragSizeRMS),
+						           'unsignedInt', int(fragSizeRMS)/divider,
 						           verbose=self.options.verbose,
 						           dry=self.options.dry)
 					utils.setParam(frl, 'ferol::FerolController',
