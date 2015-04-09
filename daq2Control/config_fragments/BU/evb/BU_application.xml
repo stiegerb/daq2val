@@ -15,11 +15,11 @@
 		<calculateAdler32 xsi:type="xsd:boolean">false</calculateAdler32>
 		<resourcesPerCore xsi:type="xsd:double">0.2</resourcesPerCore>
                 <timeSamplePreScale xsi:type="xsd:unsignedInt">0</timeSamplePreScale>
-                <hltFiles xsi:arrayType="xsd:ur-type[4]" xsi:type="soapenc:Array">
-                	<item xsi:position="[0]" xsi:type="xsd:string">HltConfig.py</item>
-                	<item xsi:position="[1]" xsi:type="xsd:string">SCRAM_ARCH</item>
-                	<item xsi:position="[2]" xsi:type="xsd:string">CMSSW_VERSION</item>
-                	<item xsi:position="[3]" xsi:type="xsd:string">fffParameters.jsn</item>
+                <hltFiles xmlns:ns3="http://schemas.xmlsoap.org/soap/encoding/" ns3:arrayType="xsd:ur-type[4]" xsi:type="soapenc:Array">
+                	<item ns3:position="[0]" xsi:type="xsd:string">HltConfig.py</item>
+                	<item ns3:position="[1]" xsi:type="xsd:string">SCRAM_ARCH</item>
+                	<item ns3:position="[2]" xsi:type="xsd:string">CMSSW_VERSION</item>
+                	<item ns3:position="[3]" xsi:type="xsd:string">fffParameters.jsn</item>
                 </hltFiles>
                 <hltParameterSetURL xsi:type="xsd:string"/>
 	</properties>
