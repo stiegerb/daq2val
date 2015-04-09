@@ -362,6 +362,15 @@ class daq2Plotter(object):
 		axes.GetXaxis().SetNoExponent()
 		axes.Draw()
 
+		## Draw line-speed lines
+		if self.args.plotBU:
+			lineSpeed = ROOT.TLine(rangex[0], 7000, rangex[1], 7000)
+		else:
+			lineSpeed = ROOT.TLine(rangex[0], 5000, rangex[1], 5000)
+		lineSpeed.SetLineColor(ROOT.kGray+2)
+		lineSpeed.SetLineStyle(7)
+		lineSpeed.Draw()
+
 		legendPosY = 0.83
 		tl = TLatex()
 		tl.SetTextFont(42)
@@ -379,7 +388,8 @@ class daq2Plotter(object):
 		if len(self.args.subtag) > 0:
 			width2 = 0.12+0.015*len(self.args.subtag)
 			if width2 > 0.9: width2=0.899
-			pave2 = TPave(0.12, legendPosY-0.02, width2, legendPosY+0.129, 0, 'NDC')
+			if width2 < width: width2 = width
+			pave2 = TPave(0.12, legendPosY-0.02, width2, legendPosY+0.03, 0, 'NDC')
 			pave2.SetFillStyle(1001)
 			pave2.SetFillColor(0)
 			pave2.Draw()
@@ -472,15 +482,6 @@ class daq2Plotter(object):
 				else:
 					leg.AddEntry(func, '%.0f kHz'% (self.args.rate), 'l')
 
-		## Draw line-speed lines
-		if self.args.plotBU:
-			lineSpeed = ROOT.TLine(rangex[0], 7000, rangex[1], 7000)
-		else:
-			lineSpeed = ROOT.TLine(rangex[0], 5000, rangex[1], 5000)
-		lineSpeed.SetLineColor(ROOT.kGray+2)
-		lineSpeed.SetLineStyle(7)
-		lineSpeed.Draw()
-
 		pad1.Update()
 		# canv.cd()
 
@@ -530,10 +531,10 @@ class daq2Plotter(object):
 		leg.Draw()
 
 		## Draw CMS Prelim
-		pave = TPave(0.62, 0.80, 0.899, 0.898, 0, 'NDC')
-		pave.SetFillStyle(1001)
-		pave.SetFillColor(0)
-		pave.Draw()
+		paveCMS = TPave(0.62, 0.80, 0.899, 0.898, 0, 'NDC')
+		paveCMS.SetFillStyle(1001)
+		paveCMS.SetFillColor(0)
+		paveCMS.Draw()
 		tl.SetTextFont(62)
 		tl.SetTextSize(0.05)
 		tl.DrawLatex(0.625, 0.83, "CMS")
