@@ -624,9 +624,9 @@ class daq2Control(object):
 				                 "somewhere.")
 
 		## Cleanup run dir
-		# if not self.options.dry:
-		subprocess.check_call(['rm', '-rf', self._runDir])
-		subprocess.check_call(['mkdir', '-p', self._runDir])
+		if not self.options.dry:
+			subprocess.check_call(['rm', '-rf', self._runDir])
+			subprocess.check_call(['mkdir', '-p', self._runDir])
 
 		## Clean up and create output dir
 		self.prepareOutputDir()
