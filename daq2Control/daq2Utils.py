@@ -169,7 +169,7 @@ def testBuilding(d2c, minevents=1000, waittime=15, verbose=1, dry=False):
 		if verbose > 1:
 			print name, 'number of events built: ', int(nEvts)
 
-	if verbose > 1:
+	if d2c.config.useEvB and verbose > 1:
 		print separator
 		d2c.printRatesEvB()
 		print separator
@@ -419,12 +419,12 @@ def getInstance(host,classname):
 
 ## Wrappers for existing perl scripts
 def sendSimpleCmdToAppPacked(packedargs):
-	(host, port, classname, instance, cmdName, verbose, dry) = packedargs
-	return sendSimpleCmdToApp(host, classname, cmdName, port=port,
+	(host, classname, instance, cmdName, verbose, dry) = packedargs
+	return sendSimpleCmdToApp(host, classname, cmdName, port=None,
 		                      instance=instance,
 		                      verbose=verbose, dry=dry)
 def sendSimpleCmdToApp(host, classname, cmdName,
-	                   port=None,instance=None,
+	                   port=None, instance=None,
 	                   verbose=0, dry=False):
 	if port == None:
 		port = host.port

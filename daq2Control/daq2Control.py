@@ -815,7 +815,7 @@ class daq2Control(object):
 			if self.config.useIBV: ## Only do this for ibv!
 				pool = Pool(min(64,len(self.config.RUs)))
 
-				tasklist = [(ru.host, ru.port, 'pt::ibv::Application', 0,
+				tasklist = [(ru, 'pt::ibv::Application', 0,
 					         'connect',
 					         self.options.verbose,
 					         self.options.dry) for ru in self.config.RUs]
@@ -1173,7 +1173,7 @@ class daq2Control(object):
 
 			## Configure and enable pt::frl application on eFEROLs:
 			if self.options.verbose > 0: print separator
-			tasklist = [(efrl.host, efrl.port, 'pt::frl::Application', n,
+			tasklist = [(efrl, 'pt::frl::Application', n,
 				         'Configure',
 				         self.options.verbose,
 				         self.options.dry) for n,efrl in enumerate(
