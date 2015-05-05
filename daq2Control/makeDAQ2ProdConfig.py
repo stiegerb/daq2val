@@ -21,7 +21,7 @@ if __name__ == "__main__":
 		               dest="nBUs",
 		               help=("Number of BUs [default: %default]"))
 	parser.add_option("--ibInventoryFile",
-		               default="2015-03-30-infiniband-ports.csv",
+		               default="2015-05-05-infiniband-ports.csv",
 		               action="store", type="string", dest="ibInventoryFile",
 		               help=("IB inventory file [default: %default]"))
 	parser.add_option("--geInventoryFile",

@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 comments = {
-    "# missing network card": [ "bu-c2f16-37-01", "bu-c2f16-41-01" ],
+    "missing network card": [ "bu-c2f16-37-01", "bu-c2f16-41-01" ],
     }
 
 blackList = [
@@ -44,6 +44,7 @@ for index,line in enumerate(sys.stdin.readlines()):
         # header line
         assert len(parts) == 4
         parts.extend(['Blacklist', 'Comment'])
+        print "#"+",".join([str(x) for x in parts ])
 
     else:
         while len(parts) < 4:
@@ -72,8 +73,7 @@ for index,line in enumerate(sys.stdin.readlines()):
 
         if allComments:
             parts.append(";".join(allComments))
+        else:
+            parts.append("")
 
-
-
-
-    print ",".join([str(x) for x in parts ])
+        print ",".join([str(x) for x in parts ])

@@ -101,7 +101,7 @@
 ----------------------------------------------------------
 ### Symbolmaps
 
-- Create symbolmaps for the DAQ production system (this uses `2014-04-16-infiniband-ports.csv` as input. To blacklist machines, change the 0 to a 1 in the corresponding line/column):
+- Create symbolmaps for the DAQ production system (this uses `2015-05-05-infiniband-ports.csv` as input. To blacklist machines, change the 0 to a 1 in the corresponding line/column):
 	- `./daq2Control/makeDAQ2Symbolmap.py --nRUs 8 --nBUs 8 --splitBy 8 -v -o daq2SymbolMap_8x8.txt`
 	- To take only N machines from one leaf: `--splitBy N`
 	- To use only RU machines: `--useOnlyRUs`
@@ -139,5 +139,3 @@ SyntaxError: invalid syntax
 ```
 
 	- Probably means you're on a machine with an old version of python (i.e. older than 2.6). Try `ssh dvsrv-C2F36-07-01`.
-
-
