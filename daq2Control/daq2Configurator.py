@@ -506,20 +506,20 @@ class daq2Configurator(object):
 			                  'RU%d_FRL_PORT'%frl.ruindex)
 		self.setPropertyInAppInContext(ferol, classname,
 			                  'TCP_DESTINATION_PORT_FED1',
-			                  '60600')
+			                  '60800')
 		self.setPropertyInAppInContext(ferol, classname,
 			                  'TCP_SOURCE_PORT_FED0',
 			                  'RU%d_FRL_PORT'%frl.ruindex)
 		self.setPropertyInAppInContext(ferol, classname,
 			                  'TCP_SOURCE_PORT_FED1',
-			                  '60600')
-		## route every second one to port 60600 if there is only one
+			                  '60800')
+		## route every second one to port 60800 if there is only one
 		## stream per RU
 		if frl.nstreams==1 and (frl.index+1)%2==0:
 			self.setPropertyInAppInContext(ferol, classname,
-				                  'TCP_DESTINATION_PORT_FED0', '60600')
+				                  'TCP_DESTINATION_PORT_FED0', '60800')
 			self.setPropertyInAppInContext(ferol, classname,
-				                  'TCP_SOURCE_PORT_FED0', '60600')
+				                  'TCP_SOURCE_PORT_FED0', '60800')
 		try:
 			self.setPropertyInAppInContext(ferol, classname,
 				     'OperationMode',
@@ -605,7 +605,7 @@ class daq2Configurator(object):
 								    'protocol' : 'ftcp',
 								    'service'  : 'frl',
 								    'hostname' : 'RU%d_FRL_HOST_NAME'%index,
-								    'port'     : '60600',
+								    'port'     : '60800',
 								    'network'  : 'ferolb',
 								    'affinity' : 'RCV:P,SND:W,DSR:W,DSS:W',
 								    'datagramSize' : '131072',
