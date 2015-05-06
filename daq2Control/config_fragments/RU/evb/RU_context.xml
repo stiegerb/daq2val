@@ -1,6 +1,6 @@
 <xc:Context url="http://RU%d_SOAP_HOST_NAME:RU%d_SOAP_PORT" xmlns:xc="http://xdaq.web.cern.ch/xdaq/xsd/2004/XMLConfiguration-30" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
 	<xc:Endpoint protocol="ftcp" service="frl" hostname="RU%d_FRL_HOST_NAME" port="RU%d_FRL_PORT" network="ferola" sndTimeout="2000" rcvTimeout="0" targetId="43" affinity="RCV:P,SND:W,DSR:W,DSS:W" singleThread="true" pollingCycle="4" rmode="select" nonblock="true" datagramSize="131072" />
-	<xc:Endpoint protocol="ftcp" service="frl" hostname="RU%d_FRL_HOST_NAME" port="60600"         network="ferolb" sndTimeout="2000" rcvTimeout="0" targetId="43" affinity="RCV:P,SND:W,DSR:W,DSS:W" singleThread="true" pollingCycle="4" rmode="select" nonblock="true" datagramSize="131072" />
+	<xc:Endpoint protocol="ftcp" service="frl" hostname="RU%d_FRL_HOST_NAME" port="60800"         network="ferolb" sndTimeout="2000" rcvTimeout="0" targetId="43" affinity="RCV:P,SND:W,DSR:W,DSS:W" singleThread="true" pollingCycle="4" rmode="select" nonblock="true" datagramSize="131072" />
 
 	<!-- BU endpoint fragment here (IBV/UDAPL) -->
 	<!-- BU Network pt Application Fragment here (IBV/UDAPL) -->

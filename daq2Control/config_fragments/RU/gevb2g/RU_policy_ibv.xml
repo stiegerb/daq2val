@@ -8,7 +8,7 @@
 	<pol:element pattern="urn:toolbox-mem-allocator-ibv-sender-mlx4_0:ibvla" type="alloc" package="numa" mempolicy="onnode" node="0" />
 
 	<pol:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:RU%d_FRL_PORT/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="13" />
-	<pol:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:60600/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="9" />
+	<pol:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:60800/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="9" />
 
 	<pol:element pattern="urn:toolbox-task-workloop:pt-frl-CopyWorker-1-0" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="12" />
 	<pol:element pattern="urn:toolbox-task-workloop:pt-frl-CopyWorker-1-1" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="14" />

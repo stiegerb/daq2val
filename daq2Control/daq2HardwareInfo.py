@@ -61,7 +61,7 @@ class daq2HardwareInfo(object):
 ---------------------------------------------------------------------
 '''
 	def __init__(self, gecabling="2015-04-01-ru-network.csv",
-		         ibcabling="2015-03-30-infiniband-ports.csv",
+		         ibcabling="2015-05-05-infiniband-ports.csv",
 		         geswitchmask=[], ibswitchmask=[],
 		         fedwhitelist=[], ruwhitelist=[], buwhitelist=[],
 		         verbose=0):

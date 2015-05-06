@@ -22,7 +22,7 @@ if __name__ == "__main__":
 	usage = """"""
 	parser = OptionParser(usage=usage)
 	parser.add_option("-i", "--inventoryFile",
-		               default="2015-03-30-infiniband-ports.csv",
+		               default="2015-05-05-infiniband-ports.csv",
 		               action="store", type="string", dest="inventoryFile",
 		               help=("Inventory file [default: %default]"))
 	parser.add_option("-o", "--outFile", default="customSymbolmap.txt",

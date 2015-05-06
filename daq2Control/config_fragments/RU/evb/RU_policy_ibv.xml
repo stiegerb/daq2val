@@ -16,7 +16,7 @@
       <ns1:element pattern="urn:fragmentFIFO_FED(.+)" type="alloc" package="numa" mempolicy="onnode" node="0" />
       <ns1:element pattern="urn:fragmentRequestFIFO:alloc" type="alloc" package="numa" mempolicy="onnode" node="1" />
       <ns1:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:RU%d_FRL_PORT/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="9" />
-      <ns1:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:60600/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="13" />
+      <ns1:element pattern="urn:toolbox-task-workloop:tcpla-psp/RU%d_FRL_HOST_NAME:60800/polling" type="thread" package="numa" mempolicy="onnode" memnode="0" affinity="13" />
       <ns1:element pattern="urn:toolbox-task-workloop:tcpla-acceptor-dispatcher(.+)" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="1" />
       <ns1:element pattern="urn:toolbox-task-workloop:tcpla-connector-dispatcher(.+)" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="1" />
       <ns1:element pattern="urn:toolbox-task-workloop:tcpla-ia(.+)" type="thread" package="numa" mempolicy="onnode" memnode="1" affinity="1" />
