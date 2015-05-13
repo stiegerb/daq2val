@@ -48,7 +48,7 @@ class daq2ProdConfigurator(daq2Configurator):
 		## Counters
 		self.haveEVM = False
 		self.ruindex = 1
-		self.ferolindex = 0
+		self.ferolindex = 1
 		self.allRUs = []
 		self.allFEROLs = []
 
@@ -144,9 +144,8 @@ class daq2ProdConfigurator(daq2Configurator):
 		if self.haveEVM: return True
 		for frlpc in frlpcs:
 			for ferol in self.hwInfo.getFEROLs(frlpc, haveFEDIDs=1):
-				ferol.index = self.ferolindex
+				ferol.index = 0
 				self.allFEROLs.append(ferol)
-				self.ferolindex += 1
 
 				evm = rus_gen.next()
 				evm.index = 0

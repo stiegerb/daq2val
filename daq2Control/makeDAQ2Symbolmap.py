@@ -4,7 +4,7 @@ from daq2HardwareInfo import daq2HardwareInfo, addDictionaries
 from daq2HardwareInfo import getMachines, getMachinesShuffled
 
 HEADER = ("LAUNCHER_BASE_PORT 17777\n"
-          "SOAP_BASE_PORT 2000\n"
+          "SOAP_BASE_PORT 12000\n"
           "I2O_BASE_PORT 54320\n"
           "FRL_BASE_PORT 55320\n")
 
